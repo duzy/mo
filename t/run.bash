@@ -3,7 +3,7 @@
 function run() {
     local X=/tmp/t.nqp
     local BOOT=t/bootstrap.nqp.tmp
-    local RUNNER="nqp-p $X"
+    local RUNNER="nqp-p --module-path=gen $X"
     local NAME=$(dirname $1)/$(basename $1 .xml)
     (
         echo "#! nqp"
