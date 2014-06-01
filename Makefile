@@ -21,7 +21,8 @@ MO_SOURCES := \
 
 $(MO_PBC): $(MO_PIR)
 	@mkdir -p $(@D)
-	$(PARROT) -c --output="$@" $<
+	$(PARROT) -t=pbc --output="$@" "$<"
+	@[ -f $@ ]
 
 $(MO_PIR): $(MO_NQP)
 	@mkdir -p $(@D)
@@ -46,7 +47,9 @@ $(XML_NQP): $(XML_SOURCES)
 	@mkdir -p $(@D)
 	$(CAT) $^ > "$@"
 
-test: test-xml
+test: test-xml test-mo
 
-test-xml: t/run.bash $(XML_PBC)
+test-xml: t/xml/run.bash $(XML_PBC)
 	@$(BASH) $<
+
+test-mo:

@@ -1,8 +1,10 @@
 #!/bin/bash
 
+SRCDIR="$(dirname $BASH_SOURCE)"
+
 function run() {
     local X=/tmp/t.nqp
-    local BOOT=t/bootstrap.nqp.tmp
+    local BOOT=$SRCDIR/bootstrap.nqp.tmp
     local RUNNER="nqp-p --module-path=gen $X"
     local NAME=$(dirname $1)/$(basename $1 .xml)
     (
@@ -13,4 +15,4 @@ function run() {
     prove --nocolor -v --exec "$RUNNER" $NAME.xml
 }
 
-run t/simple.xml
+run $SRCDIR/simple.xml
