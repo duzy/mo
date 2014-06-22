@@ -1,0 +1,14 @@
+{
+    "name": "hello",
+    "class": [
+        {
+            "name": "Base"
+        },
+        {
+            "name": "MyClassA", "parent": "Base"
+        },
+        {
+            "name": "MyClassB", "parent": "Base"
+        }
+    ]
+}

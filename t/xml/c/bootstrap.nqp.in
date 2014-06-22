@@ -1,0 +1,38 @@
+# -*- nqp -*-
+use xml;
+
+my @args := ["<engine>", "<filename>"];
+my $comp := XML::Compiler.new();
+$comp.language('xml');
+$comp.parsegrammar(XML::Grammar);
+$comp.parseactions(XML::Actions);
+#$comp.command_line(@args, :encoding('utf8'));
+
+my $h;
+try {
+    $h := nqp::open(@args[1], 'r');
+    CATCH {
+        nqp::say("Could not open @args[1]: $_");
+    }
+}
+nqp::exit(-1) unless $h; 
+nqp::setencoding($h, 'utf8');
+
+my @codes;
+try {
+    @codes := nqp::readallfh($h);
+    nqp::closefh($h);
+    CATCH {
+        nqp::say("Error while reading file @args[1]: $_");
+    }
+}
+nqp::exit(-1) unless @codes;
+
+my $code := nqp::join('', @codes);
+my $modle := $comp.compile($code);
+my $a := $modle(-> {
+    my $count := nqp::getlex('.count');
+    $count := 'null' unless nqp::defined($count);
+    nqp::say('.count = '~$count);
+});
+nqp::say(~$a);

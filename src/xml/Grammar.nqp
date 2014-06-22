@@ -1,7 +1,16 @@
 use NQPHLL;
 
 grammar XML::Grammar is HLL::Grammar {
-    token TOP {
+    method TOP() {
+        my $source_id := nqp::sha1(self.target() ~ nqp::time_n());
+        my $file := nqp::getlexdyn('$?FILES');
+        my $*W := nqp::isnull($file) ??
+            XML::World.new(:handle($source_id)) !!
+            XML::World.new(:handle($source_id), :description($file));
+        self.go;
+    }
+
+    token go {
         ^<declaration>? \s* ~ $ <markup_content>* || <.panic: 'Syntax Error!'>
     }
 

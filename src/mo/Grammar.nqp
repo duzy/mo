@@ -1,6 +1,11 @@
 use NQPHLL;
+use xml;
+#use json;
 
 grammar MO::Grammar is HLL::Grammar {
+    INIT {
+    }
+
     rule TOP {
         ^ ~ $ <statements> || <.panic('Syntax Error')>
     }
@@ -15,10 +20,6 @@ grammar MO::Grammar is HLL::Grammar {
         | <template_definition>
         | <call>
         ]
-    }
-
-    INIT {
-        nqp::say("MO::Grammar::INIT");
     }
 
     rule expr {

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE mo SYSTEM "hello.mo">
+<mo name="hello">
+  <class name="Base" />
+  <class name="MyClassA" parent="Base" />
+  <class name="MyClassB" parent="Base" />
+</mo>
