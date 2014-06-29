@@ -11,14 +11,17 @@ grammar MO::Grammar is HLL::Grammar {
     }
 
     token term:sym<value> { <value> }
-    token term:sym<name> {
+    token term:sym<name>  {
         <name> <?{ ~$<name> ne 'return' }> <args>**0..1
     }
+
+    token prefix:sym«.»  { <sym>  <O('%methodop')> }
+    token prefix:sym«->» { <sym>  <O('%methodop')> }
 
     token infix:sym<,> { <sym>  <O('%comma, :op<list>')> }
 
     token postcircumfix:sym<( )> {
-        '(' <.ws> <arglist> ')' <O('%methodop')>
+        '(' <.ws> <arglist> ')'  <O('%methodop')>
     }
 
     proto token quote { <...> }

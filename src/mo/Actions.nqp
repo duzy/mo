@@ -5,6 +5,16 @@ class MO::Actions is HLL::Actions {
         $/.prune;
     }
 
+    method prefix:sym«.»($/)  {
+        make QAST::Op.new(:op('null'));
+        $/.prune;        
+    }
+
+    method prefix:sym«->»($/) {
+        make QAST::Op.new(:op('null'));
+        $/.prune;        
+    }
+
     method infix:sym<,>($/) {
         make QAST::Op.new(:op('null'));
         $/.prune;        
