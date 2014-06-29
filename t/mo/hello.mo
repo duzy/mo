@@ -4,13 +4,13 @@ for class say .name
 
 for class
     say .name
-endfor
+end
 
 if class say ->class[0].name
 
 if class
     say ->class[1].name
-endif
+end
 
 template MyClass
 ---{{
@@ -18,7 +18,7 @@ class $(.name) : ${for parent yield .name}
 {
 --- for method
 $(.domain):
---- endfor
+--- end
 }
 ---}}
 

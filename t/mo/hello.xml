@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<mo name="hello">
+<root name="hello">
   <class name="Base" />
   <class name="MyClassA" parent="Base" />
   <class name="MyClassB" parent="Base" />
-</mo>
+</root>
