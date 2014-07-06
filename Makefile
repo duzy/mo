@@ -11,6 +11,7 @@ XML_SOURCES := \
   src/xml/Actions.nqp \
   src/xml/Compiler.nqp \
   src/xml/World.nqp \
+  src/xml/Node.nqp \
 
 MO_PBC := gen/mo.pbc
 MO_PIR := gen/mo.pir

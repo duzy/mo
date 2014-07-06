@@ -63,7 +63,7 @@ class XML::Actions is HLL::Actions {
             #$ast.blocktype('immediate');
             #$ast.blocktype('decl');
 
-            nqp::say(~$<name>);
+            #nqp::say('tag: '~$<name>);
 
             my $stmts := $ast[0];
             #$stmts.push( QAST::Op.new( :op('say'), QAST::SVal.new(:value(~$<name>)) ) );

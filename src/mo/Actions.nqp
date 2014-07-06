@@ -1,16 +1,32 @@
 class MO::Actions is HLL::Actions {
     method term:sym<value>($/) { make $<value>.made; $/.prune; }
     method term:sym<name>($/) {
-        make QAST::Op.new(:op('null'));
+        if +$<args> {
+            my $name := ~$<name>;
+            my $op := %MO::Grammar::builtins{$name};
+            my $ast := $<args>[0].made;
+            if $op {
+                $ast.op($name);
+            } else {
+                $ast.name($name);
+            }
+            make $ast;
+        } else {
+            make QAST::Op.new(:op('call'), :node($/), :name(~$<name>));
+        }
         $/.prune;
     }
 
-    method prefix:sym«.»($/)  {
-        make QAST::Op.new(:op('null'));
+    method term:sym«.»($/)  {
+        nqp::say('term:sym«.»: '~$/);
+        #my $var := QAST::Var.new( :node($<name>), :name() );
+        #make QAST::Op.new(:op('bind'));
+        make QAST::SVal.new(:value('TODO: '~$<name>));
         $/.prune;        
     }
 
-    method prefix:sym«->»($/) {
+    method term:sym«->»($/) {
+        nqp::say('term:sym«->»: '~$/);
         make QAST::Op.new(:op('null'));
         $/.prune;        
     }
@@ -43,35 +59,45 @@ class MO::Actions is HLL::Actions {
         $/.prune;
     }
 
-    method identifier($/) {
-        nqp::say("identifier: "~$/);
-        make QAST::Op.new(:op('null'));
-    }
+    # method identifier($/) {
+    #     make QAST::Op.new(:op('null'));
+    # }
 
-    method name($/) {
-        nqp::say("name: "~$/);
-        make QAST::Op.new(:op('null'));
-    }
+    # method name($/) {
+    #     make QAST::Op.new(:op('null'));
+    # }
 
     method arglist($/) {
-        nqp::say("arglist: "~$/);
-        make QAST::Op.new(:op('null'));
+        my $ast := QAST::Op.new( :op('call'), :node($/) );
+        if $<EXPR> {
+            my $expr := $<EXPR>.ast;
+            if nqp::istype($expr, QAST::Op) && $expr.name eq '&infix:<,>' && !$expr.named {
+                for $expr.list { $ast.push($_); }
+            }
+            else { $ast.push($expr); }
+        }
+        my $i := 0;
+        my $n := +$ast.list;
+        while $i < $n {
+            if nqp::istype($ast[$i], QAST::Op) && $ast[$i].name eq '&prefix:<|>' {
+                $ast[$i] := $ast[$i][0];
+                $ast[$i].flat(1);
+                $ast[$i].named(1) if nqp::istype($ast[$i], QAST::Var)
+                    && nqp::substr($ast[$i].name, 0, 1) eq '%';
+            }
+            $i++;
+        }
+        make $ast;
     }
 
     method args($/) {
-        nqp::say("args: "~$/);
-        make QAST::Op.new(:op('null'));
-    }
-
-    method TOP($/) {
-        nqp::say("TOP");
-        make QAST::Op.new(:op('say'), QAST::SVal.new(:value('MO::TOP')));
+        make $<arglist>.made;
     }
 
     method xml($/) {
         my $data := $<data>.made;
         my $test := QAST::Block.new(:node($/), :name('test'), :blocktype('declaration'), QAST::Stmts.new(
-            QAST::Op.new(:op('say'), QAST::Var.new(:name('.name'), :scope('lexical'), :returns('string'))),
+            #QAST::Op.new(:op('say'), QAST::Var.new(:name('.name'), :scope('lexical'), :returns('string'))),
         ));
         $data.push($test);
         make QAST::Op.new(:op('call'), $data, $test);
@@ -82,33 +108,48 @@ class MO::Actions is HLL::Actions {
     }
 
     method prog($/) {
-        nqp::say("prog: ");
-        make QAST::Op.new(:op('null'));
+        #make QAST::Op.new(:op('say'), QAST::SVal.new(:value('prog')));
+        make QAST::Block.new(
+            $<statements>.made
+        );
     }
 
     method statements($/) {
-        nqp::say("statements: ");
-        make QAST::Op.new(:op('null'));
+        my $stmts := QAST::Stmts.new();
+        if +$<statement> {
+            $stmts.push($_.made) for $<statement>;
+        }
+        make $stmts;
     }
 
     method statement($/) {
-        nqp::say("statement: "~$/);
-        make QAST::Op.new(:op('null'));
+        if $<control> {
+            make $<control>.made;
+        } elsif $<EXPR> {
+            make $<EXPR>.made;
+        } else {
+            make QAST::Op.new(:op('null'));
+        }
     }
 
-    method control:sym<for>($/) {
-        nqp::say("for: "~$/<expr>);
-        make QAST::Op.new(:op('null'));
+    method control:sym<cond>($/) {
+        my $ast := QAST::Op.new( :node($/), :op(~$<op>), $<EXPR>.made, $<statements>.made );
+        $ast.push($<else>.made) if $<else>;
+        make $ast;
     }
 
-    method control:sym<if>($/) {
-        nqp::say("if: "~$/);
-        make QAST::Op.new(:op('null'));
+    method control:sym<loop>($/) {
+        make QAST::Op.new( :node($/), :op(~$<op>), $<EXPR>.made, $<statements>.made );
     }
 
-    method code_block($/) {
-        nqp::say("code_block");
-        make QAST::Op.new(:op('null'));
+    method elsif($/) {
+        my $ast := QAST::Op.new( :node($/), :op('if'), $<EXPR>.made, $<statements>.made );
+        $ast.push($<else>.made) if $<else>;
+        make $ast;
+    }
+
+    method else($/) {
+        make $<statements>.made;
     }
 
     method template_definition($/) {
