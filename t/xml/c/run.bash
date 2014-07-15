@@ -15,7 +15,7 @@ function run() {
         cat $NAME.t
     ) > $X
     prove --nocolor -v --exec "$RUNNER" $1
-    parrot gen/xml.pbc --target=pir $NAME.xml > $NAME.pir
+    parrot -Lgen gen/xml.pbc --target=pir $NAME.xml > $NAME.pir
 }
 
 run $SRCDIR/simple.t

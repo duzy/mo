@@ -30,9 +30,4 @@ nqp::exit(-1) unless @codes;
 
 my $code := nqp::join('', @codes);
 my $modle := $comp.compile($code);
-my $a := $modle(-> {
-    my $count := nqp::getlex('.count');
-    $count := 'null' unless nqp::defined($count);
-    nqp::say('.count = '~$count);
-});
-nqp::say(~$a);
+my $result := $modle();

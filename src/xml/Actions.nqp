@@ -1,36 +1,34 @@
+use common;
+
 class XML::Actions is HLL::Actions {
     INIT {
     }
 
     BEGIN {
-        #my $*NODE_TYPE := nqp::newtype('node', 'HashAttrStore');
     }
 
     method go($/) {
         my $block := QAST::Block.new( :node($/) );
         my $stmts := $block.push( QAST::Stmts.new() );
-        # if $<markup_content> {
-        #     for $<markup_content> -> $mc {
-        #         my $ast := QAST::Op.new( :op('call'), $mc.ast );
-        #         if $ast {
-        #             $stmts.push($ast);
-        #         }
-        #     }
-        # }
 
-        # if $*W.root {
-        #     my $test := QAST::Block.new(
-        #         :node($*W.root.node()), :blocktype('declaration'),
-        #         QAST::Stmts.new(
-        #             QAST::Op.new(:op('say'), QAST::Var.new(:name('.count'), :scope('lexical'), :returns('string'))),
-        #             #QAST::Op.new(:op('say'), QAST::Var.new(:name('node'), :scope('lexical'))),
-        #         ));
-        #     $*W.root.push($test);
-        #     $stmts.push(QAST::Op.new( :op('call'), $*W.root, $test ));
-        # }
+        my $node_type := QAST::Op.new( :op('callmethod'), :name('new_type'),
+            QAST::WVal.new( :value(NodeClassHOW) ),
+            QAST::SVal.new( :value('Node'), :named('name') ),
+        );
 
-        $stmts.push(QAST::Op.new( :op('call'), $*W.root,
-            QAST::Var.new(:name('@'), :scope('local'), :decl('param'))));
+        $stmts.push(QAST::Op.new( :op('bind'),
+            QAST::Var.new( :name('NodeType'), :scope('lexical'), :decl('var') ),
+            $node_type,
+        ));
+
+        if +$<markup_content> {
+            for $<markup_content> -> $mc {
+                $stmts.push($mc.made);
+            }
+        }
+
+        # returns the root node
+        $block.push( $*W.root<node> );
         make $block;
     }
 
@@ -56,43 +54,61 @@ class XML::Actions is HLL::Actions {
         make $a;
     }
 
+    my %NAMES := nqp::hash();
     method tag($/) {
         my $ast;
         if $<start> {
-            $ast := $*W.push_datascope($/);
-            #$ast.blocktype('immediate');
-            #$ast.blocktype('decl');
+            $ast := $*W.push_node($/);
 
-            #nqp::say('tag: '~$<name>);
+            my $num := +%NAMES{~$<name>};
+            my $lex := $<name> ~ ($num ?? '~' ~ $num !! '');
+            %NAMES{~$<name>} := $num + 1;
 
-            my $stmts := $ast[0];
-            #$stmts.push( QAST::Op.new( :op('say'), QAST::SVal.new(:value(~$<name>)) ) );
+            my $node := QAST::Var.new( :name(~$lex), :scope<lexical> );
+            my $node_type := QAST::Var.new( :name('NodeType'), :scope('lexical') );
+            $ast.push(QAST::Op.new( :op('bind'),
+                QAST::Var.new( :name($node.name), :scope<lexical>, :decl<var> ),
+                QAST::Op.new( :op('create'), $node_type ), # repr_instance_of
+            ));
 
-            if $<attribute> {
+            $ast<node> := $node;
+            $ast<name> := ~$<name>;
+
+            $ast.push(QAST::Op.new( :op('bind'),
+                QAST::Var.new( :scope('attribute'), :name(''), $node, $node_type ),
+                QAST::SVal.new( :value(~$<name>) ),
+            ));
+
+            my $parent := $ast<parent>;
+            if $parent {
+                my $attr := QAST::Var.new( :scope('attribute'), :name($<name>),
+                    $parent<node>, $node_type );
+                $ast.push(QAST::Op.new( :op('ifnull'), $attr,
+                    QAST::Op.new( :op('bind'), $attr, QAST::Op.new( :op('list') ) ),
+                ));
+                $ast.push( QAST::Op.new( :op('callmethod'), :name('push'), $attr, $node ) );
+            }
+
+            if +$<attribute> {
                 for $<attribute> -> $a {
-                    my $s := nqp::join('', $a<value><quote_EXPR><quote_delimited><quote_atom>);
-                    $stmts.push( QAST::Op.new(:op('bind'), $a.ast,
-                        QAST::SVal.new(:value($s)) ) );
-                    #$stmts.push( QAST::Op.new( :op('say'),
-                    #    QAST::Var.new(:name('.'~$a<name>), :scope('lexical')) ) );
+                    my $str := nqp::join('', $a<value><quote_EXPR><quote_delimited><quote_atom>);
+                    my $val := QAST::SVal.new( :value($str) );
+                    my $attr := QAST::Var.new( :node($/), :scope('attribute'),
+                        :name('.' ~ $a<name>), $node, $node_type );
+                    $ast.push( QAST::Op.new(:op('bind'), $attr, $val ) ); # repr_bind_attr_obj
+                    #$ast.push( QAST::Op.new(:op('say'), $attr ) ); # repr_get_attr_obj
                 }
             }
 
             if ~$<delimiter> eq '/>' {
-                $*W.pop_datascope();
+                $*W.pop_node();
             }
         } elsif $<end> {
             $ast := QAST::Op.new( :op('null') );
-            $*W.pop_datascope();
+            $*W.pop_node();
         } else {
             $/.CURSOR.panic("Unexpected tag: "~$<name>);
         }
-        make $ast;
-    }
-
-    method attribute($/) {
-        my $name := '.' ~ $<name>;
-        my $ast := QAST::Var.new( :node($/), :name($name), :scope('lexical'), :decl('var'), :returns('string') );
         make $ast;
     }
 

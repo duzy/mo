@@ -96,11 +96,10 @@ class MO::Actions is HLL::Actions {
 
     method xml($/) {
         my $data := $<data>.made;
-        my $test := QAST::Block.new(:node($/), :name('test'), :blocktype('declaration'), QAST::Stmts.new(
-            #QAST::Op.new(:op('say'), QAST::Var.new(:name('.name'), :scope('lexical'), :returns('string'))),
-        ));
-        $data.push($test);
-        make QAST::Op.new(:op('call'), $data, $test);
+        make QAST::Stmts.new(
+            QAST::Op.new( :op('call'), QAST::BVal.new( :value($data) ) ),
+            $data
+        );
     }
 
     method json($/) {

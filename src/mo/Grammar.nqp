@@ -1,6 +1,6 @@
 use NQPHLL;
 use xml;
-#use json;
+use json;
 
 grammar MO::Grammar is HLL::Grammar {
     INIT {
