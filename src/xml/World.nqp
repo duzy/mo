@@ -14,6 +14,7 @@ class XML::World is HLL::World {
             $stmts<parent> := @!NODES[+@!NODES - 1];
         }
         @!NODES[+@!NODES] := $stmts;
+        $stmts<TAGS> := nqp::hash();
         $stmts;
     }
 

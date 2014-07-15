@@ -56,23 +56,33 @@ class XML::Actions is HLL::Actions {
         if $<start> {
             $ast := $*W.push_node($/);
 
+            my $parent := $ast<parent>;
             my $prev := $PREV;
             $PREV := $ast;
 
-            my $num := +%NAMES{~$<name>};
-            %NAMES{~$<name>} := $num + 1;
-
-            if $num eq 1 && $prev<node>.name eq ~$<name> {
-                ## Rename the first child of the name $<name>
-                $prev<node>.name($<name> ~ '~0');
-                $prev<node_decl>.name($<name> ~ '~0');
+            my $prefix := '';
+            my $num := 0;
+            if 1 {
+                $num := +%NAMES{~$<name>};
+                %NAMES{~$<name>} := $num + 1;
+            } elsif nqp::defined($parent) {
+                $num := +$parent<TAGS>{~$<name>};
+                $parent<TAGS>{~$<name>} := $num + 1;
+                $prefix := $parent ?? $parent<node>.name~'.' !! '';
             }
 
-            my $lex := $<name> ~ ($num ?? '~' ~ $num !! '');
+            if $num eq 1 && $prev<name> eq ~$<name> {
+                ## Rename the first child of the name $<name>
+                $prev<node>.name($prefix ~ $<name> ~ '~0');
+                $prev<node_decl>.name($prefix ~ $<name> ~ '~0');
+            }
+
+            my $lex := $prefix ~ $<name> ~ ($num ?? '~' ~ $num !! '');
             my $node := QAST::Var.new( :name(~$lex), :scope<lexical> );
             my $node_decl := QAST::Var.new( :name($node.name), :scope<lexical>, :decl<var> );
             my $node_type := QAST::Var.new( :name('NodeType'), :scope('lexical') );
 
+            $ast<num>  := $num;
             $ast<name> := ~$<name>;
             $ast<node> := $node;
             $ast<node_decl> := $node_decl;
@@ -86,7 +96,6 @@ class XML::Actions is HLL::Actions {
                 QAST::SVal.new( :value(~$<name>) ),
             ));
 
-            my $parent := $ast<parent>;
             if $parent {
                 my $attr := QAST::Var.new( :scope('attribute'), :name($<name>),
                     $parent<node>, $node_type );
