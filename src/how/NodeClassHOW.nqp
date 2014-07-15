@@ -1,6 +1,12 @@
 knowhow NodeClassHOW {
+    my %BUILTINS;
+
+    INIT {
+        %BUILTINS<name>   := -> $o { nqp::getattr($o, $o, ''); };
+        %BUILTINS<count>  := -> $o, $n { +nqp::getattr($o, $o, $n); };
+    }
+
     has $!name;
-    #has @!attributes;
     has @!children;
 
     method new_type(:$name) {
@@ -22,7 +28,6 @@ knowhow NodeClassHOW {
 
     method BUILD(:$name) {
         $!name := $name;
-        #@!attributes := nqp::list();
         @!children := nqp::list();
     }
 
@@ -37,22 +42,12 @@ knowhow NodeClassHOW {
         #nqp::say('TODO: ' ~ $!name ~ '.' ~ $name);
         #-> $o, $a = nqp::null() { nqp::how($o).name; };
 
-        my $code := -> $o, $a = nqp::null() { $!name ~ '.' ~ $name; };
-        if $name eq 'name' {
-            $code := -> $o { nqp::getattr($o, $o, ''); }
-        } elsif $name eq 'count' {
-            $code := -> $o, $n { +nqp::getattr($o, $o, $n); }
-        } else {
-            nqp::die($!name ~ '.' ~ $name ~ ' is not supported');
-        }
+        my $code := %BUILTINS{$name};
+        nqp::die($!name ~ '.' ~ $name ~ ' is not supported') unless $code;
         $code;
     }
 
     # method add_child($obj, $node) {
     #     nqp::push(@!children, $node);
-    # }
-
-    # method attributes($obj, :$local = 0) {
-    #     @!attributes;
     # }
 }
