@@ -1,11 +1,8 @@
 use common;
 
 class XML::Actions is HLL::Actions {
-    INIT {
-    }
-
-    BEGIN {
-    }
+    my %NAMES;
+    my $PREV;
 
     method go($/) {
         my $block := QAST::Block.new( :node($/) );
@@ -54,25 +51,35 @@ class XML::Actions is HLL::Actions {
         make $a;
     }
 
-    my %NAMES := nqp::hash();
     method tag($/) {
         my $ast;
         if $<start> {
             $ast := $*W.push_node($/);
 
+            my $prev := $PREV;
+            $PREV := $ast;
+
             my $num := +%NAMES{~$<name>};
-            my $lex := $<name> ~ ($num ?? '~' ~ $num !! '');
             %NAMES{~$<name>} := $num + 1;
 
+            if $num eq 1 && $prev<node>.name eq ~$<name> {
+                ## Rename the first child of the name $<name>
+                $prev<node>.name($<name> ~ '~0');
+                $prev<node_decl>.name($<name> ~ '~0');
+            }
+
+            my $lex := $<name> ~ ($num ?? '~' ~ $num !! '');
             my $node := QAST::Var.new( :name(~$lex), :scope<lexical> );
+            my $node_decl := QAST::Var.new( :name($node.name), :scope<lexical>, :decl<var> );
             my $node_type := QAST::Var.new( :name('NodeType'), :scope('lexical') );
-            $ast.push(QAST::Op.new( :op('bind'),
-                QAST::Var.new( :name($node.name), :scope<lexical>, :decl<var> ),
+
+            $ast<name> := ~$<name>;
+            $ast<node> := $node;
+            $ast<node_decl> := $node_decl;
+
+            $ast.push(QAST::Op.new( :op('bind'), $node_decl,
                 QAST::Op.new( :op('create'), $node_type ), # repr_instance_of
             ));
-
-            $ast<node> := $node;
-            $ast<name> := ~$<name>;
 
             $ast.push(QAST::Op.new( :op('bind'),
                 QAST::Var.new( :scope('attribute'), :name(''), $node, $node_type ),
@@ -91,8 +98,7 @@ class XML::Actions is HLL::Actions {
 
             if +$<attribute> {
                 for $<attribute> -> $a {
-                    my $str := nqp::join('', $a<value><quote_EXPR><quote_delimited><quote_atom>);
-                    my $val := QAST::SVal.new( :value($str) );
+                    my $val := $a<value>.made;
                     my $attr := QAST::Var.new( :node($/), :scope('attribute'),
                         :name('.' ~ $a<name>), $node, $node_type );
                     $ast.push( QAST::Op.new(:op('bind'), $attr, $val ) ); # repr_bind_attr_obj
@@ -104,27 +110,16 @@ class XML::Actions is HLL::Actions {
                 $*W.pop_node();
             }
         } elsif $<end> {
-            $ast := QAST::Op.new( :op('null') );
             $*W.pop_node();
+            $ast := QAST::Op.new( :node($/), :op('null') );
         } else {
             $/.CURSOR.panic("Unexpected tag: "~$<name>);
         }
         make $ast;
     }
 
-    method entity($/) {
-        make QAST::Op.new( :op('null') );
-    }
-
-    method content($/) {
-        make QAST::Op.new( :op('null') );
-    }
-
-    method name($/) {
-        make QAST::Op.new( :op('null') );
-    }
-
     method value($/) {
-        make QAST::Op.new( :op('null') );
+        my $str := nqp::join('', $<quote_EXPR><quote_delimited><quote_atom>);
+        make QAST::SVal.new( :node($/), :value($str) );
     }
 }
