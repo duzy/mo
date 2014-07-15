@@ -36,10 +36,6 @@ knowhow NodeClassHOW {
     }
 
     method find_method($obj, $name) {
-        #nqp::die($!name ~ '.' ~ $name ~ ' is not supported')
-        #    unless $name eq 'name';
-
-        #nqp::say('TODO: ' ~ $!name ~ '.' ~ $name);
         #-> $o, $a = nqp::null() { nqp::how($o).name; };
 
         my $code := %BUILTINS{$name};
