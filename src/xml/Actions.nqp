@@ -23,7 +23,7 @@ class XML::Actions is HLL::Actions {
 
         if +$<markup_content> {
             for $<markup_content> -> $mc {
-                $stmts.push($mc.made);
+                $stmts.push($mc.made) if nqp::defined($mc.made);
             }
         }
 
@@ -32,20 +32,12 @@ class XML::Actions is HLL::Actions {
         make $block;
     }
 
-    method declaration($/) {
-        make QAST::Op.new( :op('null') );
-    }
-
-    method declaration_info($/) {
-        make QAST::Op.new( :op('null') );
-    }
-
     method markup_content($/) {
         my $a;
         if $<tag> {
             $a := $<tag>.made;
         } elsif $<cdata> {
-            $a := QAST::Op.new( :op('null') );
+            # ...
         } elsif $<content> {
             $a := $<content>.made;
         } else {
@@ -99,15 +91,13 @@ class XML::Actions is HLL::Actions {
                 QAST::SVal.new( :value(~$<name>) ),
             ));
 
-            if $parent {
-                $ast.push( QAST::Op.new( :op('callmethod'), :name('+'), $parent<node>, $node ) );
-            }
+            $ast.push( QAST::Op.new( :op('callmethod'), :name('+'), $parent<node>, $node ) )
+                if $parent;
 
             if +$<attribute> {
-                for $<attribute> {
-                    $ast.push( QAST::Op.new( :op('callmethod'), :name('.'), $node,
-                        QAST::SVal.new(:value(~$_<name>)), $_<value>.made ) );
-                }
+                $ast.push( QAST::Op.new( :op('callmethod'), :name('.'), $node,
+                    QAST::SVal.new(:value(~$_<name>)), $_<value>.made )
+                ) for $<attribute>;
             }
 
             if ~$<delimiter> eq '/>' {
@@ -115,7 +105,6 @@ class XML::Actions is HLL::Actions {
             }
         } elsif $<end> {
             $*W.pop_node();
-            $ast := QAST::Op.new( :node($/), :op('null') );
         } else {
             $/.CURSOR.panic("Unexpected tag: "~$<name>);
         }
@@ -127,10 +116,7 @@ class XML::Actions is HLL::Actions {
         my $cur := $*W.current;
         if nqp::defined($cur) {
             $ast := QAST::Op.new( :op('callmethod'), :name('~'), $cur<node>,
-                QAST::SVal.new( :value(~$/) ),
-            );
-        } else {
-            $ast := QAST::Op.new( :node($/), :op('null') );
+                QAST::SVal.new( :value(~$/) ) );
         }
         make $ast;
     }
