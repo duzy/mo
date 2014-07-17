@@ -21,6 +21,18 @@ knowhow NodeClassHOW {
             }
             nqp::push($named, $node);
             nqp::push($all, $node);
+                # my $attr := QAST::Var.new( :scope('attribute'), :name($<name>),
+                #     $parent<node>, $node_type );
+                # $ast.push(QAST::Op.new( :op('ifnull'), $attr,
+                #     QAST::Op.new( :op('bind'), $attr, QAST::Op.new( :op('list') ) ),
+                # ));
+                # $ast.push( QAST::Op.new( :op('callmethod'), :name('push'), $attr, $node ) );
+
+                # my $all := $parent<*>;
+                # $ast.push(QAST::Op.new( :op('ifnull'), $all,
+                #     QAST::Op.new( :op('bind'), $all, QAST::Op.new( :op('list') ) ),
+                # ));
+                # $ast.push( QAST::Op.new( :op('callmethod'), :name('push'), $all, $node ) );
         };
         %BUILTINS<~> := -> $o, $text {
             my $all := nqp::getattr($o, $o, '*');
@@ -29,6 +41,15 @@ knowhow NodeClassHOW {
                 nqp::bindattr($o, $o, '*', $all);
             }
             nqp::push($all, $text);
+            # my $all := $cur<*>;
+            # $ast := QAST::Stmts.new( :node($/),
+            #     QAST::Op.new( :op('ifnull'), $all,
+            #         QAST::Op.new( :op('bind'), $all, QAST::Op.new( :op('list') ) ),
+            #     ),
+            #     QAST::Op.new( :op('callmethod'), :name('push'), $all,
+            #         QAST::SVal.new( :value(~$/) ),
+            #     ),
+            # );
         };
         %BUILTINS<.> := -> $o, $n, $v {
             my $all := nqp::getattr($o, $o, '.*');
@@ -37,6 +58,18 @@ knowhow NodeClassHOW {
             }
             nqp::bindattr($o, $o, '.' ~ $n, $v);
             $all.push(nqp::list($n, $v));
+                # my $all := $ast<.*>;
+                # $ast.push(QAST::Op.new( :op('ifnull'), $all,
+                #     QAST::Op.new( :op('bind'), $all, QAST::Op.new( :op('list') ) ),
+                # ));
+                # for $<attribute> -> $a {
+                #     my $val := $a<value>.made;
+                #     my $attr := QAST::Var.new( :node($/), :scope('attribute'),
+                #         :name('.' ~ $a<name>), $node, $node_type );
+                #     $ast.push( QAST::Op.new(:op('bind'), $attr, $val ) ); # repr_bind_attr_obj
+                #     $ast.push( QAST::Op.new( :op('callmethod'), :name('push'), $all,
+                #         QAST::Op.new(:op('list'), QAST::SVal.new(:value($a<name>)), $attr) ) );
+                # }
         };
         %BUILTINS<..> := -> $o, $nv {
             my $all := nqp::getattr($o, $o, '.*');
