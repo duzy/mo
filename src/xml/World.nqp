@@ -15,6 +15,8 @@ class XML::World is HLL::World {
         }
         @!NODES[+@!NODES] := $stmts;
         $stmts<TAGS> := nqp::hash();
+        $stmts<*> := QAST::Var.new( :scope('attribute'), :name('*') );
+        $stmts<.*> := QAST::Var.new( :scope('attribute'), :name('.*') );
         $stmts;
     }
 
@@ -22,8 +24,9 @@ class XML::World is HLL::World {
         @!NODES.pop();
     }
     
-    method current_node() {
-        @!NODES[+@!NODES - 1];
+    method current() {
+        my $n := +@!NODES;
+        (0 < $n) ?? @!NODES[$n - 1] !! nqp::null();
     }
 
     method root() {

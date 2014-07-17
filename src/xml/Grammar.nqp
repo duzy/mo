@@ -59,7 +59,7 @@ grammar XML::Grammar is HLL::Grammar {
                     last;
                 }
             }
-            if @names && !$known {
+            if +@names && !$known {
                 self.panic('Unknown name: '~$/);
             }
         }

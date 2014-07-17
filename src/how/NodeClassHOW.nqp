@@ -3,7 +3,10 @@ knowhow NodeClassHOW {
 
     INIT {
         %BUILTINS<name>   := -> $o { nqp::getattr($o, $o, ''); };
-        %BUILTINS<count>  := -> $o, $n { +nqp::getattr($o, $o, $n); };
+        %BUILTINS<text>   := -> $o { nqp::join('', nqp::getattr($o, $o, '*')); };
+        %BUILTINS<count>  := -> $o, $n = nqp::null() {
+            +nqp::getattr($o, $o, nqp::defined($n) ?? $n !! '*');
+        };
     }
 
     has $!name;

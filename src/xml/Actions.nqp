@@ -40,11 +40,11 @@ class XML::Actions is HLL::Actions {
     method markup_content($/) {
         my $a;
         if $<tag> {
-            $a := $<tag>.ast;
+            $a := $<tag>.made;
         } elsif $<cdata> {
             $a := QAST::Op.new( :op('null') );
         } elsif $<content> {
-            $a := QAST::Op.new( :op('null') );
+            $a := $<content>.made;
         } else {
             $/.CURSOR.panic("Unexpected tag: "~$/);
         }
@@ -96,6 +96,11 @@ class XML::Actions is HLL::Actions {
                 QAST::SVal.new( :value(~$<name>) ),
             ));
 
+            $ast<*>.push( $node );
+            $ast<*>.push( $node_type );
+            $ast<.*>.push( $node );
+            $ast<.*>.push( $node_type );
+
             if $parent {
                 my $attr := QAST::Var.new( :scope('attribute'), :name($<name>),
                     $parent<node>, $node_type );
@@ -103,15 +108,26 @@ class XML::Actions is HLL::Actions {
                     QAST::Op.new( :op('bind'), $attr, QAST::Op.new( :op('list') ) ),
                 ));
                 $ast.push( QAST::Op.new( :op('callmethod'), :name('push'), $attr, $node ) );
+
+                my $all := $parent<*>;
+                $ast.push(QAST::Op.new( :op('ifnull'), $all,
+                    QAST::Op.new( :op('bind'), $all, QAST::Op.new( :op('list') ) ),
+                ));
+                $ast.push( QAST::Op.new( :op('callmethod'), :name('push'), $all, $node ) );
             }
 
             if +$<attribute> {
+                my $all := $ast<.*>;
+                $ast.push(QAST::Op.new( :op('ifnull'), $all,
+                    QAST::Op.new( :op('bind'), $all, QAST::Op.new( :op('list') ) ),
+                ));
                 for $<attribute> -> $a {
                     my $val := $a<value>.made;
                     my $attr := QAST::Var.new( :node($/), :scope('attribute'),
                         :name('.' ~ $a<name>), $node, $node_type );
                     $ast.push( QAST::Op.new(:op('bind'), $attr, $val ) ); # repr_bind_attr_obj
-                    #$ast.push( QAST::Op.new(:op('say'), $attr ) ); # repr_get_attr_obj
+                    $ast.push( QAST::Op.new( :op('callmethod'), :name('push'), $all,
+                        QAST::Op.new(:op('list'), QAST::SVal.new(:value($a<name>)), $attr) ) );
                 }
             }
 
@@ -127,8 +143,33 @@ class XML::Actions is HLL::Actions {
         make $ast;
     }
 
+    method content($/) {
+        my $ast;
+        my $cur := $*W.current;
+        if nqp::defined($cur) {
+            my $all := $cur<*>;
+            $ast := QAST::Stmts.new( :node($/),
+                QAST::Op.new( :op('ifnull'), $all,
+                    QAST::Op.new( :op('bind'), $all, QAST::Op.new( :op('list') ) ),
+                ),
+                QAST::Op.new( :op('callmethod'), :name('push'), $all,
+                    QAST::SVal.new( :value(~$/) ),
+                ),
+            );
+        } else {
+            $ast := QAST::Op.new( :node($/), :op('null') );
+        }
+        make $ast;
+    }
+
     method value($/) {
         my $str := nqp::join('', $<quote_EXPR><quote_delimited><quote_atom>);
         make QAST::SVal.new( :node($/), :value($str) );
+    }
+
+    method entity($/) {
+    }
+
+    method cdata($/) {
     }
 }
