@@ -7,6 +7,52 @@ knowhow NodeClassHOW {
         %BUILTINS<count>  := -> $o, $n = nqp::null() {
             +nqp::getattr($o, $o, nqp::defined($n) ?? $n !! '*');
         };
+        %BUILTINS<+> := -> $o, $node {
+            my $name := $node.name;
+            my $named := nqp::getattr($o, $o, $name);
+            my $all := nqp::getattr($o, $o, '*');
+            if nqp::isnull($named) {
+                $named := nqp::list();
+                nqp::bindattr($o, $o, $name, $named);
+            }
+            if nqp::isnull($all) {
+                $all := nqp::list();
+                nqp::bindattr($o, $o, '*', $all);
+            }
+            nqp::push($named, $node);
+            nqp::push($all, $node);
+        };
+        %BUILTINS<~> := -> $o, $text {
+            my $all := nqp::getattr($o, $o, '*');
+            if nqp::isnull($all) {
+                $all := nqp::list();
+                nqp::bindattr($o, $o, '*', $all);
+            }
+            nqp::push($all, $text);
+        };
+        %BUILTINS<.> := -> $o, $n, $v {
+            my $all := nqp::getattr($o, $o, '.*');
+            if nqp::isnull($all) {
+                nqp::bindattr($o, $o, '.*', ($all := nqp::list()));
+            }
+            nqp::bindattr($o, $o, '.' ~ $n, $v);
+            $all.push(nqp::list($n, $v));
+        };
+        %BUILTINS<..> := -> $o, $nv {
+            my $all := nqp::getattr($o, $o, '.*');
+            if nqp::isnull($all) {
+                nqp::bindattr($o, $o, '.*', ($all := nqp::list()));
+            }
+            my $i := 0;
+            my $elems := nqp::elems($nv);
+            while $i < $elems {
+                my $n := '.' ~ $nv[$i];
+                my $v :=     ~ $nv[$i+1];
+                nqp::bindattr($o, $o, $n, $v);
+                $all.push(nqp::list($n, $v));
+                $i := $i + 2;
+            }
+        };
     }
 
     has $!name;
