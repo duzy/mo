@@ -1,4 +1,6 @@
 class MO::Actions is HLL::Actions {
+    my $MODEL := QAST::Var.new( :scope<lexical>, :name<MODEL> );
+
     method term:sym<value>($/) { make $<value>.made; $/.prune; }
     method term:sym<name>($/) {
         if +$<args> {
@@ -17,18 +19,31 @@ class MO::Actions is HLL::Actions {
         $/.prune;
     }
 
-    method term:sym«.»($/)  {
-        nqp::say('term:sym«.»: '~$/);
-        #my $var := QAST::Var.new( :node($<name>), :name() );
-        #make QAST::Op.new(:op('bind'));
-        make QAST::SVal.new(:value('TODO: '~$<name>));
-        $/.prune;        
+    method term:sym«.»($/) {
+        my $ast := QAST::Op.new( :op<callmethod>, :name<dot>, $MODEL,
+            QAST::SVal.new( :value(~$<name>) ),
+        );
+        $ast.push( QAST::Var.new( :name<node>, :scope<lexical> ) )
+            if $*PARSING_SELECTOR;
+        make $ast;
+        $/.prune;
     }
 
     method term:sym«->»($/) {
-        nqp::say('term:sym«->»: '~$/);
-        make QAST::Op.new(:op('null'));
-        $/.prune;        
+        my $ast := QAST::Op.new( :op<callmethod>, :name<arrow>, $MODEL,
+            QAST::SVal.new( :value(~$<name>) ),
+        );
+        $ast.push( QAST::Var.new( :name<node>, :scope<lexical> ) )
+            if $*PARSING_SELECTOR;
+        my $sel := $<selector>;
+        while +$sel {
+            my $nxt := $sel[0].made;
+            $nxt.push($ast);
+            $ast := $nxt;
+            $sel := $sel[0]<selector>;
+        }
+        make $ast;
+        $/.prune;
     }
 
     method infix:sym<,>($/) {
@@ -36,10 +51,37 @@ class MO::Actions is HLL::Actions {
         $/.prune;        
     }
 
-    method postcircumfix:sym<( )>($/) {
-        nqp::say("postcircumfix:sym<( )>: "~$/);
-        make QAST::Op.new(:op('null'));
-        $/.prune;
+    method circumfix:sym<( )>($/) {
+        make $<EXPR>.made;
+        $/.prune;        
+    }
+
+    # method postcircumfix:sym<( )>($/) {
+    #     nqp::say("postcircumfix:sym<( )>: "~$/);
+    #     make QAST::Op.new(:op('null'));
+    #     $/.prune;
+    # }
+
+    method postcircumfix:sym<[ ]>($/) {
+        make QAST::Var.new( :scope('positional'), $<EXPR>.made );
+    }
+
+    method postcircumfix:sym<{ }>($/) {
+        make QAST::Var.new( :scope('associative'), $<EXPR>.made );
+    }
+
+    method postcircumfix:sym<ang>($/) {
+        make QAST::Var.new( :scope('associative'), $<quote_EXPR>.made );
+    }
+
+    method postfix:sym«.»($/) {
+        make QAST::Op.new( :op<callmethod>, :name(~$<name>) );
+    }
+    method postfix:sym«->»($/) { # »child
+        my $methodcall := QAST::Op.new( :op<callmethod>, :name<arrow>, $MODEL,
+            QAST::SVal.new( :value(~$<name>) ),
+        );
+        make $methodcall;
     }
 
     method quote:sym<'>($/) { make $<quote_EXPR>.made; } #'
@@ -94,10 +136,37 @@ class MO::Actions is HLL::Actions {
         make $<arglist>.made;
     }
 
+    method selector:sym«.»($/) {
+        make QAST::Op.new( :node($/), :op<callmethod>, :name<dot>, $MODEL,
+            QAST::SVal.new( :value(~$<name>) ),
+        );
+    }
+
+    method selector:sym«->»($/) {
+        make QAST::Op.new( :node($/), :op<callmethod>, :name<arrow>, $MODEL,
+            QAST::SVal.new( :value(~$<name>) ),
+        );
+    }
+
+    method selector:sym<[ ]>($/) {
+        make QAST::Op.new( :node($/), :op<callmethod>, :name<at>, $MODEL, $<EXPR>.made );
+    }
+
+    method selector:sym<{ }>($/) {
+        my $block := QAST::Block.new(
+            QAST::Var.new( :name<node>, :scope<lexical>, :decl<param> ),
+            $<statements>.made
+        );
+        make QAST::Op.new( :node($/), :op<callmethod>, :name<query>, $MODEL, $block );
+    }
+
     method xml($/) {
         my $data := $<data>.made;
         make QAST::Stmts.new(
-            QAST::Op.new( :op('call'), QAST::BVal.new( :value($data) ) ),
+            QAST::Op.new( :op('callmethod'), :name('init'),
+                QAST::WVal.new( :value(MO::Model) ),
+                QAST::Op.new( :op('call'), QAST::BVal.new( :value($data) ) ),
+            ),
             $data
         );
     }
@@ -107,8 +176,13 @@ class MO::Actions is HLL::Actions {
     }
 
     method prog($/) {
-        #make QAST::Op.new(:op('say'), QAST::SVal.new(:value('prog')));
         make QAST::Block.new(
+            QAST::Op.new( :op<bind>,
+                QAST::Var.new( :scope<lexical>, :decl<var>, :name($MODEL.name) ),
+                QAST::Op.new( :op<callmethod>, :name<get>,
+                    QAST::WVal.new( :value(MO::Model) ),
+                ),
+            ),
             $<statements>.made
         );
     }

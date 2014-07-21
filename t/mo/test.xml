@@ -1,2 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<test name="test-name-value" value="test-value" />
+<test name="test-name-value" value="test-value" okay="ok - test.okay" else="ok - test.else" >
+  <child name="test-child-1" okay="ok - test->child[0].okay" />
+  <child name="test-child-2" okay="ok - test->child[1].okay" />
+  <end okay="ok - test->end.okay" />
+</test>

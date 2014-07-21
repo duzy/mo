@@ -31,6 +31,7 @@ MO_SOURCES := \
   src/mo/Grammar.nqp \
   src/mo/Actions.nqp \
   src/mo/Compiler.nqp \
+  src/mo/Model.nqp \
   src/mo/World.nqp \
 
 $(MO_PBC): $(MO_PIR)

@@ -8,4 +8,4 @@ until 1
   say "fail"
 end
 
-say "ok"
+say "ok\t\t- no dead loop"

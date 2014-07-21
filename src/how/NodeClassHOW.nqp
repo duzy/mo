@@ -2,11 +2,16 @@ knowhow NodeClassHOW {
     my %BUILTINS;
 
     INIT {
+        #%BUILTINS<get_string>   := -> $o { nqp::getattr($o, $o, ''); };
         %BUILTINS<name>   := -> $o { nqp::getattr($o, $o, ''); };
         %BUILTINS<text>   := -> $o { nqp::join('', nqp::getattr($o, $o, '*')); };
         %BUILTINS<count>  := -> $o, $n = nqp::null() {
             +nqp::getattr($o, $o, nqp::defined($n) ?? $n !! '*');
         };
+        # %BUILTINS<dot>   := -> $o, $name {
+        #     nqp::say('dot: '~$name);
+        #     ~$name;
+        # };
         %BUILTINS<+> := -> $o, $node {
             my $name := $node.name;
             my $named := nqp::getattr($o, $o, $name);
@@ -89,7 +94,6 @@ knowhow NodeClassHOW {
     }
 
     has $!name;
-    has @!children;
 
     method new_type(:$name) {
         # my $repr := 'P6opaque';
@@ -110,22 +114,23 @@ knowhow NodeClassHOW {
 
     method BUILD(:$name) {
         $!name := $name;
-        @!children := nqp::list();
     }
 
     method name() {
         $!name;
     }
 
+    # method type_check($obj, $o) {
+    #     #nqp::say('type_check: '~$obj.WHAT);
+    #     #nqp::say('type_check: '~$o.WHAT);
+    #     0;
+    # }
+
     method find_method($obj, $name) {
         #-> $o, $a = nqp::null() { nqp::how($o).name; };
-
-        my $code := %BUILTINS{$name};
-        nqp::die($!name ~ '.' ~ $name ~ ' is not supported') unless $code;
-        $code;
+        # my $code := %BUILTINS{$name};
+        # nqp::die($!name ~ '.' ~ $name ~ ' is not supported') unless $code;
+        # $code;
+        %BUILTINS{$name};
     }
-
-    # method add_child($obj, $node) {
-    #     nqp::push(@!children, $node);
-    # }
 }

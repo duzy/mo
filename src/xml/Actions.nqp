@@ -4,9 +4,6 @@ class XML::Actions is HLL::Actions {
     my %NAMES;
     my $PREV;
 
-    INIT {
-    }
-
     method go($/) {
         my $block := QAST::Block.new( :node($/) );
         my $stmts := $block.push( QAST::Stmts.new() );
