@@ -2,6 +2,7 @@ class MO::Actions is HLL::Actions {
     my $MODEL := QAST::Var.new( :scope<lexical>, :name<MODEL> );
 
     method term:sym<value>($/) { make $<value>.made; $/.prune; }
+    method term:sym<variable>($/) { make $<variable>.made; $/.prune; }
     method term:sym<name>($/) {
         if +$<args> {
             my $name := ~$<name>;
@@ -24,7 +25,7 @@ class MO::Actions is HLL::Actions {
             QAST::SVal.new( :value(~$<name>) ),
         );
         $ast.push( QAST::Var.new( :name<node>, :scope<lexical> ) )
-            if $*PARSING_SELECTOR;
+            if $*PARSING_SELECTOR || $*PARSING_WITHDO;
         make $ast;
         $/.prune;
     }
@@ -34,7 +35,7 @@ class MO::Actions is HLL::Actions {
             QAST::SVal.new( :value(~$<name>) ),
         );
         $ast.push( QAST::Var.new( :name<node>, :scope<lexical> ) )
-            if $*PARSING_SELECTOR;
+            if $*PARSING_SELECTOR || $*PARSING_WITHDO;
         my $sel := $<selector>;
         while +$sel {
             my $nxt := $sel[0].made;
@@ -101,13 +102,16 @@ class MO::Actions is HLL::Actions {
         $/.prune;
     }
 
-    # method identifier($/) {
-    #     make QAST::Op.new(:op('null'));
-    # }
-
-    # method name($/) {
-    #     make QAST::Op.new(:op('null'));
-    # }
+    method variable($/) {
+        my $scope := $*W.current_scope();
+        my $name := $<sigil> ~ $<name>;
+        my $var := QAST::Var.new( :name($name), :scope<lexical> );
+        if !$scope.symbol($name) {
+            $var.decl('var');
+            $scope.symbol($name, :scope<lexical>);
+        }
+        make $var;
+    }
 
     method arglist($/) {
         my $ast := QAST::Op.new( :op('call'), :node($/) );
@@ -153,10 +157,10 @@ class MO::Actions is HLL::Actions {
     }
 
     method selector:sym<{ }>($/) {
-        my $block := QAST::Block.new(
-            QAST::Var.new( :name<node>, :scope<lexical>, :decl<param> ),
-            $<statements>.made
-        );
+        my $block := $*W.pop_scope();
+        $block.push( QAST::Var.new( :name<node>, :scope<lexical>, :decl<param> ) );
+        $block.push( $<statements>.made );
+        $block.symbol('node', :scope<lexical>);
         make QAST::Op.new( :node($/), :op<callmethod>, :name<query>, $MODEL, $block );
     }
 
@@ -176,15 +180,21 @@ class MO::Actions is HLL::Actions {
     }
 
     method prog($/) {
-        make QAST::Block.new(
-            QAST::Op.new( :op<bind>,
-                QAST::Var.new( :scope<lexical>, :decl<var>, :name($MODEL.name) ),
-                QAST::Op.new( :op<callmethod>, :name<get>,
-                    QAST::WVal.new( :value(MO::Model) ),
-                ),
+        my $block := $*W.pop_scope();
+        $block.push( QAST::Op.new( :op<bind>,
+            QAST::Var.new( :scope<lexical>, :decl<var>, :name($MODEL.name) ),
+            QAST::Op.new( :op<callmethod>, :name<get>,
+                QAST::WVal.new( :value(MO::Model) ),
             ),
-            $<statements>.made
+        ) );
+        $block.push( $<statements>.made );
+
+        my $compunit := QAST::CompUnit.new(
+            :hll('mo'),
+
+            $block
         );
+        make $compunit;
     }
 
     method statements($/) {
@@ -213,6 +223,14 @@ class MO::Actions is HLL::Actions {
 
     method control:sym<loop>($/) {
         make QAST::Op.new( :node($/), :op(~$<op>), $<EXPR>.made, $<statements>.made );
+    }
+
+    method control:sym<with>($/) {
+        my $block := $*W.pop_scope();
+        $block.push( QAST::Var.new( :name<node>, :scope<lexical>, :decl<param> ) );
+        $block.push( $<statements>.made );
+        $block.symbol('node', :scope<lexical>);
+        make QAST::Op.new( :node($/), :op<call>, $block, $<EXPR>.made );
     }
 
     method elsif($/) {

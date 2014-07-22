@@ -57,7 +57,8 @@ grammar MO::Grammar is HLL::Grammar {
             );
     }
 
-    token term:sym<value> { <value> }
+    token term:sym<value>       { <value> }
+    token term:sym<variable>    { <variable> }
     token term:sym<name>  { # call
         <name> <?{ ~$<name> ne 'return' }> <args>**0..1
     }
@@ -136,7 +137,6 @@ grammar MO::Grammar is HLL::Grammar {
         | <number>
     }
 
-
     token number {
         $<sign>=[<[+\-]>?]
         [ <dec_number> | <integer> ]
@@ -176,6 +176,7 @@ grammar MO::Grammar is HLL::Grammar {
             MO::World.new(:handle($source_id), :description($file));
 
         my $*PARSING_SELECTOR;
+        my $*PARSING_WITHDO;
 
         nqp::say('parsing: ' ~ $file);
         
@@ -195,16 +196,34 @@ grammar MO::Grammar is HLL::Grammar {
     token selector:sym«->» { <sym> <name=.ident> [<.ws> <selector>]**0..1 }
     token selector:sym<[ ]> { '[' ~ ']' <EXPR> [<.ws> <selector>]**0..1 }
     token selector:sym<{ }> {
-        '{' ~ '}' [ { $*PARSING_SELECTOR := 1; } <statements> ]
+        '{' ~ '}'
+        [
+            {
+                $*PARSING_SELECTOR := 1;
+                $*W.push_scope($/);
+            }
+            <statements>
+            {
+                $*PARSING_SELECTOR := nqp::null();
+            }
+        ]
         [<.ws> <selector>]**0..1
-        { $*PARSING_SELECTOR := nqp::null(); }
     }
 
     token xml  { <data=.LANG('XML','TOP')> }
     token json { <.panic: 'JSON parser not implemented yet'> }
     rule  prog {
-        ^ ~ $ <statements> || <.panic('Syntax Error')>
+        :my $*UNIT := $*W.push_scope($/);
+        ^ ~ $ <statements> || <.panic: 'Confused'>
     }
+
+    token variable {
+        #<sigil> <twigil>? <name=.ident>
+        <sigil> <name=.ident>
+    }
+
+    token sigil { <[$@%&]> }
+    token twigil { <[*!?]> }
 
     rule statements {
         <.ws>
@@ -228,6 +247,21 @@ grammar MO::Grammar is HLL::Grammar {
     token control:sym<loop> {
         $<op>=['while'|'until'] ~ 'end'
         [ \s+ <EXPR> <statements> ]
+    }
+
+    token control:sym<with> {
+        <sym> <?before \s> <.ws> <?before '->'> <EXPR>
+        'do' <.ws> '{' ~ '}'
+        [
+            {
+                $*PARSING_WITHDO := 1;
+                $*W.push_scope($/);
+            }
+            <statements>
+            {
+                $*PARSING_WITHDO := nqp::null();
+            }
+        ]
     }
 
     token elsif { 'elsif' ~ [<else=.elsif>|<else>]? [ <.ws> <EXPR> <statements> ] }

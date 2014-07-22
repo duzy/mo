@@ -24,9 +24,9 @@ end
 }
 
 if ->child { 0 } == 0
-  say "ok\t\t - ->child { 0 } == 0"
+  say "ok\t\t- ->child { 0 } == 0"
 else
-  say "fail\t\t - ->child { 0 } == 0"
+  say "fail\t\t- ->child { 0 } == 0"
 end
 
 if ->child { 1 } == 2

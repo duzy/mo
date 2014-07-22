@@ -1,36 +1,18 @@
 class MO::World is HLL::World {
-    # This is actually as QAST::Block objects.
-    has @!DATA_SCOPES;
-    has $!round;
+    has @!scopes; # QAST::Block
 
-    method BUILD(*%opts) {
-        $!round := 0;
-        @!DATA_SCOPES := nqp::list();
-        #nqp::say('MO::World.BUILD: '~%opts);
-    }
-
-    method push_datascope($/) {
+    method push_scope($/) {
         my $scope := QAST::Block.new( QAST::Stmts.new(), :node($/) );
-        if +@!DATA_SCOPES {
-            $scope<outer> := @!DATA_SCOPES[+@!DATA_SCOPES - 1];
-        }
-        @!DATA_SCOPES[+@!DATA_SCOPES] := $scope;
+        $scope<outer> := @!scopes[+@!scopes - 1] if +@!scopes;
+        @!scopes[+@!scopes] := $scope;
         $scope;
     }
 
-    method pop_datascope($/) {
-        @!DATA_SCOPES.pop();
-    }
-    
-    method current_datascope() {
-        @!DATA_SCOPES[+@!DATA_SCOPES - 1];
+    method pop_scope() {
+        @!scopes.pop();
     }
 
-    method round() {
-        $!round;
-    }
-
-    method set_round($n) {
-        $!round := $n;
+    method current_scope() {
+        @!scopes[+@!scopes - 1];
     }
 }

@@ -24,3 +24,5 @@ run $SRCDIR/01-control-cond-expr
 run $SRCDIR/01-control-loop
 run $SRCDIR/10-dot-name
 run $SRCDIR/10-arrow-name
+run $SRCDIR/11-with
+run $SRCDIR/20-var
