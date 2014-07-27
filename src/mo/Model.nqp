@@ -1,3 +1,4 @@
+# my native NodeList is repr('QRPA') { }
 class MO::Model {
     my $instance;
     method get() { $instance; }
@@ -56,6 +57,7 @@ class MO::Model {
     }
 
     method query($selector, $nodes) { # ->child{ ... }
+        #my $list := nqp::create(NodeList);
         my $list := nqp::list();
         $list.push($_) if $selector($_) for $nodes;
         $list;

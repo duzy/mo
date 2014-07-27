@@ -125,8 +125,8 @@ grammar MO::Grammar is HLL::Grammar {
     token postcircumfix:sym<{ }> { '{' ~ '}' <EXPR> <O('%methodop')> }
     token postcircumfix:sym<ang> { <?[<]> <quote_EXPR: ':q'> <O('%methodop')> }
 
-    token postfix:sym«.» { <sym> <name=.ident> <O('%methodop')> }
-    token postfix:sym«->» { <sym> <name=.ident> <O('%methodop')> }
+    token postfix:sym«.» { <sym> <name=.ident> <args>? <O('%methodop')> }
+    token postfix:sym«?» { <sym> <name=.ident> <O('%methodop')> }
 
     proto token quote { <...> }
     token quote:sym<'> { <?[']> <quote_EXPR: ':q'>  }
@@ -159,8 +159,9 @@ grammar MO::Grammar is HLL::Grammar {
 
     token keyword {
         [
-        | 'if' | 'else' | 'elsif' | 'end'
-        | 'for' | 'def'
+        | 'if' | 'else' | 'elsif' | 'for'
+        | 'def' | 'end'
+        #| 'le' | 'ge' | 'lt' | 'gt' | 'eq' | 'ne' | 'cmp' | 'not' | 'and' | 'or'
         ] <!ww>
     }
 
@@ -178,7 +179,7 @@ grammar MO::Grammar is HLL::Grammar {
         my $*PARSING_SELECTOR;
         my $*PARSING_WITHDO;
 
-        nqp::say('parsing: ' ~ $file);
+        # nqp::say('parsing: ' ~ $file);
         
         if $file ~~ / .*\.xml$ / {
             self.xml

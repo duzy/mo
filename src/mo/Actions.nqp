@@ -76,13 +76,19 @@ class MO::Actions is HLL::Actions {
     }
 
     method postfix:sym«.»($/) {
-        make QAST::Op.new( :op<callmethod>, :name(~$<name>) );
-    }
-    method postfix:sym«->»($/) { # »child
-        my $methodcall := QAST::Op.new( :op<callmethod>, :name<arrow>, $MODEL,
-            QAST::SVal.new( :value(~$<name>) ),
-        );
+        my $methodcall;
+        if $<args> {
+            $methodcall := $<args>.made;
+            $methodcall.op('callmethod');
+            $methodcall.name(~$<name>);
+        } else {
+            $methodcall := QAST::Op.new( :op<callmethod>, :name(~$<name>) );
+        }
         make $methodcall;
+    }
+
+    method postfix:sym«?»($/) {
+        make QAST::Op.new( :op<can>, QAST::SVal.new( :value(~$<name>) ) );
     }
 
     method quote:sym<'>($/) { make $<quote_EXPR>.made; } #'

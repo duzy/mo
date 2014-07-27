@@ -26,3 +26,4 @@ run $SRCDIR/10-dot-name
 run $SRCDIR/10-arrow-name
 run $SRCDIR/11-with
 run $SRCDIR/20-var
+run $SRCDIR/21-can
