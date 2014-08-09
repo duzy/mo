@@ -21,29 +21,34 @@ class MO::Actions is HLL::Actions {
     }
 
     method term:sym«.»($/) {
-        my $ast := QAST::Op.new( :op<callmethod>, :name<dot>, $MODEL,
-            QAST::SVal.new( :value(~$<name>) ),
-        );
-        $ast.push( QAST::Var.new( :name<node>, :scope<lexical> ) )
-            if $*PARSING_SELECTOR || $*PARSING_WITHDO;
+        my $scope := $*W.current_scope;
+        my $ast := $<selector>.made;
+        $ast.push( QAST::Var.new( :name<$_>, :scope<lexical> ) ) if $scope<with>;
         make $ast;
         $/.prune;
     }
 
     method term:sym«->»($/) {
-        my $ast := QAST::Op.new( :op<callmethod>, :name<arrow>, $MODEL,
-            QAST::SVal.new( :value(~$<name>) ),
-        );
-        $ast.push( QAST::Var.new( :name<node>, :scope<lexical> ) )
-            if $*PARSING_SELECTOR || $*PARSING_WITHDO;
+        my $scope := $*W.current_scope;
         my $sel := $<selector>;
-        while +$sel {
-            my $nxt := $sel[0].made;
+        my $ast := $sel.made;
+        $ast.push( QAST::Var.new( :name<$_>, :scope<lexical> ) ) if $scope<with>;
+
+        ## Chain all selectors
+        $sel := $sel<selector>;
+        while $sel {
+            my $nxt := $sel.made;
             $nxt.push($ast);
             $ast := $nxt;
-            $sel := $sel[0]<selector>;
+            $sel := $sel<selector>;
         }
+
         make $ast;
+        $/.prune;
+    }
+
+    method term:sym<yield>($/) {
+        make $<statement>.made;
         $/.prune;
     }
 
@@ -112,9 +117,10 @@ class MO::Actions is HLL::Actions {
         my $scope := $*W.current_scope();
         my $name := $<sigil> ~ $<name>;
         my $var := QAST::Var.new( :name($name), :scope<lexical> );
-        if !$scope.symbol($name) {
+        my $sym := $scope.symbol($name);
+        unless $sym {
+            $sym := $scope.symbol($name, :scope<lexical>, :decl<var>);
             $var.decl('var');
-            $scope.symbol($name, :scope<lexical>);
         }
         make $var;
     }
@@ -146,6 +152,10 @@ class MO::Actions is HLL::Actions {
         make $<arglist>.made;
     }
 
+    method newscope($/) {
+        make $<statements>.made;
+    }
+
     method selector:sym«.»($/) {
         make QAST::Op.new( :node($/), :op<callmethod>, :name<dot>, $MODEL,
             QAST::SVal.new( :value(~$<name>) ),
@@ -164,9 +174,7 @@ class MO::Actions is HLL::Actions {
 
     method selector:sym<{ }>($/) {
         my $block := $*W.pop_scope();
-        $block.push( QAST::Var.new( :name<node>, :scope<lexical>, :decl<param> ) );
-        $block.push( $<statements>.made );
-        $block.symbol('node', :scope<lexical>);
+        $block.push( $<newscope>.made );
         make QAST::Op.new( :node($/), :op<callmethod>, :name<query>, $MODEL, $block );
     }
 
@@ -187,7 +195,7 @@ class MO::Actions is HLL::Actions {
 
     method prog($/) {
         my $block := $*W.pop_scope();
-        $block.push( QAST::Op.new( :op<bind>,
+        $block.unshift( QAST::Op.new( :op<bind>,
             QAST::Var.new( :scope<lexical>, :decl<var>, :name($MODEL.name) ),
             QAST::Op.new( :op<callmethod>, :name<get>,
                 QAST::WVal.new( :value(MO::Model) ),
@@ -211,14 +219,31 @@ class MO::Actions is HLL::Actions {
         make $stmts;
     }
 
-    method statement($/) {
-        if $<control> {
-            make $<control>.made;
-        } elsif $<EXPR> {
-            make $<EXPR>.made;
+    method statement:sym<control>($/) {
+        make $<control>.made;
+    }
+
+    method statement:sym<definition>($/) {
+        make $<definition>.made;
+    }
+
+    method statement:sym<EXPR>($/) {
+        make $<EXPR>.made;
+    }
+
+    method statement:sym<yield_t>($/) {
+        my $scope := $*W.current_scope;
+        my $ast := QAST::Op.new( :node($/), :op<call>, :name(~$<name>) );
+        if $scope.symbol('$_') {
+            $ast.push( QAST::Var.new( :name<$_>, :scope<lexical> ) );
         } else {
-            make QAST::Op.new(:op('null'));
+            $ast.push( QAST::Op.new( :op<callmethod>, :name<root>, $MODEL ) );
         }
+        make $ast;
+    }
+
+    method statement:sym<yield_x>($/) {
+        make $<EXPR>.made;
     }
 
     method control:sym<cond>($/) {
@@ -231,12 +256,25 @@ class MO::Actions is HLL::Actions {
         make QAST::Op.new( :node($/), :op(~$<op>), $<EXPR>.made, $<statements>.made );
     }
 
-    method control:sym<with>($/) {
-        my $block := $*W.pop_scope();
-        $block.push( QAST::Var.new( :name<node>, :scope<lexical>, :decl<param> ) );
-        $block.push( $<statements>.made );
-        $block.symbol('node', :scope<lexical>);
-        make QAST::Op.new( :node($/), :op<call>, $block, $<EXPR>.made );
+    method control:sym<for>($/) {
+        my $scope := $*W.pop_scope();
+        $scope.push( $<newscope>.made );
+        make QAST::Op.new( :node($/), :op<for>, $<EXPR>.made, $scope );
+    }
+
+    method control:sym<with-1>($/) {
+        make QAST::Op.new( :node($/), :op<call>, $<with>.made, $<with><EXPR>.made );
+    }
+
+    method control:sym<with-n>($/) {
+        #$block.blocktype('immediate');
+        make QAST::Op.new( :node($/), :op<for>, $<with><EXPR>.made, $<with>.made );
+    }
+
+    method with($/) {
+        my $scope := $*W.pop_scope();
+        $scope.push( $<newscope>.made );
+        make $scope;
     }
 
     method elsif($/) {
@@ -249,18 +287,33 @@ class MO::Actions is HLL::Actions {
         make $<statements>.made;
     }
 
-    method template_definition($/) {
-        nqp::say("template_definition");
-        make QAST::Op.new(:op('null'));
-    }
-
-    method template_block($/) {
-        nqp::say("template_block");
-        make QAST::Op.new(:op('null'));
+    method definition:sym<template>($/) {
+        my $scope := $*W.pop_scope();
+        #$scope.namespace( ['MO', 'Template'] );
+        #$scope.blocktype('declaration_static');
+        $scope.name( ~$<name> );
+        $scope.push( $<template_body>.made );
+        make $scope;
     }
 
     method template_body($/) {
-        nqp::say("template_body");
-        make QAST::Op.new(:op('null'));
+        my $stmts := QAST::Stmts.new( :node($/) );
+        $stmts.push( $_.made ) for $<template_atom>;
+        make $stmts;
+    }
+
+    method template_atom:sym<()>($/) {
+        #nqp::say("template_atom:sym<()>: "~$/);
+        make QAST::SVal.new( :node($/), :value(~$/) );
+    }
+
+    method template_atom:sym<{}>($/) {
+        #nqp::say('template_atom:sym<{}>: '~$/);
+        make QAST::SVal.new( :node($/), :value(~$/) );
+    }
+
+    method template_atom:sym<.>($/) {
+        #nqp::say("template_atom:sym<.>: "~$/);
+        make QAST::SVal.new( :node($/), :value(~$/) );
     }
 }

@@ -7,8 +7,6 @@ class MO::Model {
     has $!current;
 
     method init($data) {
-        #nqp::say('init: '~nqp::getattr($data, $data, ''));
-        #nqp::say('init: '~$data.name);
         my $one := nqp::create(self);
         $one.BUILD( :data($data) );
         $instance := $one;
@@ -57,7 +55,7 @@ class MO::Model {
     }
 
     method query($selector, $nodes) { # ->child{ ... }
-        #my $list := nqp::create(NodeList);
+        ## see Parrot_QRPA_class_init in src/vm/parrot/pmc/qrpa.c
         my $list := nqp::list();
         $list.push($_) if $selector($_) for $nodes;
         $list;

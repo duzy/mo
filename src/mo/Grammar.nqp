@@ -62,8 +62,10 @@ grammar MO::Grammar is HLL::Grammar {
     token term:sym<name>  { # call
         <name> <?{ ~$<name> ne 'return' }> <args>**0..1
     }
-    token term:sym«.»  { <sym> <name=.ident> <.ws> <selector>**0..1 }
-    token term:sym«->» { <sym> <.ws> <name=.ident> <.ws> <selector>**0..1 }
+    token term:sym«.»  { <?before <sym>> <selector> }
+    token term:sym«->» { <?before <sym>> <selector> }
+
+    token term:sym<yield> { <?before <sym>> <statement> }
 
     # Operators - mostly stolen from NQP's Rubyish example
     token infix:sym<**> { <sym>  <O('%exponentiation, :op<pow_n>')> }
@@ -159,7 +161,7 @@ grammar MO::Grammar is HLL::Grammar {
 
     token keyword {
         [
-        | 'if' | 'else' | 'elsif' | 'for'
+        | 'if' | 'else' | 'elsif' | 'for' | 'while' | 'until' | 'yield'
         | 'def' | 'end'
         #| 'le' | 'ge' | 'lt' | 'gt' | 'eq' | 'ne' | 'cmp' | 'not' | 'and' | 'or'
         ] <!ww>
@@ -176,9 +178,6 @@ grammar MO::Grammar is HLL::Grammar {
             MO::World.new(:handle($source_id)) !!
             MO::World.new(:handle($source_id), :description($file));
 
-        my $*PARSING_SELECTOR;
-        my $*PARSING_WITHDO;
-
         # nqp::say('parsing: ' ~ $file);
         
         if $file ~~ / .*\.xml$ / {
@@ -192,29 +191,37 @@ grammar MO::Grammar is HLL::Grammar {
         }
     }
 
-    proto token selector { <...> }
-    token selector:sym«.» { <sym> <name=.ident> }
-    token selector:sym«->» { <sym> <name=.ident> [<.ws> <selector>]**0..1 }
-    token selector:sym<[ ]> { '[' ~ ']' <EXPR> [<.ws> <selector>]**0..1 }
-    token selector:sym<{ }> {
-        '{' ~ '}'
-        [
-            {
-                $*PARSING_SELECTOR := 1;
-                $*W.push_scope($/);
-            }
-            <statements>
-            {
-                $*PARSING_SELECTOR := nqp::null();
-            }
-        ]
-        [<.ws> <selector>]**0..1
+    my method push_scope($type, $params?) {
+        my $scope := $*W.push_scope($/);
+        $scope<type> := $type;
+        if $params {
+           $params := [$params] unless nqp::islist($params);
+           for $params {
+               $scope.symbol($_, :scope<lexical>, :decl<param>);
+               $scope.push( QAST::Var.new( :name($_), :scope<lexical>, :decl<param> ) );
+           }
+        }
+        $scope;
     }
+
+    method newscope($type, $params?, $with?) {
+        my $scope := self.push_scope($type, $params);
+        $scope<with> := 1 if $with;
+        self.statements;
+    }
+
+    proto token selector { <...> }
+    token selector:sym«.»  {:s <sym> <name=.ident> }
+    token selector:sym«->» {:s <sym> <name=.ident> <selector>? }
+    token selector:sym<[ ]> {:s '[' ~ ']' <EXPR> <selector>? }
+    token selector:sym<{ }> {:s '{' ~ '}' <newscope: 'selector', '$_', 1> <selector>? }
 
     token xml  { <data=.LANG('XML','TOP')> }
     token json { <.panic: 'JSON parser not implemented yet'> }
     rule  prog {
-        :my $*UNIT := $*W.push_scope($/);
+        {
+            my $*UNIT := self.push_scope('prog');
+        }
         ^ ~ $ <statements> || <.panic: 'Confused'>
     }
 
@@ -226,17 +233,15 @@ grammar MO::Grammar is HLL::Grammar {
     token sigil { <[$@%&]> }
     token twigil { <[*!?]> }
 
-    rule statements {
-        <.ws>
-        <statement>*
-    }
+    rule statements { <.ws> <statement>* }
 
-    rule statement {
-        [
-        | <control>
-        | <EXPR>
-        ]
-    }
+    proto rule statement { <...> }
+    rule statement:sym<control>    { <control> }
+    rule statement:sym<definition> { <definition> }
+    rule statement:sym<EXPR>       { <EXPR> }
+
+    rule statement:sym<yield_t> { 'yield' <name=.ident> }
+    rule statement:sym<yield_x> { 'yield' <EXPR> }
 
     proto rule control { <...> }
 
@@ -246,37 +251,43 @@ grammar MO::Grammar is HLL::Grammar {
     }
 
     token control:sym<loop> {
-        $<op>=['while'|'until'] ~ 'end'
-        [ \s+ <EXPR> <statements> ]
+        [
+            $<op>=['while'|'until'] \s+ <EXPR>
+        ] ~ 'end' <statements>
     }
 
-    token control:sym<with> {
-        <sym> <?before \s> <.ws> <?before '->'> <EXPR>
-        'do' <.ws> '{' ~ '}'
+    token control:sym<for> {
+        [ <sym> \s+ <!before '->'><EXPR> ] ~ 'end' <newscope: 'for', '$_'>
+    }
+
+    token control:sym<with-1> { 'with' <with> }
+    token control:sym<with-n> { 'for' <with> }
+    token with {
+        <?before \s> <.ws> <?before '->'> <EXPR>
         [
-            {
-                $*PARSING_WITHDO := 1;
-                $*W.push_scope($/);
-            }
-            <statements>
-            {
-                $*PARSING_WITHDO := nqp::null();
-            }
+        |<?before 'yield'> <statement>
+        |'do' <.ws> '{' ~ '}' <newscope: 'with', '$_', 1>
         ]
     }
 
     token elsif { 'elsif' ~ [<else=.elsif>|<else>]? [ <.ws> <EXPR> <statements> ] }
     token else { 'else' <statements> }
 
-    rule template_definition {
-        'template' <name> ':' <template_block>
-    }
+    proto rule definition { <...> }
 
-    rule template_block {
-        ^^ '---{{' ~ '---}}' <template_body>
+    rule definition:sym<template> {
+        <sym>\s <name=.ident>
+        <template_starter> ~ <template_stopper>
+        [ { self.push_scope( 'template', '$_' ) } <template_body> ]
     }
+    rule template_starter { ^^ '-'**3..*\n }
+    rule template_stopper { \n? <.template_starter> 'end' }
+    rule template_body { <template_atom>* }
 
-    rule template_body {
-        [<!before ^^ '---}}'>.]*
+    proto token template_atom { <...> }
+    token template_atom:sym<()> { '$(' ~ ')' <EXPR> }
+    token template_atom:sym<{}> { '${' ~ '}' <statements> }
+    token template_atom:sym<.> {
+        [<!before <.template_stopper>><![$]>.]+
     }
 }

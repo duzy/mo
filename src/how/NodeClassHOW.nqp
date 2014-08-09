@@ -126,11 +126,11 @@ knowhow NodeClassHOW {
     #     0;
     # }
 
+    ##
+    ## We're mapping any method to 'getattr' of HashAttrStore, if no specified method was
+    ## found, a BUILTIN mapping will take effect.
     method find_method($obj, $name) {
-        #-> $o, $a = nqp::null() { nqp::how($o).name; };
-        # my $code := %BUILTINS{$name};
-        # nqp::die($!name ~ '.' ~ $name ~ ' is not supported') unless $code;
-        # $code;
-        %BUILTINS{$name};
+        my $attribute := nqp::getattr($obj, $obj, '.'~$name);
+        nqp::isnull($attribute) ?? %BUILTINS{$name} !! -> $o { $attribute };
     }
 }
