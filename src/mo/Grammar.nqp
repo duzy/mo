@@ -212,9 +212,15 @@ grammar MO::Grammar is HLL::Grammar {
 
     proto token selector { <...> }
     token selector:sym«.»  {:s <sym> <name=.ident> }
-    token selector:sym«->» {:s <sym> <name=.ident> <selector>? }
-    token selector:sym<[ ]> {:s '[' ~ ']' <EXPR> <selector>? }
+    token selector:sym«->» {:s <sym>
+        [
+        | <?before '['> <paths=.filesystem_list>
+        | <name=.ident> <selector>?
+        ]
+    }
+    token selector:sym<[ ]> {:s '[' ~ ']' <EXPR> <selector>? } #[<EXPR>+ %% ',']
     token selector:sym<{ }> {:s '{' ~ '}' <newscope: 'selector', '$_', 1> <selector>? }
+    token filesystem_list {:s '[' ~ ']' <EXPR> <selector>? }
 
     token xml  { <data=.LANG('XML','TOP')> }
     token json { <.panic: 'JSON parser not implemented yet'> }

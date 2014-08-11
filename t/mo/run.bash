@@ -28,4 +28,4 @@ run $SRCDIR/11-with
 run $SRCDIR/20-var
 run $SRCDIR/21-can
 run $SRCDIR/30-template
-#run $SRCDIR/40-filesystem -v
+run $SRCDIR/40-filesystem -v

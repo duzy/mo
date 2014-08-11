@@ -52,11 +52,6 @@ class MO::Actions is HLL::Actions {
         $/.prune;
     }
 
-    method infix:sym<,>($/) {
-        make QAST::Op.new(:op('null'));
-        $/.prune;        
-    }
-
     method circumfix:sym<( )>($/) {
         make $<EXPR>.made;
         $/.prune;        
@@ -163,13 +158,21 @@ class MO::Actions is HLL::Actions {
     }
 
     method selector:sym«->»($/) {
-        make QAST::Op.new( :node($/), :op<callmethod>, :name<arrow>, $MODEL,
-            QAST::SVal.new( :value(~$<name>) ),
-        );
+        if $<name> {
+            my $name := QAST::SVal.new( :value(~$<name>) );
+            make QAST::Op.new( :node($/), :op<callmethod>, :name<arrow>, $MODEL, $name );
+        } elsif $<paths> {
+            
+        } else {
+            $/.CURSOR.panic('unexpected selector: '~$/);
+        }
     }
 
     method selector:sym<[ ]>($/) {
         make QAST::Op.new( :node($/), :op<callmethod>, :name<at>, $MODEL, $<EXPR>.made );
+    }
+    method filesystem_list($/) {
+        nqp::say('filesystem_list: '~$/);
     }
 
     method selector:sym<{ }>($/) {
