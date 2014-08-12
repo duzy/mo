@@ -1,4 +1,3 @@
-# Custom models
 model SimpleModel {}
 $data = SimpleModel:none
 

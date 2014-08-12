@@ -30,9 +30,10 @@ class MO::Model {
             $!current;
         } elsif nqp::can($any, 'get_how') && nqp::istype($any.HOW, NodeClassHOW) { # Can only use get_how on a SixModelObject
             $any;
-        } elsif nqp::can($any, 'push') && nqp::can($any, 'pop') &&
-                nqp::can($any, 'shift') && nqp::can($any, 'unshift') &&
-                nqp::elems($any) && +$any { # QRPA
+        } elsif nqp::islist($any) && +$any { # QRPA
+                #nqp::can($any, 'push') && nqp::can($any, 'pop') &&
+                #nqp::can($any, 'shift') && nqp::can($any, 'unshift') &&
+                #nqp::elems($any) && +$any { # QRPA
             nqp::atpos($any, 0);
         } else {
             nqp::die('Invalid node');
@@ -41,7 +42,8 @@ class MO::Model {
 
     method dot($name, $node = nqp::null()) { # .name, node.attribute
         $node := self.ensure($node);
-        nqp::getattr($node, $node, '.'~$name);
+        $name := '.'~$name unless $name eq '';
+        nqp::getattr($node, $node, $name);
     }
 
     method arrow($name, $parent = nqp::null()) { # ->child, ->child[pos], parent->child
@@ -50,8 +52,14 @@ class MO::Model {
     }
 
     method at($pos, $nodes) {
-        my $node := nqp::atpos($nodes, $pos);
-        $node;
+        if nqp::islist($pos) {
+            my $nodes := nqp::list();
+            $nodes.push(nqp::atpos($nodes, $_)) for $pos;
+            $nodes;
+        } else {
+            my $node := nqp::atpos($nodes, $pos);
+            $node;
+        }
     }
 
     method query($selector, $nodes) { # ->child{ ... }

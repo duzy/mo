@@ -159,13 +159,21 @@ grammar MO::Grammar is HLL::Grammar {
         | \s+ <arglist>
     }
 
-    token keyword {
-        [
-        | 'if' | 'else' | 'elsif' | 'for' | 'while' | 'until' | 'yield'
-        | 'def' | 'end'
-        #| 'le' | 'ge' | 'lt' | 'gt' | 'eq' | 'ne' | 'cmp' | 'not' | 'and' | 'or'
-        ] <!ww>
-    }
+    # | 'if' | 'else' | 'elsif' | 'for' | 'while' | 'until' | 'yield'
+    # | 'def' | 'end'
+    # | 'le' | 'ge' | 'lt' | 'gt' | 'eq' | 'ne' | 'cmp' | 'not' | 'and' | 'or'
+    proto token kw      { <...> }
+    token kw:sym<if>    { <sym> }
+    token kw:sym<else>  { <sym> }
+    token kw:sym<elsif> { <sym> }
+    token kw:sym<for>   { <sym> }
+    token kw:sym<while> { <sym> }
+    token kw:sym<until> { <sym> }
+    token kw:sym<yield> { <sym> }
+    token kw:sym<def>   { <sym> }
+    token kw:sym<end>   { <sym> }
+
+    token keyword { <kw> <!ww> }
 
     method TOP() {
         my %*LANG;
@@ -211,15 +219,16 @@ grammar MO::Grammar is HLL::Grammar {
     }
 
     proto token selector { <...> }
+    token selector:sym«..» { <sym> }
     token selector:sym«.»  {:s <sym> <name=.ident> }
-    token selector:sym«->» {:s <sym>
-        [
-        | <?before '['> <paths=.filesystem_list>
-        | <name=.ident> <selector>?
-        ]
-    }
+    token selector:sym«->» {:s <sym> <arrow_consequence> }
     token selector:sym<[ ]> {:s '[' ~ ']' <EXPR> <selector>? } #[<EXPR>+ %% ',']
     token selector:sym<{ }> {:s '{' ~ '}' <newscope: 'selector', '$_', 1> <selector>? }
+
+    proto token arrow_consequence { <...> }
+    token arrow_consequence:sym<name> {:s <name=.ident> <selector>? }
+    token arrow_consequence:sym<[]> {:s <?before '['> <paths=.filesystem_list> }
+
     token filesystem_list {:s '[' ~ ']' <EXPR> <selector>? }
 
     token xml  { <data=.LANG('XML','TOP')> }
@@ -266,15 +275,16 @@ grammar MO::Grammar is HLL::Grammar {
         [ <sym> \s+ <!before '->'><EXPR> ] ~ 'end' <newscope: 'for', '$_'>
     }
 
-    token control:sym<with-1> { 'with' <with> }
-    token control:sym<with-n> { 'for' <with> }
-    token with {
-        <?before \s> <.ws> <?before '->'> <EXPR>
-        [
-        |<?before 'yield'> <statement>
-        |'do' <.ws> '{' ~ '}' <newscope: 'with', '$_', 1>
-        ]
-    }
+    token control:sym<with-1> { 'with'\s+ <with> }
+    token control:sym<with-n> { 'for'\s+ <with> }
+
+    proto token with { <...> }
+    token with:sym«->» {:s <?before '->'> <node=.term> <with_action> }
+    token with:sym«$» {:s <?before '$'> <node=.variable> <with_action> }
+
+    proto token with_action { <...> }
+    token with_action:sym<do> {:s 'do' '{' ~ '}' <newscope: 'with', '$_', 1> }
+    token with_action:sym<yield> {:s <?before 'yield'> <statement> }
 
     token elsif { 'elsif' ~ [<else=.elsif>|<else>]? [ <.ws> <EXPR> <statements> ] }
     token else { 'else' <statements> }

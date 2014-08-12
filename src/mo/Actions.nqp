@@ -28,6 +28,11 @@ class MO::Actions is HLL::Actions {
         $/.prune;
     }
 
+    my sub next_selector($sel) {
+        my $a := $sel<arrow_consequence>;
+        $a ?? $a<selector> !! $sel<selector>;
+    }
+
     method term:sym«->»($/) {
         my $scope := $*W.current_scope;
         my $sel := $<selector>;
@@ -35,12 +40,12 @@ class MO::Actions is HLL::Actions {
         $ast.push( QAST::Var.new( :name<$_>, :scope<lexical> ) ) if $scope<with>;
 
         ## Chain all selectors
-        $sel := $sel<selector>;
+        $sel := next_selector($sel); #$sel<selector>;
         while $sel {
             my $nxt := $sel.made;
             $nxt.push($ast);
             $ast := $nxt;
-            $sel := $sel<selector>;
+            $sel := next_selector($sel); #$sel<selector>;
         }
 
         make $ast;
@@ -157,28 +162,37 @@ class MO::Actions is HLL::Actions {
         );
     }
 
+    method selector:sym«..»($/) {
+        make QAST::Op.new( :node($/), :op<callmethod>, :name<dot>, $MODEL,
+            QAST::SVal.new( :value('') ),
+        );
+    }
+
     method selector:sym«->»($/) {
-        if $<name> {
-            my $name := QAST::SVal.new( :value(~$<name>) );
-            make QAST::Op.new( :node($/), :op<callmethod>, :name<arrow>, $MODEL, $name );
-        } elsif $<paths> {
-            
-        } else {
-            $/.CURSOR.panic('unexpected selector: '~$/);
-        }
+        make $<arrow_consequence>.made;
     }
 
     method selector:sym<[ ]>($/) {
         make QAST::Op.new( :node($/), :op<callmethod>, :name<at>, $MODEL, $<EXPR>.made );
-    }
-    method filesystem_list($/) {
-        nqp::say('filesystem_list: '~$/);
     }
 
     method selector:sym<{ }>($/) {
         my $block := $*W.pop_scope();
         $block.push( $<newscope>.made );
         make QAST::Op.new( :node($/), :op<callmethod>, :name<query>, $MODEL, $block );
+    }
+
+    method arrow_consequence:sym<name>($/) {
+        my $name := QAST::SVal.new( :value(~$<name>) );
+        make QAST::Op.new( :node($/), :op<callmethod>, :name<arrow>, $MODEL, $name );
+    }
+
+    method arrow_consequence:sym<[]>($/) {
+        nqp::say('arrow_consequence:sym«[]»: '~$/);
+    }
+
+    method filesystem_list($/) {
+        nqp::say('filesystem_list: '~$/);
     }
 
     method xml($/) {
@@ -266,18 +280,24 @@ class MO::Actions is HLL::Actions {
     }
 
     method control:sym<with-1>($/) {
-        make QAST::Op.new( :node($/), :op<call>, $<with>.made, $<with><EXPR>.made );
+        make QAST::Op.new( :node($/), :op<call>, $<with>.made, $<with><node>.made );
     }
 
     method control:sym<with-n>($/) {
-        #$block.blocktype('immediate');
-        make QAST::Op.new( :node($/), :op<for>, $<with><EXPR>.made, $<with>.made );
+        make QAST::Op.new( :node($/), :op<for>, $<with><node>.made, $<with>.made );
     }
 
-    method with($/) {
+    method with:sym«->»($/) { make $<with_action>.made; }
+    method with:sym«$»($/)  { make $<with_action>.made; }
+
+    method with_action:sym<do>($/) {
         my $scope := $*W.pop_scope();
         $scope.push( $<newscope>.made );
         make $scope;
+    }
+
+    method with_action:sym<yield>($/) {
+        nqp::say('with_action:sym<yield>: '~$/);
     }
 
     method elsif($/) {

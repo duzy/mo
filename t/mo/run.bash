@@ -12,7 +12,7 @@ function run() {
         $PROVE "$RUNNER $(dirname $1)/test.xml" "$1.mo"
     fi
     #parrot -Igen -Lgen gen/xml.pbc --target=pir $(dirname $1)/test.xml > $1.pir
-    parrot -Igen -Lgen gen/mo.pbc --target=pir $(dirname $1)/test.xml $1.mo > $1.pir
+    #parrot -Igen -Lgen gen/mo.pbc --target=pir $(dirname $1)/test.xml $1.mo > $1.pir
 }
 
 #run $SRCDIR/hello.xml $SRCDIR/hello.mo
@@ -22,11 +22,19 @@ run $SRCDIR/01-control-cond
 run $SRCDIR/01-control-cond-expr
 run $SRCDIR/01-control-loop
 run $SRCDIR/01-control-loop-for
+run $SRCDIR/10-dot-dot
 run $SRCDIR/10-dot-name
 run $SRCDIR/10-arrow-name
+run $SRCDIR/10-arrow-name-many -v
 run $SRCDIR/11-with
 run $SRCDIR/11-with-var
 run $SRCDIR/20-var
 run $SRCDIR/21-can
 run $SRCDIR/30-template
 run $SRCDIR/40-filesystem -v
+run $SRCDIR/40-filesystem-filter -v
+run $SRCDIR/40-filesystem-selectors -v
+run $SRCDIR/40-filesystem-wildcard -v
+run $SRCDIR/70-builtin-model-path -v
+run $SRCDIR/70-builtin-model-json -v
+run $SRCDIR/70-builtin-model-xml -v
