@@ -25,6 +25,7 @@ run $SRCDIR/01-control-loop-for
 run $SRCDIR/10-dot-name
 run $SRCDIR/10-arrow-name
 run $SRCDIR/11-with
+run $SRCDIR/11-with-var
 run $SRCDIR/20-var
 run $SRCDIR/21-can
 run $SRCDIR/30-template
