@@ -245,12 +245,12 @@ grammar MO::Grammar is HLL::Grammar {
         <sigil> <name=.ident>
     }
 
-    token sigil { <[$@%&]> }
+    token sigil  { <[$@%&]> }
     token twigil { <[*!?]> }
 
     rule statements { <.ws> <statement>* }
 
-    proto rule statement { <...> }
+    proto rule statement           { <...> }
     rule statement:sym<control>    { <control> }
     rule statement:sym<definition> { <definition> }
     rule statement:sym<EXPR>       { <EXPR> }
@@ -279,11 +279,11 @@ grammar MO::Grammar is HLL::Grammar {
     token control:sym<with-n> { 'for'\s+ <with> }
 
     proto token with { <...> }
-    token with:sym«->» {:s <?before '->'> <node=.term> <with_action> }
-    token with:sym«$» {:s <?before '$'> <node=.variable> <with_action> }
+    token with:sym«->» {:s <?before '->'> <node=.term> 'do' <with_action> }
+    token with:sym«$» {:s <?before '$'> <node=.variable> 'do'? <with_action> }
 
     proto token with_action { <...> }
-    token with_action:sym<do> {:s 'do' '{' ~ '}' <newscope: 'with', '$_', 1> }
+    token with_action:sym<scope> {:s '{' ~ '}' <newscope: 'with', '$_', 1> }
     token with_action:sym<yield> {:s <?before 'yield'> <statement> }
 
     token elsif { 'elsif' ~ [<else=.elsif>|<else>]? [ <.ws> <EXPR> <statements> ] }

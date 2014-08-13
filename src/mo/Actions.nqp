@@ -290,7 +290,7 @@ class MO::Actions is HLL::Actions {
     method with:sym«->»($/) { make $<with_action>.made; }
     method with:sym«$»($/)  { make $<with_action>.made; }
 
-    method with_action:sym<do>($/) {
+    method with_action:sym<scope>($/) {
         my $scope := $*W.pop_scope();
         $scope.push( $<newscope>.made );
         make $scope;
