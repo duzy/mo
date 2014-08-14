@@ -1,13 +1,13 @@
-say "1..4"
+say("1..4")
 
 $okay = "ok\t\t- $okay = \"...\""
-say $okay
+say($okay)
 
 $v = .okay
-say $v
+say($v)
 
 $v = ->child.okay
-say $v
+say($v)
 
 $v = ->child[1].okay
-say $v
+say($v)

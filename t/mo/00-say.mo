@@ -1,2 +1,2 @@
-say "1..1"
-say "ok"
+say("1..1")
+say("ok")

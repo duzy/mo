@@ -1,56 +1,56 @@
-say "1..8"
+say("1..8")
 
 if 1
-  say "ok"
+  say("ok")
 end
 
 if 0
-  say "fail"
+  say("fail")
 end
 
 if 1
   if 0
-    say "fail"
+    say("fail")
   end
 end
 
 if 1
-  say "ok"
+  say("ok")
   if 0
-    say "fail"
+    say("fail")
   end
   if 1
-    say "ok"
+    say("ok")
   end
 else
-  say "fail"
+  say("fail")
 end
 
 unless 0
-  say "ok"
+  say("ok")
 end
 
 unless 0
-  say "ok"
+  say("ok")
 else
-  say "fail"
+  say("fail")
 end
 
 unless 0
-  say "ok"
+  say("ok")
 elsif 1
-  say "fail"
+  say("fail")
 else
-  say "fail"
+  say("fail")
 end
 
 unless 1
-  say "fail"
+  say("fail")
 elsif 1
-  say "ok"
+  say("ok")
 else
-  say "fail"
+  say("fail")
 end
 
-if 1 say "ok" ;
-if 0 say "fail" ;
+if 1 say("ok");
+if 0 say("fail");

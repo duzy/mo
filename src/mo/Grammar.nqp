@@ -57,11 +57,19 @@ grammar MO::Grammar is HLL::Grammar {
             );
     }
 
+    token ws {
+        ||  <?MARKED('ws')>
+        ||  <!ww>
+            [ \v+
+            | '#' \N*
+            | \h+
+            ]*
+            <?MARKER('ws')>
+    }
+
     token term:sym<value>       { <value> }
     token term:sym<variable>    { <variable> }
-    token term:sym<name>  { # call
-        <name> <?{ ~$<name> ne 'return' }> <args>**0..1
-    }
+    token term:sym<name>  { <name> <?{ ~$<name> ne 'return' }> <args>? }
     token term:sym«.»  { <?before <sym>> <selector> }
     token term:sym«->» { <?before <sym>> <selector> }
 
@@ -109,7 +117,7 @@ grammar MO::Grammar is HLL::Grammar {
     token infix:sym<&&>   { <sym>  <O('%logical_and, :op<if>')> }
     token infix:sym<||>   { <sym>  <O('%logical_or,  :op<unless>')> }
 
-    token infix:sym<? :> {:s '?' <EXPR('i=')>
+    token infix:sym<? :> {:s '?' <EXPR('g=')>
                              ':' <O('%conditional, :reducecheck<ternary>, :op<if>')>
     }
 
@@ -119,7 +127,7 @@ grammar MO::Grammar is HLL::Grammar {
     token infix:sym<and>  { <sym>  <O('%loose_logical, :op<if>')> }
     token infix:sym<or>   { <sym>  <O('%loose_logical, :op<unless>')> }
 
-    token infix:sym<,> { <sym>  <O('%comma, :op<list>')> }
+    token infix:sym<,>    { <sym>  <O('%comma, :op<list>')> }
 
     token circumfix:sym<( )> { '(' ~ ')' <EXPR> <O('%methodop')> }
 
@@ -130,33 +138,29 @@ grammar MO::Grammar is HLL::Grammar {
     token postfix:sym«.» { <sym> <name=.ident> <args>? <O('%methodop')> }
     token postfix:sym«?» { <sym> <name=.ident> <O('%methodop')> }
 
+    proto token value { <...> }
+    token value:sym<quote> { <quote> }
+    token value:sym<number> { <number> }
+
     proto token quote { <...> }
     token quote:sym<'> { <?[']> <quote_EXPR: ':q'>  }
     token quote:sym<"> { <?["]> <quote_EXPR: ':qq'> }
 
-    token value {
-        | <quote>
-        | <number>
-    }
-
-    token number {
-        $<sign>=[<[+\-]>?]
-        [ <dec_number> | <integer> ]
-    }
+    token number { $<sign>=[<[+\-]>?] [ <dec_number> | <integer> ] }
 
     token name { <!keyword> <.ident> ['::'<.ident>]* }
+
+    token args {
+        | '(' <arglist> ')'
+        #| \s+ <arglist>
+    }
 
     token arglist {
         <.ws>
         [
-        | <EXPR('f=')>
+        | <EXPR('b=')>
         | <?>
         ]
-    }
-
-    token args {
-        | '(' <arglist> ')'
-        | \s+ <arglist>
     }
 
     # | 'if' | 'else' | 'elsif' | 'for' | 'while' | 'until' | 'yield'
@@ -223,7 +227,7 @@ grammar MO::Grammar is HLL::Grammar {
     token selector:sym«.»  {:s <sym> <name=.ident> }
     token selector:sym«->» {:s <sym> <arrow_consequence> }
     token selector:sym<[ ]> {:s '[' ~ ']' <EXPR> <selector>? } #[<EXPR>+ %% ',']
-    token selector:sym<{ }> {:s '{' ~ '}' <newscope: 'selector', '$_', 1> <selector>? }
+    token selector:sym<{ }> {:s '{' ~ '}' <newscope: 'selector', '$', 1> <selector>? }
 
     proto token arrow_consequence { <...> }
     token arrow_consequence:sym<name> {:s <name=.ident> <selector>? }
@@ -242,7 +246,7 @@ grammar MO::Grammar is HLL::Grammar {
 
     token variable {
         #<sigil> <twigil>? <name=.ident>
-        <sigil> <name=.ident>
+        <sigil> <name=.ident>?
     }
 
     token sigil  { <[$@%&]> }
@@ -261,7 +265,7 @@ grammar MO::Grammar is HLL::Grammar {
     proto rule control { <...> }
 
     token control:sym<cond> {
-        $<op>=['if'|'unless'] ~ ['end'|<?{ +$<statements><statement> eq 1 }>';']
+        $<op>=['if'|'unless'] ~ ['end'|<?{ +$<statements><statement> == 1 }>';']
         [ \s+ <EXPR> <statements> [<else=.elsif>|<else>]? ]
     }
 
@@ -272,7 +276,7 @@ grammar MO::Grammar is HLL::Grammar {
     }
 
     token control:sym<for> {
-        [ <sym> \s+ <!before '->'><EXPR> ] ~ 'end' <newscope: 'for', '$_'>
+        [ <sym> \s+ <!before '->'><EXPR> ] ~ 'end' <newscope: 'for', '$'>
     }
 
     token control:sym<with-1> { 'with'\s+ <with> }
@@ -283,7 +287,7 @@ grammar MO::Grammar is HLL::Grammar {
     token with:sym«$» {:s <?before '$'> <node=.variable> 'do'? <with_action> }
 
     proto token with_action { <...> }
-    token with_action:sym<scope> {:s '{' ~ '}' <newscope: 'with', '$_', 1> }
+    token with_action:sym<scope> {:s '{' ~ '}' <newscope: 'with', '$', 1> }
     token with_action:sym<yield> {:s <?before 'yield'> <statement> }
 
     token elsif { 'elsif' ~ [<else=.elsif>|<else>]? [ <.ws> <EXPR> <statements> ] }
@@ -294,7 +298,7 @@ grammar MO::Grammar is HLL::Grammar {
     rule definition:sym<template> {
         <sym>\s <name=.ident>
         <template_starter> ~ <template_stopper>
-        [ { self.push_scope( 'template', '$_' ) } <template_body> ]
+        [ { self.push_scope( 'template', '$' ) } <template_body> ]
     }
     rule template_starter { ^^ '-'**3..*\n }
     rule template_stopper { \n? <.template_starter> 'end' }

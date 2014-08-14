@@ -1,7 +1,7 @@
-say "1..1"
+say("1..1")
 
 if .. eq "test"
-  say .okay
+  say(.okay)
 else
-  say "fail\t\t- .. eq \"test\""
+  say("fail\t\t- .. eq \"test\"")
 end

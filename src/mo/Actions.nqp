@@ -4,10 +4,10 @@ class MO::Actions is HLL::Actions {
     method term:sym<value>($/) { make $<value>.made; $/.prune; }
     method term:sym<variable>($/) { make $<variable>.made; $/.prune; }
     method term:sym<name>($/) {
-        if +$<args> {
+        if $<args> {
             my $name := ~$<name>;
             my $op := %MO::Grammar::builtins{$name};
-            my $ast := $<args>[0].made;
+            my $ast := $<args>.made;
             if $op {
                 $ast.op($name);
             } else {
@@ -23,7 +23,7 @@ class MO::Actions is HLL::Actions {
     method term:sym«.»($/) {
         my $scope := $*W.current_scope;
         my $ast := $<selector>.made;
-        $ast.push( QAST::Var.new( :name<$_>, :scope<lexical> ) ) if $scope<with>;
+        $ast.push( QAST::Var.new( :name<$>, :scope<lexical> ) ) if $scope<with>;
         make $ast;
         $/.prune;
     }
@@ -37,7 +37,7 @@ class MO::Actions is HLL::Actions {
         my $scope := $*W.current_scope;
         my $sel := $<selector>;
         my $ast := $sel.made;
-        $ast.push( QAST::Var.new( :name<$_>, :scope<lexical> ) ) if $scope<with>;
+        $ast.push( QAST::Var.new( :name<$>, :scope<lexical> ) ) if $scope<with>;
 
         ## Chain all selectors
         $sel := next_selector($sel); #$sel<selector>;
@@ -89,6 +89,7 @@ class MO::Actions is HLL::Actions {
         } else {
             $methodcall := QAST::Op.new( :op<callmethod>, :name(~$<name>) );
         }
+        #$methodcall.returns('P');
         make $methodcall;
     }
 
@@ -96,13 +97,11 @@ class MO::Actions is HLL::Actions {
         make QAST::Op.new( :op<can>, QAST::SVal.new( :value(~$<name>) ) );
     }
 
+    method value:sym<quote>($/) { make $<quote>.made; }
+    method value:sym<number>($/) { make $<number>.made; }
+
     method quote:sym<'>($/) { make $<quote_EXPR>.made; } #'
     method quote:sym<">($/) { make $<quote_EXPR>.made; } #"
-
-    method value($/) {
-        make $<quote> ?? $<quote>.made !! $<number>.made;
-        $/.prune;
-    }
 
     method number($/) {
         my $value := $<dec_number> ?? $<dec_number>.made !! $<integer>.made;
@@ -110,7 +109,6 @@ class MO::Actions is HLL::Actions {
         make $<dec_number> ??
             QAST::NVal.new( :value($value) ) !!
             QAST::IVal.new( :value($value) );
-        $/.prune;
     }
 
     method variable($/) {
@@ -122,6 +120,7 @@ class MO::Actions is HLL::Actions {
             $sym := $scope.symbol($name, :scope<lexical>, :decl<var>);
             $var.decl('var');
         }
+        #$var.returns('P');
         make $var;
     }
 
@@ -251,8 +250,8 @@ class MO::Actions is HLL::Actions {
     method statement:sym<yield_t>($/) {
         my $scope := $*W.current_scope;
         my $ast := QAST::Op.new( :node($/), :op<call>, :name(~$<name>) );
-        if $scope.symbol('$_') {
-            $ast.push( QAST::Var.new( :name<$_>, :scope<lexical> ) );
+        if $scope.symbol('$') {
+            $ast.push( QAST::Var.new( :name<$>, :scope<lexical> ) );
         } else {
             $ast.push( QAST::Op.new( :op<callmethod>, :name<root>, $MODEL ) );
         }
