@@ -34,6 +34,8 @@ MO_SOURCES := \
   src/mo/Model.nqp \
   src/mo/World.nqp \
 
+MO_SOURCES += src/mo/parrot/Ops.nqp
+
 $(MO_PBC): $(MO_PIR)
 	@mkdir -p $(@D)
 	$(PARROT) -t=pbc --output="$@" "$<" 2>/dev/null

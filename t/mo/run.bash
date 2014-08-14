@@ -12,16 +12,16 @@ function run() {
         $PROVE "$RUNNER $(dirname $1)/test.xml" "$1.mo"
     fi
     #parrot -Igen -Lgen gen/xml.pbc --target=pir $(dirname $1)/test.xml > $1.pir
-    parrot -Igen -Lgen gen/mo.pbc --target=pir $(dirname $1)/test.xml $1.mo > $1.pir
+    #parrot -Igen -Lgen gen/mo.pbc --target=pir $(dirname $1)/test.xml $1.mo > $1.pir
 }
 
 #run $SRCDIR/hello.xml $SRCDIR/hello.mo
 
-#run $SRCDIR/00-expression -v
+run $SRCDIR/00-expression -v
 #run $SRCDIR/01-control-loop-for -v
 #run $SRCDIR/11-with -v
 #run $SRCDIR/11-with-var -v
-#exit
+exit
 
 run $SRCDIR/00-say
 run $SRCDIR/01-control-cond
