@@ -23,7 +23,7 @@ class MO::Actions is HLL::Actions {
     method term:sym«.»($/) {
         my $scope := $*W.current_scope;
         my $ast := $<selector>.made;
-        $ast.push( QAST::Var.new( :name<$>, :scope<lexical> ) ) if $scope<with>;
+        $ast.push( QAST::Var.new( :name<$>, :scope<lexical> ) ); # if $scope<with>;
         make $ast;
         $/.prune;
     }
@@ -37,7 +37,7 @@ class MO::Actions is HLL::Actions {
         my $scope := $*W.current_scope;
         my $sel := $<selector>;
         my $ast := $sel.made;
-        $ast.push( QAST::Var.new( :name<$>, :scope<lexical> ) ) if $scope<with>;
+        $ast.push( QAST::Var.new( :name<$>, :scope<lexical> ) ); # if $scope<with>;
 
         ## Chain all selectors
         $sel := next_selector($sel); #$sel<selector>;
@@ -210,13 +210,21 @@ class MO::Actions is HLL::Actions {
     }
 
     method prog($/) {
-        my $block := $*W.pop_scope();
-        $block.unshift( QAST::Op.new( :op<bind>,
-            QAST::Var.new( :scope<lexical>, :decl<var>, :name($MODEL.name) ),
-            QAST::Op.new( :op<callmethod>, :name<get>,
-                QAST::WVal.new( :value(MO::Model) ),
+        my $init := QAST::Stmts.new(
+            QAST::Op.new( :op<bind>,
+                QAST::Var.new( :scope<lexical>, :decl<var>, :name($MODEL.name) ),
+                QAST::Op.new( :op<callmethod>, :name<get>,
+                    QAST::WVal.new( :value(MO::Model) ),
+                ),
             ),
-        ) );
+            QAST::Op.new( :op<bind>,
+                QAST::Var.new( :name<$>, :scope<lexical>, :decl<var> ),
+                QAST::Op.new( :op<callmethod>, :name<root>, $MODEL ),
+            ),
+        );
+
+        my $block := $*W.pop_scope();
+        $block.unshift( $init );
         $block.push( $<statements>.made );
 
         my $compunit := QAST::CompUnit.new(

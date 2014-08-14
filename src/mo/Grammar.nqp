@@ -240,6 +240,13 @@ grammar MO::Grammar is HLL::Grammar {
     rule  prog {
         {
             my $*UNIT := self.push_scope('prog');
+            $*UNIT.symbol('$', :scope<lexical>, :decl<var>);
+            # $*UNIT.push( QAST::Op.new( :op<bind>,
+            #     QAST::Var.new( :name<$>, :scope<lexical>, :decl<var> ),
+            #     QAST::Op.new( :op<callmethod>, :name<root>,
+            #         QAST::Var.new( :scope<lexical>, :name($MODEL.name) ),
+            #     ),
+            # ) );
         }
         ^ ~ $ <statements> || <.panic: 'Confused'>
     }

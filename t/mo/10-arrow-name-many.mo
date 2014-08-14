@@ -1,4 +1,4 @@
-say("1..10")
+say("1..11")
 
 $subset = ->child{ .. eq 'child' }
 for $subset do {
@@ -17,6 +17,16 @@ with $subset do {
       say(.okay)
     else
       say("fail\t\t- [0]; " ~ .name)
+    end
+}
+
+for ->child[0, 1] do {
+    if .name eq 'test-child-1'
+      say(.okay)
+    elsif .name eq 'test-child-2'
+      say(.okay)
+    else
+      say("fail\t- [0, 1]; " ~ .name)
     end
 }
 
