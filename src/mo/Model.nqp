@@ -27,15 +27,13 @@ class MO::Model {
 
     method dot($name, $node) { # .name, node.attribute
         $node := nqp::atpos($node, 0) if nqp::islist($node);
-        if !nqp::isnull($node) {
-            $name := '.'~$name unless $name eq '';
-            nqp::getattr($node, $node, $name);
-        }
+        $name := '.'~$name unless $name eq '';
+        nqp::getattr($node, $node, $name);
     }
 
     method arrow($name, $parent) { # ->child, ->child[pos], parent->child
         $parent := nqp::atpos($parent, 0) if nqp::islist($parent);
-        nqp::getattr($parent, $parent, $name) if !nqp::isnull($parent);
+        nqp::getattr($parent, $parent, $name);
     }
 
     method at($pos, $nodes) {
@@ -43,7 +41,7 @@ class MO::Model {
             my $list := nqp::list();
             $list.push(nqp::atpos($nodes, $_)) for $pos;
             $list;
-        } elsif !nqp::isnull($pos) {
+        } else {
             nqp::atpos($nodes, $pos);
         }
     }
@@ -54,7 +52,7 @@ class MO::Model {
             my $list := nqp::list();
             $list.push($_) if $selector($_) for $nodes;
             $list;
-        } elsif !nqp::isnull($nodes) {
+        } else {
             my $list := nqp::list();
             $list.push($nodes) if $selector($nodes);
             $list;
