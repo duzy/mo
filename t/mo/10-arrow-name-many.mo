@@ -31,7 +31,7 @@ for ->child[0, 1] do {
 }
 
 $subset = ->child[0, 1]
-if $subset == 2
+if +$subset == 2
   say("ok\t- +$subset == 2")
 else
   say("fail\t- +$subset == 2")
@@ -47,7 +47,7 @@ for $subset do {
 }
 
 $subset = ->child[0, 1, 2]{ .. eq 'child' }
-if $subset == 2
+if +$subset == 2
   say("ok\t- +$subset == 2")
 else
   say("fail\t- +$subset == 2")

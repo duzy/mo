@@ -27,13 +27,15 @@ class MO::Model {
 
     method dot($name, $node) { # .name, node.attribute
         $node := nqp::atpos($node, 0) if nqp::islist($node);
-        $name := '.'~$name unless $name eq '';
-        nqp::getattr($node, $node, $name);
+        #if !nqp::isnull($node) {
+            $name := '.'~$name unless $name eq '';
+            nqp::getattr($node, $node, $name);
+        #}
     }
 
     method arrow($name, $parent) { # ->child, ->child[pos], parent->child
         $parent := nqp::atpos($parent, 0) if nqp::islist($parent);
-        nqp::getattr($parent, $parent, $name);
+        nqp::getattr($parent, $parent, $name); # if !nqp::isnull($parent);
     }
 
     method at($pos, $nodes) {
@@ -47,15 +49,12 @@ class MO::Model {
     }
 
     method query($selector, $nodes) { # ->child{ ... }
-        ## see Parrot_QRPA_class_init in src/vm/parrot/pmc/qrpa.c
+        my $list := nqp::list();
         if nqp::islist($nodes) {
-            my $list := nqp::list();
-            $list.push($_) if $selector($_) for $nodes;
-            $list;
+            $list.push($_) if !nqp::isnull($_) && $selector($_) for $nodes;
         } else {
-            my $list := nqp::list();
-            $list.push($nodes) if $selector($nodes);
-            $list;
+            $list.push($nodes) if !nqp::isnull($nodes) && $selector($nodes);
         }
+        $list;
     }
 }
