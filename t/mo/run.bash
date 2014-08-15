@@ -17,11 +17,11 @@ function run() {
 
 #run $SRCDIR/hello.xml $SRCDIR/hello.mo
 
-#run $SRCDIR/00-expression -v
+run $SRCDIR/00-expression -v
 #run $SRCDIR/01-control-loop-for -v
 #run $SRCDIR/11-with -v
 #run $SRCDIR/11-with-var -v
-#exit
+exit
 
 run $SRCDIR/00-say
 run $SRCDIR/01-control-cond

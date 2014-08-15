@@ -219,18 +219,19 @@ grammar MO::Grammar is HLL::Grammar {
     }
 
     proto token selector { <...> }
-    token selector:sym«..» { <sym> }
-    token selector:sym«.»  {:s <sym> <name=.ident> }
-    token selector:sym«->» {:s <sym> <arrow_consequence> }
     token selector:sym<[ ]> {:s '[' ~ ']' <EXPR> <selector>? } #[<EXPR>+ %% ',']
     token selector:sym<{ }> {:s '{' ~ '}' <newscope: 'selector', '$', 1> <selector>? }
-
-    proto token arrow_consequence { <...> }
-    token arrow_consequence:sym<name> {:s <name=.ident> <selector>? }
-    token arrow_consequence:sym<[]> {:s '[' ~ ']' <EXPR> <selector>? }
-
-    #token arrow_consequence:sym<[]> {:s <?before '['> <files=.filesystem_list> }
-    #token filesystem_list {:s '[' ~ ']' <EXPR> <selector>? }
+    token selector:sym«..» { <sym> }
+    token selector:sym«.»  {:s <sym> <name=.ident> }
+    token selector:sym«->» {:s <sym>
+        [
+        | <name=.ident>
+        | <quote>
+        | <?before '['>
+        | <.panic: 'confused selector'>
+        ]
+        <selector>?
+    }
 
     token xml  { <data=.LANG('XML','TOP')> }
     token json { <.panic: 'JSON parser not implemented yet'> }

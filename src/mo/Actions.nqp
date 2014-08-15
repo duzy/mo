@@ -168,27 +168,23 @@ class MO::Actions is HLL::Actions {
     }
 
     method selector:sym«->»($/) {
-        make $<arrow_consequence>.made;
+        if $<name> {
+            my $name := QAST::SVal.new( :value(~$<name>) );
+            make QAST::Op.new( :node($/), :op<callmethod>, :name<arrow>, $MODEL, $name );
+        } else {
+            my $path := QAST::SVal.new( :value(~$<quote>) );
+            make QAST::Op.new( :node($/), :op<callmethod>, :name<path>, $MODEL, $path );
+        }
     }
 
     method selector:sym<[ ]>($/) {
-        make QAST::Op.new( :node($/), :op<callmethod>, :name<atpos>, $MODEL, $<EXPR>.made );
+        make QAST::Op.new( :node($/), :op<callmethod>, :name<keyed>, $MODEL, $<EXPR>.made );
     }
 
     method selector:sym<{ }>($/) {
         my $block := $*W.pop_scope();
         $block.push( $<newscope>.made );
         make QAST::Op.new( :node($/), :op<callmethod>, :name<query>, $MODEL, $block );
-    }
-
-    method arrow_consequence:sym<name>($/) {
-        my $name := QAST::SVal.new( :value(~$<name>) );
-        make QAST::Op.new( :node($/), :op<callmethod>, :name<arrow>, $MODEL, $name );
-    }
-
-    method arrow_consequence:sym<[]>($/) {
-        #nqp::say('arrow_consequence:sym<[]>: '~$/);
-        make QAST::Op.new( :node($/), :op<callmethod>, :name<keyed>, $MODEL, $<EXPR>.made );
     }
 
     method xml($/) {
