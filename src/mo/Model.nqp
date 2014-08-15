@@ -38,13 +38,25 @@ class MO::Model {
         nqp::getattr($parent, $parent, $name); # if !nqp::isnull($parent);
     }
 
-    method at($pos, $nodes) {
-        if nqp::islist($pos) {
+    method atpos($poses, $nodes) {
+        if nqp::islist($poses) {
             my $list := nqp::list();
-            $list.push(nqp::atpos($nodes, $_)) for $pos;
+            $list.push(nqp::atpos($nodes, $_)) for $poses;
             $list;
         } else {
-            nqp::atpos($nodes, $pos);
+            nqp::atpos($nodes, $poses);
+        }
+    }
+
+    method keyed($keys, $nodes) {
+        if nqp::islist($keys) {
+            nqp::say('keys: '~nqp::join(', ', $keys));
+            my $list := nqp::list();
+            $list.push(nqp::atpos($nodes, $_)) for $keys;
+            $list;
+        } else {
+            nqp::say('key: '~$keys);
+            nqp::atpos($nodes, $keys);
         }
     }
 

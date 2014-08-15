@@ -172,7 +172,7 @@ class MO::Actions is HLL::Actions {
     }
 
     method selector:sym<[ ]>($/) {
-        make QAST::Op.new( :node($/), :op<callmethod>, :name<at>, $MODEL, $<EXPR>.made );
+        make QAST::Op.new( :node($/), :op<callmethod>, :name<atpos>, $MODEL, $<EXPR>.made );
     }
 
     method selector:sym<{ }>($/) {
@@ -187,11 +187,8 @@ class MO::Actions is HLL::Actions {
     }
 
     method arrow_consequence:sym<[]>($/) {
-        nqp::say('arrow_consequence:sym«[]»: '~$/);
-    }
-
-    method filesystem_list($/) {
-        nqp::say('filesystem_list: '~$/);
+        #nqp::say('arrow_consequence:sym<[]>: '~$/);
+        make QAST::Op.new( :node($/), :op<callmethod>, :name<keyed>, $MODEL, $<EXPR>.made );
     }
 
     method xml($/) {

@@ -231,9 +231,10 @@ grammar MO::Grammar is HLL::Grammar {
 
     proto token arrow_consequence { <...> }
     token arrow_consequence:sym<name> {:s <name=.ident> <selector>? }
-    token arrow_consequence:sym<[]> {:s <?before '['> <paths=.filesystem_list> }
+    token arrow_consequence:sym<[]> {:s '[' ~ ']' <EXPR> <selector>? }
 
-    token filesystem_list {:s '[' ~ ']' <EXPR> <selector>? }
+    #token arrow_consequence:sym<[]> {:s <?before '['> <files=.filesystem_list> }
+    #token filesystem_list {:s '[' ~ ']' <EXPR> <selector>? }
 
     token xml  { <data=.LANG('XML','TOP')> }
     token json { <.panic: 'JSON parser not implemented yet'> }
