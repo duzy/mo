@@ -60,6 +60,6 @@ else
   say("fail\t\t- ->child.name eq 'test-child-1'")
 end
 
-if ->end == 1
+if +->end == 1
   say("ok\t\t- ->end == 1")
 end

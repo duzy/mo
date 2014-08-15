@@ -150,11 +150,7 @@ grammar MO::Grammar is HLL::Grammar {
 
     token name { <!keyword> <.ident> ['::'<.ident>]* }
 
-    token args {
-        | '(' <arglist> ')'
-        #| \s+ <arglist>
-    }
-
+    token args { '(' <arglist> ')' }
     token arglist {
         <.ws>
         [
