@@ -8,9 +8,12 @@ class XML::Actions is HLL::Actions {
         my $block := QAST::Block.new( :node($/) );
         my $stmts := $block.push( QAST::Stmts.new() );
 
-        my $node_type := QAST::Op.new( :op('callmethod'), :name('new_type'),
+        # my $node_type := QAST::Op.new( :op('callmethod'), :name('new_type'),
+        #     QAST::WVal.new( :value(NodeClassHOW) ),
+        #     QAST::SVal.new( :value('Node'), :named('name') ),
+        # );
+        my $node_type := QAST::Op.new( :op('callmethod'), :name('type'),
             QAST::WVal.new( :value(NodeClassHOW) ),
-            QAST::SVal.new( :value('Node'), :named('name') ),
         );
 
         $stmts.push(QAST::Op.new( :op('bind'),

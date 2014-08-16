@@ -172,7 +172,8 @@ class MO::Actions is HLL::Actions {
             my $name := QAST::SVal.new( :value(~$<name>) );
             make QAST::Op.new( :node($/), :op<callmethod>, :name<arrow>, $MODEL, $name );
         } else {
-            my $path := QAST::SVal.new( :value(~$<quote>) );
+            my $quote := ~$<quote>;
+            my $path := QAST::SVal.new( :value($quote ne '' ?? $quote !! '.') );
             make QAST::Op.new( :node($/), :op<callmethod>, :name<path>, $MODEL, $path );
         }
     }
@@ -184,7 +185,7 @@ class MO::Actions is HLL::Actions {
     method selector:sym<{ }>($/) {
         my $block := $*W.pop_scope();
         $block.push( $<newscope>.made );
-        make QAST::Op.new( :node($/), :op<callmethod>, :name<query>, $MODEL, $block );
+        make QAST::Op.new( :node($/), :op<callmethod>, :name<filter>, $MODEL, $block );
     }
 
     method xml($/) {

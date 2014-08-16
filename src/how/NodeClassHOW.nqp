@@ -95,6 +95,12 @@ knowhow NodeClassHOW {
 
     has $!name;
 
+    my $type;
+    method type() {
+        $type := self.new_type(:name('NodeType')) unless $type;
+        $type;
+    }
+
     method new_type(:$name) {
         # my $repr := 'P6opaque';
         # my $metaclass := self.new(:name($name));

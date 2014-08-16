@@ -39,22 +39,23 @@ class MO::Model {
     }
 
     method path($path, $parent) {
-        my $node := MO::FilesystemNode.new();
-        nqp::say('path: '~$path);
+        my $node := MO::FilesystemNode.new(:path($path));
         $node;
     }
 
-    method keyed($poses, $nodes) {
-        if nqp::islist($poses) {
+    method keyed($keys, $nodes) {
+        if nqp::istype($nodes, MO::Node) {
+            $nodes.keyed($keys);
+        } elsif nqp::islist($keys) {
             my $list := nqp::list();
-            $list.push(nqp::atpos($nodes, $_)) for $poses;
+            $list.push(nqp::atpos($nodes, $_)) for $keys;
             $list;
         } else {
-            nqp::atpos($nodes, $poses);
+            nqp::atpos($nodes, $keys);
         }
     }
 
-    method query($selector, $nodes) { # ->child{ ... }
+    method filter($selector, $nodes) { # ->child{ ... }
         my $list := nqp::list();
         if nqp::islist($nodes) {
             $list.push($_) if !nqp::isnull($_) && $selector($_) for $nodes;
@@ -65,6 +66,32 @@ class MO::Model {
     }
 }
 
-class MO::FilesystemNode {
-        
+class MO::Node {
+    method keyed($keys) { self; }
+}
+
+class MO::FilesystemNode is MO::Node {
+    has $!path;
+    has $!handle;
+
+    method new(:$path) {
+        my $o := nqp::create(MO::FilesystemNode);
+        $o.BUILD(:path($path));
+    }
+
+    method BUILD(:$path) {
+        $!path := $path;
+        #$!handle := nqp::open($path, 'r');
+        self;
+    }
+
+    method path() {
+        $!path;
+    }
+
+    method keyed($keys) {
+        nqp::say('keyed: '~$!path~', '~$keys);
+
+        self;
+    }
 }
