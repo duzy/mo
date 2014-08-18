@@ -1,13 +1,8 @@
 knowhow NodeClassHOW {
-    my %static_methods;
     my $type;
-
-    has $!name;
 
     method type() {
         unless $type {
-            self.declare_methods();
-
             # my $repr := 'P6opaque';
             # my $metaclass := self.new(:name($name));
             # my $metainfo := nqp::hash();
@@ -20,25 +15,6 @@ knowhow NodeClassHOW {
         $type;
     }
 
-    method declare_methods() {
-        ## Add attributes (deprecated)
-        %static_methods<..> := -> $o, $nv {
-            my $all := nqp::getattr($o, $type, '.*');
-            if nqp::isnull($all) {
-                nqp::bindattr($o, $type, '.*', ($all := nqp::list()));
-            }
-            my $i := 0;
-            my $elems := nqp::elems($nv);
-            while $i < $elems {
-                my $n := '.' ~ $nv[$i];
-                my $v :=     ~ $nv[$i+1];
-                nqp::bindattr($o, $type, $n, $v);
-                $all.push(nqp::list($n, $v));
-                $i := $i + 2;
-            }
-        };
-    }
-
     method new(:$name) {
         my $obj := nqp::create(self);
         $obj.BUILD(:name($name));
@@ -46,11 +22,6 @@ knowhow NodeClassHOW {
     }
 
     method BUILD(:$name) {
-        $!name := $name;
-    }
-
-    method name() {
-        $!name;
     }
 
     method node_name($o) { nqp::getattr($o, $type, ''); };
@@ -85,6 +56,23 @@ knowhow NodeClassHOW {
         $all.push(nqp::list($n, $v));
     }
 
+    ## Add attributes (deprecated)
+    method _attributes($o, $nv) {
+        my $all := nqp::getattr($o, $type, '.*');
+        if nqp::isnull($all) {
+            nqp::bindattr($o, $type, '.*', ($all := nqp::list()));
+        }
+        my $i := 0;
+        my $elems := nqp::elems($nv);
+        while $i < $elems {
+            my $n := '.' ~ $nv[$i];
+            my $v :=     ~ $nv[$i+1];
+            nqp::bindattr($o, $type, $n, $v);
+            $all.push(nqp::list($n, $v));
+            $i := $i + 2;
+        }
+    }
+
     ## Concat text string
     method concat($o, $text) {
             my $all := nqp::getattr($o, $type, '*');
@@ -106,6 +94,7 @@ knowhow NodeClassHOW {
     ## found, a BUILTIN mapping will take effect.
     method find_method($obj, $name) {
         my $attribute := nqp::getattr($obj, $type, '.'~$name);
-        nqp::isnull($attribute) ?? %static_methods{$name} !! -> $o { $attribute };
+        #nqp::isnull($attribute) ?? %static_methods{$name} !! -> $o { $attribute };
+        nqp::isnull($attribute) ?? nqp::null() !! -> $o { $attribute };
     }
 }

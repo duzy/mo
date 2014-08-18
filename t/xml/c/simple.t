@@ -1,5 +1,5 @@
 # -*- nqp -*-
-plan(67);
+plan(59);
 
 # Node
 # 
@@ -12,7 +12,6 @@ plan(67);
 
 ok(!nqp::isnull($result), '$result');
 if !nqp::isnull($result) {
-    ok(nqp::how($result).name, 'how($result).name = Node');
     ok(nqp::how($result).node_name($result) eq 'root', '$result.name = root');
     ok(nqp::how($result).node_count($result, 'node') eq 4, '$result.count(node) = 4');
     ok(nqp::getattr($result, $result, '') eq 'root', 'root."" = root');
@@ -26,7 +25,6 @@ if !nqp::isnull($nodes) {
     ok(+$nodes eq 4, '+$nodes = 4');
     my $i := 1;
     for $nodes -> $node {
-        ok(nqp::how($node).name, 'how($node).name = Node');
         ok(nqp::how($node).node_name($node) eq 'node', '$node.name = node');
         ok(nqp::getattr($node, $node, '') eq 'node', 'node."" = node');
         ok(nqp::getattr($node, $node, '.name') eq 'node-'~$i, 'node.name = node-'~$i);
@@ -64,7 +62,6 @@ if !nqp::isnull($nodes) {
                 ok(+$subnodes eq 3, '+$subnodes = 3');
                 my $j := 1;
                 for $subnodes -> $subnode {
-                    ok(nqp::how($subnode).name, 'how($subnode).name = Node');
                     ok(nqp::how($subnode).node_name($subnode) eq 'node', '$subnode.name = node');
                     ok(nqp::getattr($subnode, $subnode, '') eq 'node', 'node."" = node');
                     ok(nqp::getattr($subnode, $subnode, '.name') eq 'node-'~$i~'-'~$j, 'node.name = node-'~$i~'-'~$j);
