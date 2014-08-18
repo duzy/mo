@@ -1,6 +1,8 @@
 use common;
 
 class XML::Actions is HLL::Actions {
+    my $NODEHOW := QAST::Var.new( :name<nodehow>, :scope<local> );
+    my $NODETYPE := QAST::Var.new( :name<nodetype>, :scope<local> );
     my %NAMES;
     my $PREV;
 
@@ -8,17 +10,13 @@ class XML::Actions is HLL::Actions {
         my $block := QAST::Block.new( :node($/) );
         my $stmts := $block.push( QAST::Stmts.new() );
 
-        # my $node_type := QAST::Op.new( :op('callmethod'), :name('new_type'),
-        #     QAST::WVal.new( :value(NodeClassHOW) ),
-        #     QAST::SVal.new( :value('Node'), :named('name') ),
-        # );
-        my $node_type := QAST::Op.new( :op('callmethod'), :name('type'),
+        $stmts.push(QAST::Op.new( :op<bind>,
+            QAST::Var.new( :name($NODEHOW.name), :scope<local>, :decl<var> ),
             QAST::WVal.new( :value(NodeClassHOW) ),
-        );
-
-        $stmts.push(QAST::Op.new( :op('bind'),
-            QAST::Var.new( :name('NodeType'), :scope('lexical'), :decl('var') ),
-            $node_type,
+        ));
+        $stmts.push(QAST::Op.new( :op<bind>,
+            QAST::Var.new( :name($NODETYPE.name), :scope<local>, :decl<var> ),
+            QAST::Op.new( :op<callmethod>, :name<type>, $NODEHOW ),
         ));
 
         if +$<markup_content> {
@@ -75,27 +73,27 @@ class XML::Actions is HLL::Actions {
             my $lex := $prefix ~ $<name> ~ ($num ?? '~' ~ $num !! '');
             my $node := QAST::Var.new( :name(~$lex), :scope<lexical> );
             my $node_decl := QAST::Var.new( :name($node.name), :scope<lexical>, :decl<var> );
-            my $node_type := QAST::Var.new( :name('NodeType'), :scope('lexical') );
+            my $node_type := QAST::Var.new( :name<nodetype>, :scope<local> );
 
             $ast<num>  := $num;
             $ast<name> := ~$<name>;
             $ast<node> := $node;
             $ast<node_decl> := $node_decl;
 
-            $ast.push(QAST::Op.new( :op('bind'), $node_decl,
-                QAST::Op.new( :op('create'), $node_type ), # repr_instance_of
+            $ast.push(QAST::Op.new( :op<bind>, $node_decl,
+                QAST::Op.new( :op<create>, $node_type ), # repr_instance_of
             ));
 
-            $ast.push(QAST::Op.new( :op('bind'),
-                QAST::Var.new( :scope('attribute'), :name(''), $node, $node_type ),
+            $ast.push(QAST::Op.new( :op<bind>,
+                QAST::Var.new( :scope<attribute>, :name(''), $node, $node_type ),
                 QAST::SVal.new( :value(~$<name>) ),
             ));
 
-            $ast.push( QAST::Op.new( :op('callmethod'), :name('+'), $parent<node>, $node ) )
+            $ast.push( QAST::Op.new( :op<callmethod>, :name<child>, $NODEHOW, $parent<node>, $node ) )
                 if $parent;
 
             if +$<attribute> {
-                $ast.push( QAST::Op.new( :op('callmethod'), :name('.'), $node,
+                $ast.push( QAST::Op.new( :op<callmethod>, :name<attr>, $NODEHOW, $node,
                     QAST::SVal.new(:value(~$_<name>)), $_<value>.made )
                 ) for $<attribute>;
             }
@@ -115,8 +113,8 @@ class XML::Actions is HLL::Actions {
         my $ast;
         my $cur := $*W.current;
         if nqp::defined($cur) {
-            $ast := QAST::Op.new( :op('callmethod'), :name('~'), $cur<node>,
-                QAST::SVal.new( :value(~$/) ) );
+            $ast := QAST::Op.new( :op<callmethod>, :name<concat>,
+                $NODEHOW, $cur<node>, QAST::SVal.new( :value(~$/) ) );
         }
         make $ast;
     }

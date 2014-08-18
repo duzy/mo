@@ -1,115 +1,42 @@
 knowhow NodeClassHOW {
-    my %BUILTINS;
+    my %static_methods;
+    my $type;
 
-    INIT {
-        #%BUILTINS<get_string>   := -> $o { nqp::getattr($o, $o, ''); };
-        %BUILTINS<name>   := -> $o { nqp::getattr($o, $o, ''); };
-        %BUILTINS<text>   := -> $o { nqp::join('', nqp::getattr($o, $o, '*')); };
-        %BUILTINS<count>  := -> $o, $n = nqp::null() {
-            +nqp::getattr($o, $o, nqp::defined($n) ?? $n !! '*');
-        };
-        # %BUILTINS<dot>   := -> $o, $name {
-        #     nqp::say('dot: '~$name);
-        #     ~$name;
-        # };
-        %BUILTINS<+> := -> $o, $node {
-            my $name := $node.name;
-            my $named := nqp::getattr($o, $o, $name);
-            my $all := nqp::getattr($o, $o, '*');
-            if nqp::isnull($named) {
-                $named := nqp::list();
-                nqp::bindattr($o, $o, $name, $named);
-            }
-            if nqp::isnull($all) {
-                $all := nqp::list();
-                nqp::bindattr($o, $o, '*', $all);
-            }
-            nqp::push($named, $node);
-            nqp::push($all, $node);
-                # my $attr := QAST::Var.new( :scope('attribute'), :name($<name>),
-                #     $parent<node>, $node_type );
-                # $ast.push(QAST::Op.new( :op('ifnull'), $attr,
-                #     QAST::Op.new( :op('bind'), $attr, QAST::Op.new( :op('list') ) ),
-                # ));
-                # $ast.push( QAST::Op.new( :op('callmethod'), :name('push'), $attr, $node ) );
+    has $!name;
 
-                # my $all := $parent<*>;
-                # $ast.push(QAST::Op.new( :op('ifnull'), $all,
-                #     QAST::Op.new( :op('bind'), $all, QAST::Op.new( :op('list') ) ),
-                # ));
-                # $ast.push( QAST::Op.new( :op('callmethod'), :name('push'), $all, $node ) );
-        };
-        %BUILTINS<~> := -> $o, $text {
-            my $all := nqp::getattr($o, $o, '*');
+    method type() {
+        unless $type {
+            self.declare_methods();
+
+            # my $repr := 'P6opaque';
+            # my $metaclass := self.new(:name($name));
+            # my $metainfo := nqp::hash();
+            # nqp::setwho(nqp::composetype(nqp::newtype($metaclass, $repr), $metainfo), {});
+
+            my $repr := 'HashAttrStore'; # P6opaque
+            my $metaclass := self.new(:name('Node'));
+            $type := nqp::setwho(nqp::newtype($metaclass, $repr), {});
+        }
+        $type;
+    }
+
+    method declare_methods() {
+        ## Add attributes (deprecated)
+        %static_methods<..> := -> $o, $nv {
+            my $all := nqp::getattr($o, $type, '.*');
             if nqp::isnull($all) {
-                $all := nqp::list();
-                nqp::bindattr($o, $o, '*', $all);
-            }
-            nqp::push($all, $text);
-            # my $all := $cur<*>;
-            # $ast := QAST::Stmts.new( :node($/),
-            #     QAST::Op.new( :op('ifnull'), $all,
-            #         QAST::Op.new( :op('bind'), $all, QAST::Op.new( :op('list') ) ),
-            #     ),
-            #     QAST::Op.new( :op('callmethod'), :name('push'), $all,
-            #         QAST::SVal.new( :value(~$/) ),
-            #     ),
-            # );
-        };
-        %BUILTINS<.> := -> $o, $n, $v {
-            my $all := nqp::getattr($o, $o, '.*');
-            if nqp::isnull($all) {
-                nqp::bindattr($o, $o, '.*', ($all := nqp::list()));
-            }
-            nqp::bindattr($o, $o, '.' ~ $n, $v);
-            $all.push(nqp::list($n, $v));
-                # my $all := $ast<.*>;
-                # $ast.push(QAST::Op.new( :op('ifnull'), $all,
-                #     QAST::Op.new( :op('bind'), $all, QAST::Op.new( :op('list') ) ),
-                # ));
-                # for $<attribute> -> $a {
-                #     my $val := $a<value>.made;
-                #     my $attr := QAST::Var.new( :node($/), :scope('attribute'),
-                #         :name('.' ~ $a<name>), $node, $node_type );
-                #     $ast.push( QAST::Op.new(:op('bind'), $attr, $val ) ); # repr_bind_attr_obj
-                #     $ast.push( QAST::Op.new( :op('callmethod'), :name('push'), $all,
-                #         QAST::Op.new(:op('list'), QAST::SVal.new(:value($a<name>)), $attr) ) );
-                # }
-        };
-        %BUILTINS<..> := -> $o, $nv {
-            my $all := nqp::getattr($o, $o, '.*');
-            if nqp::isnull($all) {
-                nqp::bindattr($o, $o, '.*', ($all := nqp::list()));
+                nqp::bindattr($o, $type, '.*', ($all := nqp::list()));
             }
             my $i := 0;
             my $elems := nqp::elems($nv);
             while $i < $elems {
                 my $n := '.' ~ $nv[$i];
                 my $v :=     ~ $nv[$i+1];
-                nqp::bindattr($o, $o, $n, $v);
+                nqp::bindattr($o, $type, $n, $v);
                 $all.push(nqp::list($n, $v));
                 $i := $i + 2;
             }
         };
-    }
-
-    has $!name;
-
-    my $type;
-    method type() {
-        $type := self.new_type(:name('NodeType')) unless $type;
-        $type;
-    }
-
-    method new_type(:$name) {
-        # my $repr := 'P6opaque';
-        # my $metaclass := self.new(:name($name));
-        # my $metainfo := nqp::hash();
-        # nqp::setwho(nqp::composetype(nqp::newtype($metaclass, $repr), $metainfo), {});
-
-        my $repr := 'HashAttrStore'; # P6opaque
-        my $metaclass := self.new(:name($name));
-        nqp::setwho(nqp::newtype($metaclass, $repr), {});
     }
 
     method new(:$name) {
@@ -126,6 +53,48 @@ knowhow NodeClassHOW {
         $!name;
     }
 
+    method node_name($o) { nqp::getattr($o, $type, ''); };
+    method node_text($o) { nqp::join('', nqp::getattr($o, $type, '*')); };
+    method node_count($o, $n = nqp::null()) {
+        +nqp::getattr($o, $type, nqp::defined($n) ?? $n !! '*');
+    };
+
+    method child($o, $node) {
+        my $name := self.node_name($node);
+        my $named := nqp::getattr($o, $type, $name);
+        my $all := nqp::getattr($o, $type, '*');
+        if nqp::isnull($named) {
+                $named := nqp::list();
+                nqp::bindattr($o, $type, $name, $named);
+        }
+        if nqp::isnull($all) {
+                $all := nqp::list();
+                nqp::bindattr($o, $type, '*', $all);
+        }
+        nqp::push($named, $node);
+        nqp::push($all, $node);
+    }
+
+    ## Add attribute
+    method attr($o, $n, $v) {
+        my $all := nqp::getattr($o, $type, '.*');
+        if nqp::isnull($all) {
+                nqp::bindattr($o, $type, '.*', ($all := nqp::list()));
+        }
+        nqp::bindattr($o, $type, '.' ~ $n, $v);
+        $all.push(nqp::list($n, $v));
+    }
+
+    ## Concat text string
+    method concat($o, $text) {
+            my $all := nqp::getattr($o, $type, '*');
+            if nqp::isnull($all) {
+                $all := nqp::list();
+                nqp::bindattr($o, $type, '*', $all);
+            }
+            nqp::push($all, $text);
+    }
+
     # method type_check($obj, $o) {
     #     #nqp::say('type_check: '~$obj.WHAT);
     #     #nqp::say('type_check: '~$o.WHAT);
@@ -136,7 +105,7 @@ knowhow NodeClassHOW {
     ## We're mapping any method to 'getattr' of HashAttrStore, if no specified method was
     ## found, a BUILTIN mapping will take effect.
     method find_method($obj, $name) {
-        my $attribute := nqp::getattr($obj, $obj, '.'~$name);
-        nqp::isnull($attribute) ?? %BUILTINS{$name} !! -> $o { $attribute };
+        my $attribute := nqp::getattr($obj, $type, '.'~$name);
+        nqp::isnull($attribute) ?? %static_methods{$name} !! -> $o { $attribute };
     }
 }
