@@ -24,14 +24,14 @@ knowhow NodeClassHOW {
     method BUILD(:$name) {
     }
 
-    method node_name($o) { nqp::getattr($o, $type, ''); };
-    method node_text($o) { nqp::join('', nqp::getattr($o, $type, '*')); };
-    method node_count($o, $n = nqp::null()) {
+    method name($o) { nqp::getattr($o, $type, ''); };
+    method text($o) { nqp::join('', nqp::getattr($o, $type, '*')); };
+    method count($o, $n = nqp::null()) {
         +nqp::getattr($o, $type, nqp::defined($n) ?? $n !! '*');
     };
 
     method child($o, $node) {
-        my $name := self.node_name($node);
+        my $name := self.name($node);
         my $named := nqp::getattr($o, $type, $name);
         my $all := nqp::getattr($o, $type, '*');
         if nqp::isnull($named) {
