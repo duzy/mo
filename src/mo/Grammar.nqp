@@ -201,12 +201,13 @@ grammar MO::Grammar is HLL::Grammar {
 
     my method push_scope($type, $params?) {
         my $scope := $*W.push_scope($/);
+        my $block := $scope<block>;
         $scope<type> := $type;
         if $params {
            $params := [$params] unless nqp::islist($params);
            for $params {
-               $scope.symbol($_, :scope<lexical>, :decl<param>);
-               $scope.push( QAST::Var.new( :name($_), :scope<lexical>, :decl<param> ) );
+               $block.symbol($_, :scope<lexical>, :decl<param>);
+               $block.push( QAST::Var.new( :name($_), :scope<lexical>, :decl<param> ) );
            }
         }
         $scope;
@@ -237,7 +238,8 @@ grammar MO::Grammar is HLL::Grammar {
     token json { <.panic: 'JSON parser not implemented yet'> }
     rule  prog {
         {
-            my $*UNIT := self.push_scope('prog');
+            my $scope := self.push_scope('prog');
+            my $*UNIT := $scope<block>;
             $*UNIT.symbol('$', :scope<lexical>, :decl<var>);
             # $*UNIT.push( QAST::Op.new( :op<bind>,
             #     QAST::Var.new( :name<$>, :scope<lexical>, :decl<var> ),

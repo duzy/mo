@@ -81,7 +81,8 @@ class MO::FilesystemNode is MO::Node {
 
     method BUILD(:$path) {
         $!path := $path;
-        $!handle := nqp::opendir($path);
+        #$!handle := nqp::opendir($path);
+        #$!handle := pir::readdir($path);
         self;
     }
 

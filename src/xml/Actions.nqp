@@ -47,11 +47,12 @@ class XML::Actions is HLL::Actions {
     method tag($/) {
         my $ast;
         if $<start> {
-            $ast := $*W.push_node($/);
+            my $nodestub := $*W.push_node($/);
+            $ast := $nodestub<ast>;
 
-            my $parent := $ast<parent>;
+            my $parent := $nodestub<parent>;
             my $prev := $PREV;
-            $PREV := $ast;
+            $PREV := $nodestub;
 
             my $prefix := '';
             my $num := 0;
@@ -75,10 +76,10 @@ class XML::Actions is HLL::Actions {
             my $node_decl := QAST::Var.new( :name($node.name), :scope<lexical>, :decl<var> );
             my $node_type := QAST::Var.new( :name<nodetype>, :scope<local> );
 
-            $ast<num>  := $num;
-            $ast<name> := ~$<name>;
-            $ast<node> := $node;
-            $ast<node_decl> := $node_decl;
+            $nodestub<num>  := $num;
+            $nodestub<name> := ~$<name>;
+            $nodestub<node> := $node;
+            $nodestub<node_decl> := $node_decl;
 
             $ast.push(QAST::Op.new( :op<bind>, $node_decl,
                 QAST::Op.new( :op<create>, $node_type ), # repr_instance_of

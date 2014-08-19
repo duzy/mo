@@ -21,9 +21,8 @@ class MO::Actions is HLL::Actions {
     }
 
     method term:sym«.»($/) {
-        my $scope := $*W.current_scope;
         my $ast := $<selector>.made;
-        $ast.push( QAST::Var.new( :name<$>, :scope<lexical> ) ); # if $scope<with>;
+        $ast.push( QAST::Var.new( :name<$>, :scope<lexical> ) );
         make $ast;
         $/.prune;
     }
@@ -34,10 +33,9 @@ class MO::Actions is HLL::Actions {
     }
 
     method term:sym«->»($/) {
-        my $scope := $*W.current_scope;
         my $sel := $<selector>;
         my $ast := $sel.made;
-        $ast.push( QAST::Var.new( :name<$>, :scope<lexical> ) ); # if $scope<with>;
+        $ast.push( QAST::Var.new( :name<$>, :scope<lexical> ) );
 
         ## Chain all selectors
         $sel := next_selector($sel); #$sel<selector>;
@@ -112,7 +110,7 @@ class MO::Actions is HLL::Actions {
     }
 
     method variable($/) {
-        my $scope := $*W.current_scope();
+        my $scope := $*W.current_scope<block>;
         my $name := $<sigil> ~ $<name>;
         my $var := QAST::Var.new( :name($name), :scope<lexical> );
         my $sym := $scope.symbol($name);
@@ -183,7 +181,7 @@ class MO::Actions is HLL::Actions {
     }
 
     method selector:sym<{ }>($/) {
-        my $block := $*W.pop_scope();
+        my $block := $*W.pop_scope()<block>;
         $block.push( $<newscope>.made );
         make QAST::Op.new( :node($/), :op<callmethod>, :name<filter>, $MODEL, $block );
     }
@@ -217,7 +215,7 @@ class MO::Actions is HLL::Actions {
             ),
         );
 
-        my $block := $*W.pop_scope();
+        my $block := $*W.pop_scope()<block>;
         $block.unshift( $init );
         $block.push( $<statements>.made );
 
@@ -250,7 +248,7 @@ class MO::Actions is HLL::Actions {
     }
 
     method statement:sym<yield_t>($/) {
-        my $scope := $*W.current_scope;
+        my $scope := $*W.current_scope<block>;
         my $ast := QAST::Op.new( :node($/), :op<call>, :name(~$<name>) );
         if $scope.symbol('$') {
             $ast.push( QAST::Var.new( :name<$>, :scope<lexical> ) );
@@ -275,7 +273,7 @@ class MO::Actions is HLL::Actions {
     }
 
     method control:sym<for>($/) {
-        my $scope := $*W.pop_scope();
+        my $scope := $*W.pop_scope()<block>;
         $scope.push( $<newscope>.made );
         make QAST::Op.new( :node($/), :op<for>, $<EXPR>.made, $scope );
     }
@@ -292,7 +290,7 @@ class MO::Actions is HLL::Actions {
     method with:sym«$»($/)  { make $<with_action>.made; }
 
     method with_action:sym<scope>($/) {
-        my $scope := $*W.pop_scope();
+        my $scope := $*W.pop_scope()<block>;
         $scope.push( $<newscope>.made );
         make $scope;
     }
@@ -312,7 +310,7 @@ class MO::Actions is HLL::Actions {
     }
 
     method definition:sym<template>($/) {
-        my $scope := $*W.pop_scope();
+        my $scope := $*W.pop_scope()<block>;
         #$scope.namespace( ['MO', 'Template'] );
         #$scope.blocktype('declaration_static');
         $scope.name( ~$<name> );

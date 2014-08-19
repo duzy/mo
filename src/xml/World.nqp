@@ -8,16 +8,17 @@ class XML::World is HLL::World {
     }
 
     method push_node($/) {
-        my $stmts := QAST::Stmts.new( :node($/) );
-        $!ROOT := $stmts unless $!ROOT;
+        my $nodestub := nqp::hash();
+        $!ROOT := $nodestub unless $!ROOT;
         if +@!NODES {
-            $stmts<parent> := @!NODES[+@!NODES - 1];
+            $nodestub<parent> := @!NODES[+@!NODES - 1];
         }
-        @!NODES[+@!NODES] := $stmts;
-        $stmts<TAGS> := nqp::hash();
-        $stmts<*> := QAST::Var.new( :scope('attribute'), :name('*') );
-        $stmts<.*> := QAST::Var.new( :scope('attribute'), :name('.*') );
-        $stmts;
+        @!NODES[+@!NODES] := $nodestub;
+        $nodestub<ast> := QAST::Stmts.new( :node($/) );
+        $nodestub<*> := QAST::Var.new( :scope('attribute'), :name('*') );
+        $nodestub<.*> := QAST::Var.new( :scope('attribute'), :name('.*') );
+        $nodestub<TAGS> := nqp::hash();
+        $nodestub;
     }
 
     method pop_node() {
