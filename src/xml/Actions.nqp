@@ -74,7 +74,6 @@ class XML::Actions is HLL::Actions {
             my $lex := $prefix ~ $<name> ~ ($num ?? '~' ~ $num !! '');
             my $node := QAST::Var.new( :name(~$lex), :scope<lexical> );
             my $node_decl := QAST::Var.new( :name($node.name), :scope<lexical>, :decl<var> );
-            my $node_type := QAST::Var.new( :name<nodetype>, :scope<local> );
 
             $nodestub<num>  := $num;
             $nodestub<name> := ~$<name>;
@@ -82,11 +81,11 @@ class XML::Actions is HLL::Actions {
             $nodestub<node_decl> := $node_decl;
 
             $ast.push(QAST::Op.new( :op<bind>, $node_decl,
-                QAST::Op.new( :op<create>, $node_type ), # repr_instance_of
+                QAST::Op.new( :op<create>, $NODETYPE ), # repr_instance_of
             ));
 
             $ast.push(QAST::Op.new( :op<bind>,
-                QAST::Var.new( :scope<attribute>, :name(''), $node, $node_type ),
+                QAST::Var.new( :scope<attribute>, :name(''), $node, $NODETYPE ),
                 QAST::SVal.new( :value(~$<name>) ),
             ));
 

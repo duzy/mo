@@ -1,6 +1,13 @@
 knowhow MO::NodeClassHOW {
     my $type;
 
+    # ''                tag (e.g. XML tag name, <name/>)
+    # '.name'           an attribute ( <tag name="value"/>)
+    # 'name'            a named child
+    # '*'               all children (e.g. XML subtags and texts)
+    # '.*'              all attributes in represented order
+    # '?'               node class (what kind of node?)
+
     method type() {
         unless $type {
             # my $repr := 'P6opaque';
@@ -15,11 +22,11 @@ knowhow MO::NodeClassHOW {
         $type;
     }
 
-    method name($o) { nqp::getattr($o, $type, ''); };
-    method text($o) { nqp::join('', nqp::getattr($o, $type, '*')); };
+    method name($o) { nqp::getattr($o, $type, ''); }
+    method text($o) { nqp::join('', nqp::getattr($o, $type, '*')); }
     method count($o, $n = nqp::null()) { # counting sub nodes (including text)
         +nqp::getattr($o, $type, nqp::defined($n) ?? $n !! '*');
-    };
+    }
 
     method child($o, $node) {
         my $name := self.name($node);

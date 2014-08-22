@@ -8,6 +8,7 @@ COMMON_PIR := gen/common.pir
 COMMON_NQP := gen/common.nqp
 COMMON_SOURCES := \
   src/how/NodeClassHOW.nqp \
+  src/how/FilesystemNodeHOW.nqp \
 
 JSON_PBC := gen/json.pbc
 JSON_PIR := gen/json.pir
