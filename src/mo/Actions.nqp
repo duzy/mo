@@ -185,8 +185,6 @@ class MO::Actions is HLL::Actions {
             $ast.name('keyed_s');
         } elsif nqp::istype($expr, QAST::Op) && $expr.op eq 'list' {
             my $elem := $expr.list[0];
-            #nqp::say('selector:sym<[ ]>: '~$elem~', '~nqp::istype($elem, $elem.HOW));
-            #nqp::say('selector:sym<[ ]>: '~$elem~', '~$elem.HOW);
             if nqp::istype($elem, QAST::IVal) {
                 $ast.name('keyed_list_i');
             } elsif nqp::istype($elem, QAST::SVal) {
@@ -197,7 +195,7 @@ class MO::Actions is HLL::Actions {
         } else {
             $ast.name('keyed');
         }
-        nqp::say('selector:sym<[ ]>: '~$expr~', '~$ast.name);
+        #nqp::say('selector:sym<[ ]>: '~$expr~', '~$ast.name);
         make $ast;
     }
 

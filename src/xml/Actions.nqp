@@ -89,11 +89,11 @@ class XML::Actions is HLL::Actions {
                 QAST::SVal.new( :value(~$<name>) ),
             ));
 
-            $ast.push( QAST::Op.new( :op<callmethod>, :name<child>, $NODEHOW, $parent<node>, $node ) )
+            $ast.push( QAST::Op.new( :op<callmethod>, :name<node_child>, $NODEHOW, $parent<node>, $node ) )
                 if $parent;
 
             if +$<attribute> {
-                $ast.push( QAST::Op.new( :op<callmethod>, :name<attr>, $NODEHOW, $node,
+                $ast.push( QAST::Op.new( :op<callmethod>, :name<node_attr>, $NODEHOW, $node,
                     QAST::SVal.new(:value(~$_<name>)), $_<value>.made )
                 ) for $<attribute>;
             }
@@ -113,7 +113,7 @@ class XML::Actions is HLL::Actions {
         my $ast;
         my $cur := $*W.current;
         if nqp::defined($cur) {
-            $ast := QAST::Op.new( :op<callmethod>, :name<concat>,
+            $ast := QAST::Op.new( :op<callmethod>, :name<node_concat>,
                 $NODEHOW, $cur<node>, QAST::SVal.new( :value(~$/) ) );
         }
         make $ast;

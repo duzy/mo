@@ -35,6 +35,17 @@ class MO::Model {
         $base ~ '/' ~ $leaf;
     }
 
+    my sub pathread($path) {
+#?if parrot
+        my $names := pir::new__PS('OS').readdir($path);
+        for $names {
+            if $_ ne '.' && $_ ne '..' {
+                
+            }
+        }
+#?endif
+    }
+
     method dot($name, $node) { # .name, node.attribute
         $node := nqp::atpos($node, 0) if nqp::islist($node);
         $name := '.'~$name unless $name eq '';
@@ -47,8 +58,10 @@ class MO::Model {
     }
 
     method path($path, $parent) {
-        my $node := nqp::create(MO::NodeClassHOW.type);
-        # TODO: .. 
+        my $type := MO::NodeClassHOW.type;
+        my $node := nqp::create($type);
+        nqp::bindattr($node, $type, '?', 'filesystem');
+        nqp::bindattr($node, $type, '', pathname($path));
         $node;
     }
 

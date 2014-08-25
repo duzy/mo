@@ -9,7 +9,7 @@ knowhow MO::NodeClassHOW {
     # '?'               node class (what kind of node?)
 
     method type() {
-        unless $type {
+        unless nqp::defined($type) {
             # my $repr := 'P6opaque';
             # my $metaclass := self.new(:name($name));
             # my $metainfo := nqp::hash();
@@ -22,14 +22,35 @@ knowhow MO::NodeClassHOW {
         $type;
     }
 
-    method name($o) { nqp::getattr($o, $type, ''); }
-    method text($o) { nqp::join('', nqp::getattr($o, $type, '*')); }
-    method count($o, $n = nqp::null()) { # counting sub nodes (including text)
+    method name() { 'Node' }
+
+    # method type_check($obj, $o) {
+    #     #nqp::say('type_check: '~$obj.WHAT);
+    #     #nqp::say('type_check: '~$o.WHAT);
+    #     0;
+    # }
+
+    ##
+    ## We're mapping any method to 'getattr' of HashAttrStore.
+    method find_method($obj, $name) {
+        my $attribute := nqp::getattr($obj, $type, '.'~$name);
+        nqp::isnull($attribute) ?? nqp::null() !! -> $o { $attribute };
+    }
+
+    method node_new(:$kind = 'data') {
+        my $node := nqp::create($type);
+        nqp::bindattr($node, $type, '?', $kind);
+        $node;
+    }
+
+    method node_name($o) { nqp::getattr($o, $type, ''); }
+    method node_text($o) { nqp::join('', nqp::getattr($o, $type, '*')); }
+    method node_count($o, $n = nqp::null()) { # counting sub nodes (including text)
         +nqp::getattr($o, $type, nqp::defined($n) ?? $n !! '*');
     }
 
-    method child($o, $node) {
-        my $name := self.name($node);
+    method node_child($o, $node) {
+        my $name := self.node_name($node);
         my $named := nqp::getattr($o, $type, $name);
         my $all := nqp::getattr($o, $type, '*');
         if nqp::isnull($named) {
@@ -45,7 +66,7 @@ knowhow MO::NodeClassHOW {
     }
 
     ## Add attribute
-    method attr($o, $n, $v) {
+    method node_attr($o, $n, $v) {
         my $all := nqp::getattr($o, $type, '.*');
         if nqp::isnull($all) {
             nqp::bindattr($o, $type, '.*', ($all := nqp::list()));
@@ -72,25 +93,12 @@ knowhow MO::NodeClassHOW {
     # }
 
     ## Concat text string
-    method concat($o, $text) {
+    method node_concat($o, $text) {
         my $all := nqp::getattr($o, $type, '*');
         if nqp::isnull($all) {
             $all := nqp::list();
             nqp::bindattr($o, $type, '*', $all);
         }
         nqp::push($all, $text);
-    }
-
-    # method type_check($obj, $o) {
-    #     #nqp::say('type_check: '~$obj.WHAT);
-    #     #nqp::say('type_check: '~$o.WHAT);
-    #     0;
-    # }
-
-    ##
-    ## We're mapping any method to 'getattr' of HashAttrStore.
-    method find_method($obj, $name) {
-        my $attribute := nqp::getattr($obj, $type, '.'~$name);
-        nqp::isnull($attribute) ?? nqp::null() !! -> $o { $attribute };
     }
 }
