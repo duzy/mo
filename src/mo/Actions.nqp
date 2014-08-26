@@ -208,9 +208,9 @@ class MO::Actions is HLL::Actions {
     method xml($/) {
         my $data := $<data>.made;
         make QAST::Stmts.new(
-            QAST::Op.new( :op('callmethod'), :name('init'),
+            QAST::Op.new( :op<callmethod>, :name<init>,
                 QAST::WVal.new( :value(MO::Model) ),
-                QAST::Op.new( :op('call'), QAST::BVal.new( :value($data) ) ),
+                QAST::Op.new( :op<call>, QAST::BVal.new( :value($data) ) ),
             ),
             $data
         );

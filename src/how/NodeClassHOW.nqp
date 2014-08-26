@@ -24,11 +24,12 @@ knowhow MO::NodeClassHOW {
 
     method name() { 'Node' }
 
-    # method type_check($obj, $o) {
-    #     #nqp::say('type_check: '~$obj.WHAT);
-    #     #nqp::say('type_check: '~$o.WHAT);
-    #     0;
-    # }
+    method type_check($o, $t) {
+        #nqp::say('type_check: '~$t~', '~$type);
+        #nqp::say('type_check: '~$o.WHAT);
+        #nqp::say('type_check: '~$t.WHAT);
+        0;
+    }
 
     ##
     ## We're mapping any method to 'getattr' of HashAttrStore.
@@ -65,6 +66,10 @@ knowhow MO::NodeClassHOW {
         nqp::push($all, $node);
     }
 
+    method node_getchildren($o, $n) {
+        nqp::getattr($o, $type, $n);
+    }
+
     ## Add attribute
     method node_attr($o, $n, $v) {
         my $all := nqp::getattr($o, $type, '.*');
@@ -75,22 +80,10 @@ knowhow MO::NodeClassHOW {
         $all.push(nqp::list($n, $v));
     }
 
-    ## Add attributes (deprecated)
-    # method _attributes($o, $nv) {
-    #     my $all := nqp::getattr($o, $type, '.*');
-    #     if nqp::isnull($all) {
-    #         nqp::bindattr($o, $type, '.*', ($all := nqp::list()));
-    #     }
-    #     my $i := 0;
-    #     my $elems := nqp::elems($nv);
-    #     while $i < $elems {
-    #         my $n := '.' ~ $nv[$i];
-    #         my $v :=     ~ $nv[$i+1];
-    #         nqp::bindattr($o, $type, $n, $v);
-    #         $all.push(nqp::list($n, $v));
-    #         $i := $i + 2;
-    #     }
-    # }
+    method node_getattr($o, $n) {
+        $n := '.'~$n unless $n eq '';
+        nqp::getattr($o, $type, $n);
+    }
 
     ## Concat text string
     method node_concat($o, $text) {
@@ -100,5 +93,13 @@ knowhow MO::NodeClassHOW {
             nqp::bindattr($o, $type, '*', $all);
         }
         nqp::push($all, $text);
+    }
+
+    method node_keyed_i($node, $key) {
+        nqp::null();
+    }
+
+    method node_keyed_s($node, $key) {
+        nqp::getattr($node, $type, $key);
     }
 }
