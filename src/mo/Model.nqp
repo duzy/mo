@@ -44,11 +44,6 @@ class MO::Model {
     }
 
     method keyed_i($key, $nodes) { # [0]
-        # if nqp::islist($nodes) {
-        #     nqp::atpos($nodes, $key);
-        # } else {
-        #     $nodes.HOW.node_keyed_i($nodes, $key);
-        # }
         nqp::atpos($nodes, $key);
     }
 
@@ -62,8 +57,7 @@ class MO::Model {
         } elsif nqp::isstr($key) {
             self.keyed_s($key, $nodes);
         } else {
-            nqp::say('keyed: missing: '~$key);
-            nqp::null();
+            nqp::die('keyed: bad key');
         }
     }
 

@@ -179,23 +179,29 @@ class MO::Actions is HLL::Actions {
     method selector:sym<[ ]>($/) {
         my $expr := $<EXPR>.made;
         my $ast := QAST::Op.new( :node($/), :op<callmethod>, $MODEL, $expr );
-        if nqp::istype($expr, QAST::IVal) {
-            $ast.name('keyed_i');
-        } elsif nqp::istype($expr, QAST::SVal) {
-            $ast.name('keyed_s');
-        } elsif nqp::istype($expr, QAST::Op) && $expr.op eq 'list' {
-            my $elem := $expr.list[0];
-            if nqp::istype($elem, QAST::IVal) {
+        if nqp::istype($expr, QAST::Op) && $expr.op eq 'list' {
+            my $countAll := +$expr.list;
+            my $countIVal := 0;
+            my $countSVal := 0;
+            for $expr.list {
+                $countIVal := $countIVal + 1 if nqp::istype($_, QAST::IVal);
+                $countSVal := $countSVal + 1 if nqp::istype($_, QAST::SVal);
+            }
+
+            if $countIVal == $countAll {
                 $ast.name('keyed_list_i');
-            } elsif nqp::istype($elem, QAST::SVal) {
+            } elsif $countSVal == $countAll {
                 $ast.name('keyed_list_s');
             } else {
                 $ast.name('keyed_list');
             }
+        } elsif nqp::istype($expr, QAST::IVal) {
+            $ast.name('keyed_i');
+        } elsif nqp::istype($expr, QAST::SVal) {
+            $ast.name('keyed_s');
         } else {
             $ast.name('keyed');
         }
-        #nqp::say('selector:sym<[ ]>: '~$expr~', '~$ast.name);
         make $ast;
     }
 
