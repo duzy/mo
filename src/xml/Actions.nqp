@@ -81,7 +81,7 @@ class XML::Actions is HLL::Actions {
             $nodestub<node_decl> := $node_decl;
 
             $ast.push(QAST::Op.new( :op<bind>, $node_decl,
-                QAST::Op.new( :op<create>, $NODETYPE ), # repr_instance_of
+                QAST::Op.new( :op<callmethod>, :name<node_new>, $NODEHOW ),
             ));
 
             $ast.push(QAST::Op.new( :op<bind>,
@@ -93,7 +93,7 @@ class XML::Actions is HLL::Actions {
                 if $parent;
 
             if +$<attribute> {
-                $ast.push( QAST::Op.new( :op<callmethod>, :name<node_attr>, $NODEHOW, $node,
+                $ast.push( QAST::Op.new( :op<callmethod>, :name<node_bindattr>, $NODEHOW, $node,
                     QAST::SVal.new(:value(~$_<name>)), $_<value>.made )
                 ) for $<attribute>;
             }
