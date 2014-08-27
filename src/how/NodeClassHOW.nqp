@@ -37,7 +37,7 @@ knowhow MO::NodeClassHOW {
             my $metaclass := nqp::create(self);
             $type := nqp::setwho(nqp::newtype($metaclass, $repr), {});
             nqp::setmethcache($type, %methods);
-            #nqp::setmethcacheauth($type, 1);
+            nqp::setmethcacheauth($type, 1);
         }
         $type;
     }

@@ -3,8 +3,30 @@ knowhow MO::FilesystemNodeHOW {
 
     method type() {
         unless $type {
+            my %methods;
+            %methods<name> := -> $node { nqp::getattr($node, $type, ''); };
+            %methods<type> := -> $node { nqp::getattr($node, $type, '?'); };
+            %methods<text> := -> $node {
+                nqp::join('', nqp::getattr($node, $type, '*'));
+            };
+            %methods<attributes> := -> $node {
+                nqp::getattr($node, $type, '.*');
+            };
+            %methods<get> := -> $node, $name {
+                nqp::getattr($node, $type, '.'~$name);
+            };
+            %methods<set> := -> $node, $name, $value {
+                nqp::die('filesystem nodes are readonly');
+            };
+            %methods<count> := -> $node, $name = nqp::null() {
+            };
+            %methods<children> := -> $node, $name = nqp::null() {
+            };
+
             my $metaclass := nqp::create(self);
             $type := nqp::setwho(nqp::newtype($metaclass, 'HashAttrStore'), {});
+            nqp::setmethcache($type, %methods);
+            nqp::setmethcacheauth($type, 1);
 
             if 0 { #######################################################
             my @repr_info;

@@ -27,18 +27,23 @@ class MO::Model {
 
     method dot($name, $node) { # .name, node.attribute
         $node := nqp::atpos($node, 0) if nqp::islist($node);
-        $node.HOW.node_getattr($node, $name);
+        $node.get($name);
+    }
+
+    method dotdot($node) {
+        $node := nqp::atpos($node, 0) if nqp::islist($node);
+        $node.name;
     }
 
     method arrow($name, $nodes) { # ->child, parent->child
         my $result := nqp::list();
         if nqp::islist($nodes) {
             for $nodes -> $node {
-                $result.push($_) for $node.HOW.node_getchildren($node, $name);
+                $result.push($_) for $node.children($name);
             }
         } else {
             my $node := $nodes;
-            $result := $node.HOW.node_getchildren($node, $name);
+            $result := $node.children($name);
         }
         $result;
     }

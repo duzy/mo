@@ -160,9 +160,7 @@ class MO::Actions is HLL::Actions {
     }
 
     method selector:sym«..»($/) {
-        make QAST::Op.new( :node($/), :op<callmethod>, :name<dot>, $MODEL,
-            QAST::SVal.new( :value('') ),
-        );
+        make QAST::Op.new( :node($/), :op<callmethod>, :name<dotdot>, $MODEL );
     }
 
     method selector:sym«->»($/) {
