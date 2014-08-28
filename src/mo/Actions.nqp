@@ -168,7 +168,7 @@ class MO::Actions is HLL::Actions {
             my $name := QAST::SVal.new( :value(~$<name>) );
             make QAST::Op.new( :node($/), :op<callmethod>, :name<select_name>, $MODEL, $name );
         } elsif $<quote> {
-            my $path := QAST::SVal.new( :value(~$<quote>) );
+            my $path := $<quote>.made;
             make QAST::Op.new( :node($/), :op<callmethod>, :name<select_path>, $MODEL, $path );
         } else {
             make QAST::Op.new( :node($/), :op<callmethod>, :name<select_all>, $MODEL );
