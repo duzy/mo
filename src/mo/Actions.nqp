@@ -166,11 +166,12 @@ class MO::Actions is HLL::Actions {
     method selector:sym«->»($/) {
         if $<name> {
             my $name := QAST::SVal.new( :value(~$<name>) );
-            make QAST::Op.new( :node($/), :op<callmethod>, :name<arrow>, $MODEL, $name );
+            make QAST::Op.new( :node($/), :op<callmethod>, :name<select_name>, $MODEL, $name );
+        } elsif $<quote> {
+            my $path := QAST::SVal.new( :value(~$<quote>) );
+            make QAST::Op.new( :node($/), :op<callmethod>, :name<select_path>, $MODEL, $path );
         } else {
-            my $quote := ~$<quote>;
-            my $path := QAST::SVal.new( :value($quote ne '' ?? $quote !! '.') );
-            make QAST::Op.new( :node($/), :op<callmethod>, :name<path>, $MODEL, $path );
+            make QAST::Op.new( :node($/), :op<callmethod>, :name<select_all>, $MODEL );
         }
     }
 

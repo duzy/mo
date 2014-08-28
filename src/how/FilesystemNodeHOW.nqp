@@ -2,7 +2,7 @@ knowhow MO::FilesystemNodeHOW {
     my $type;
 
     method type() {
-        unless $type {
+        unless nqp::defined($type) {
             my %methods;
             %methods<name> := -> $node { nqp::getattr($node, $type, ''); };
             %methods<type> := -> $node { nqp::getattr($node, $type, '?'); };
@@ -19,8 +19,10 @@ knowhow MO::FilesystemNodeHOW {
                 nqp::die('filesystem nodes are readonly');
             };
             %methods<count> := -> $node, $name = nqp::null() {
+                'count';
             };
             %methods<children> := -> $node, $name = nqp::null() {
+                nqp::say('children: '~$name);
             };
 
             my $metaclass := nqp::create(self);
@@ -48,6 +50,26 @@ knowhow MO::FilesystemNodeHOW {
             } ############################################################
         }
         $type;
+    }
+
+    sub pathname($path) {
+        my $i := nqp::rindex($path, '/');
+        my $name := nqp::substr($path, $i+1);
+        $name;
+    }
+
+    sub pathconcat($base, $leaf) {
+        $base ~ '/' ~ $leaf;
+    }
+
+    method open(:$path) {
+        nqp::say('open: '~$path);
+        my $node := nqp::create(self.type);
+        nqp::bindattr($node, $type, '?', 'filesystem');
+        nqp::bindattr($node, $type, '', $path);
+        nqp::bindattr($node, $type, '.name', pathname($path));
+        nqp::bindattr($node, $type, '.path', $path);
+        $node;
     }
 }
 

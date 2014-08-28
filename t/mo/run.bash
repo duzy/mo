@@ -32,6 +32,7 @@ run $SRCDIR/10-dot-dot
 run $SRCDIR/10-dot-name
 run $SRCDIR/10-arrow-name
 run $SRCDIR/10-arrow-name-many
+run $SRCDIR/10-arrow-many
 run $SRCDIR/11-with
 run $SRCDIR/11-with-var
 run $SRCDIR/20-var

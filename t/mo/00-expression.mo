@@ -1,10 +1,16 @@
-for ->['test'] do
+with ->'test' do
   {
     say(.name)
     say(.path)
   }
 
-for ->['test/many/1.txt', "test/many/2.txt"] do
+with ->'.'['test'] do
+  {
+    say(.name)
+    say(.path)
+  }
+
+for ->'.'['test/many/1.txt', "test/many/2.txt"] do
   {
       if .name eq '1.txt'
         say("ok\t\t- 1.txt")
@@ -26,7 +32,8 @@ for ->'test/many'['1.txt', "2.txt"] do
       end
   }
 
-->[
+->'.'
+  [
    "test/many/1.txt",
    "test/many/2.txt",
   ]
