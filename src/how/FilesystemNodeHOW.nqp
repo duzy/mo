@@ -25,10 +25,14 @@ knowhow MO::FilesystemNodeHOW {
                 my $child;
                 my $parent := $node;
                 my $names := nqp::split('/', $subpath);
-                nqp::say('children: '~$names);
                 for $names -> $name {
-                    my $s := $parent.name
-                    $node := MO::FilesystemNodeHOW.open();
+                    my $s := pathconcat($parent.name, $name);
+                    $child := nqp::getattr($parent, $type, '/'~$name);
+                    unless nqp::defined($child) {
+                        $child := MO::FilesystemNodeHOW.open(:path($s));
+                        nqp::bindattr($parent, $type, '/'~$name, $child);
+                    }
+                    $parent := $child;
                 }
                 $child;
             };
@@ -71,7 +75,11 @@ knowhow MO::FilesystemNodeHOW {
     }
 
     sub pathabs($path) {
-        $path;
+        if $path[0] eq '/' {
+            $path;
+        } else {
+            pathconcat(nqp::cwd, $path);
+        }
     }
 
     method open(:$path) {

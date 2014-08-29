@@ -18,4 +18,5 @@ function run() {
     parrot -Lgen gen/xml.pbc --target=pir $NAME.xml > $NAME.pir
 }
 
-run $SRCDIR/simple.t
+run $SRCDIR/simple.t || exit $?
+run $SRCDIR/filesystem.t || exit $?
