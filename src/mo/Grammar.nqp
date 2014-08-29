@@ -264,10 +264,10 @@ grammar MO::Grammar is HLL::Grammar {
     proto rule statement           { <...> }
     rule statement:sym<control>    { <control> }
     rule statement:sym<definition> { <definition> }
-    rule statement:sym<EXPR>       { <EXPR> }
+    rule statement:sym<EXPR>       { <EXPR> ';'? }
 
-    rule statement:sym<yield_t> { 'yield' <name=.ident> }
-    rule statement:sym<yield_x> { 'yield' <EXPR> }
+    rule statement:sym<yield_t> { 'yield' <name=.ident> ';'? }
+    rule statement:sym<yield_x> { 'yield' <EXPR> ';'? }
 
     proto rule control { <...> }
 

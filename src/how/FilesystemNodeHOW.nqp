@@ -25,6 +25,7 @@ knowhow MO::FilesystemNodeHOW {
                 my $child;
                 my $parent := $node;
                 my $names := nqp::split('/', $subpath);
+        #nqp::say('children: '~$names);
                 for $names -> $name {
                     my $s := pathconcat($parent.name, $name);
                     $child := nqp::getattr($parent, $type, '/'~$name);
