@@ -54,7 +54,14 @@ grammar MO::Grammar is HLL::Grammar {
             'exit',   'exit',
             'print',  'print',
             'sleep',  'sleep',
-            );
+            'open',   'open',
+            'pipe',   'openpipe',
+            'system', 'system',
+            'shell',  'shell',
+            'execname', 'execname',
+            'env',    'getenvhash',
+            'null',    'null',
+        );
     }
 
     token ws {

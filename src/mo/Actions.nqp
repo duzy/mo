@@ -4,18 +4,20 @@ class MO::Actions is HLL::Actions {
     method term:sym<value>($/) { make $<value>.made; $/.prune; }
     method term:sym<variable>($/) { make $<variable>.made; $/.prune; }
     method term:sym<name>($/) {
+        my $name := ~$<name>;
+        my $op := %MO::Grammar::builtins{$name};
         if $<args> {
-            my $name := ~$<name>;
-            my $op := %MO::Grammar::builtins{$name};
             my $ast := $<args>.made;
             if $op {
-                $ast.op($name);
+                $ast.op($op);
             } else {
                 $ast.name($name);
             }
             make $ast;
+        } elsif $op {
+            make QAST::Op.new(:op($op), :node($/));
         } else {
-            make QAST::Op.new(:op('call'), :node($/), :name(~$<name>));
+            make QAST::Op.new(:op<call>, :node($/), :name($name));
         }
         $/.prune;
     }

@@ -42,6 +42,7 @@ run $SRCDIR/20-var
 run $SRCDIR/21-can
 run $SRCDIR/30-template
 run $SRCDIR/40-filesystem
+run $SRCDIR/41-io
 #exit
 run $SRCDIR/40-filesystem-filter -v
 run $SRCDIR/40-filesystem-selectors -v
