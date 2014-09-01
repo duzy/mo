@@ -25,6 +25,10 @@ XML_SOURCES := \
   src/xml/Compiler.nqp \
   src/xml/World.nqp \
 
+MODULELOADER_PBC := gen/mo/ModuleLoader.pbc
+MODULELOADER_PIR := gen/mo/ModuleLoader.pir
+MODULELOADER_NQP := src/mo/parrot/ModuleLoader.nqp
+
 MO_PBC := gen/mo.pbc
 MO_PIR := gen/mo.pir
 MO_NQP := gen/mo.nqp
@@ -37,7 +41,7 @@ MO_SOURCES := \
 
 MO_SOURCES += src/mo/parrot/Ops.nqp
 
-$(MO_PBC): $(MO_PIR)
+$(MO_PBC): $(MO_PIR) $(MODULELOADER_PBC)
 	@mkdir -p $(@D)
 	$(PARROT) -t=pbc --output="$@" "$<" 2>/dev/null
 	@[ -f $@ ]
@@ -50,6 +54,16 @@ $(MO_PIR): $(MO_NQP) $(XML_PBC) $(JSON_PBC)
 $(MO_NQP): $(MO_SOURCES)
 	@mkdir -p $(@D)
 	$(CAT) $^ > "$@"
+	@[ -f $@ ]
+
+$(MODULELOADER_PBC): $(MODULELOADER_PIR)
+	@mkdir -p $(@D)
+	$(PARROT) -t=pbc --output="$@" "$<" 2>/dev/null
+	@[ -f $@ ]
+
+$(MODULELOADER_PIR): $(MODULELOADER_NQP)
+	@mkdir -p $(@D)
+	$(NQP) --target=pir --output="$@" $<
 	@[ -f $@ ]
 
 $(XML_PBC): $(XML_PIR)

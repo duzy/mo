@@ -45,22 +45,22 @@ grammar MO::Grammar is HLL::Grammar {
         #MO::Grammar.O(':prec<d=>, :assoc<unary>', '%list_prefix');
     }
 
-    our %builtins;
+    our %builtins; # ops
 
     BEGIN {
         %builtins := nqp::hash(
-            'die',    'die',
-            'say',    'say',
-            'exit',   'exit',
-            'print',  'print',
-            'sleep',  'sleep',
-            'open',   'open',
-            'pipe',   'openpipe',
-            'system', 'system',
-            'shell',  'shell',
+            'die',      'die',
+            'say',      'say',
+            'exit',     'exit',
+            'print',    'print',
+            'sleep',    'sleep',
+            'open',     'open',
+            'pipe',     'openpipe',
+            'system',   'system',
+            'shell',    'shell',
             'execname', 'execname',
-            'env',    'getenvhash',
-            'null',    'null',
+            'env',      'getenvhash',
+            'null',     'null',
         );
     }
 
