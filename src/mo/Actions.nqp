@@ -112,13 +112,17 @@ class MO::Actions is HLL::Actions {
     }
 
     method variable($/) {
-        my $scope := $*W.current_scope<block>;
+        my $scope := $*W.current_scope;
+        my $block := $scope<block>;
         my $name := $<sigil> ~ $<name>;
         my $var := QAST::Var.new( :name($name), :scope<lexical> );
-        my $sym := $scope.symbol($name);
+        my $sym := $block.symbol($name);
+        if !$sym && $scope<outer> && $scope<outer><block>.symbol($name) {
+            nqp::say('outer: '~$name);
+        }
         unless $sym {
-            $sym := $scope.symbol($name, :scope<lexical>, :decl<var>);
-            $var.decl('var');
+            $sym := $block.symbol($name, :scope<lexical>, :decl<var>);
+            $var.decl($sym<decl>);
         }
         #$var.returns('P');
         make $var;
@@ -265,6 +269,10 @@ class MO::Actions is HLL::Actions {
         make $<control>.made;
     }
 
+    method statement:sym<declaration>($/) {
+        make $<declaration>.made;
+    }
+
     method statement:sym<definition>($/) {
         make $<definition>.made;
     }
@@ -335,6 +343,17 @@ class MO::Actions is HLL::Actions {
         make $<statements>.made;
     }
 
+    method declaration:sym<use>($/) {
+        # my $module := $*W.load_module(~$<name>, $*GLOBALish);
+        # if nqp::defined($module) {
+        #     $*W.import($module<EXPORT>.WHO<DEFAULT>.WHO)
+        #         if nqp::existskey($module, 'EXPORT') &&
+        #             nqp::existskey($module<EXPORT>.WHO, 'DEFAULT');
+        #     import_HOW_exports($module);
+        # }
+        make QAST::Stmts.new();
+    }
+
     method definition:sym<template>($/) {
         my $scope := $*W.pop_scope()<block>;
         #$scope.namespace( ['MO', 'Template'] );
@@ -351,17 +370,39 @@ class MO::Actions is HLL::Actions {
     }
 
     method template_atom:sym<()>($/) {
-        #nqp::say("template_atom:sym<()>: "~$/);
         make QAST::SVal.new( :node($/), :value(~$/) );
     }
 
     method template_atom:sym<{}>($/) {
-        #nqp::say('template_atom:sym<{}>: '~$/);
         make QAST::SVal.new( :node($/), :value(~$/) );
     }
 
     method template_atom:sym<.>($/) {
-        #nqp::say("template_atom:sym<.>: "~$/);
         make QAST::SVal.new( :node($/), :value(~$/) );
+    }
+
+    method param($/) {
+        my $name := $<sigil> ~ $<name>;
+        my $block := $*W.current_scope<block>;
+        $/.CURSOR.panic('duplicated parameter '~$name)
+            if $block.symbol($name);
+
+        my $sym := $block.symbol($name, :scope<lexical>, :decl<param>);
+        make $block.push( QAST::Var.new( :name($name),
+            :decl($sym<decl>), :scope<lexical> ) );
+    }
+
+    method definition:sym<sub>($/) {
+        my $block := $*W.pop_scope()<block>;
+        $block.name(~$<name>);
+        # if $<params> {
+        #     $block.push($_.made) for $<params><param>;
+        # }
+        $block.push( $<statements>.made );
+        make $block;
+    }
+
+    method definition:sym<class>($/) {
+        make QAST::Stmts.new();
     }
 }

@@ -179,6 +179,9 @@ grammar MO::Grammar is HLL::Grammar {
     token kw:sym<yield> { <sym> }
     token kw:sym<def>   { <sym> }
     token kw:sym<end>   { <sym> }
+    token kw:sym<use>   { <sym> }
+    token kw:sym<sub>   { <sym> }
+    token kw:sym<method>{ <sym> }
 
     token keyword { <kw> <!ww> }
 
@@ -220,7 +223,7 @@ grammar MO::Grammar is HLL::Grammar {
         $scope;
     }
 
-    method newscope($type, $params?, $with?) {
+    method newscope($type, $params?, $with = 0) {
         my $scope := self.push_scope($type, $params);
         $scope<with> := 1 if $with;
         self.statements;
@@ -268,10 +271,11 @@ grammar MO::Grammar is HLL::Grammar {
 
     rule statements { <.ws> <statement>* }
 
-    proto rule statement           { <...> }
-    rule statement:sym<control>    { <control> }
-    rule statement:sym<definition> { <definition> }
-    rule statement:sym<EXPR>       { <EXPR> ';'? }
+    proto rule statement                { <...> }
+    rule statement:sym<control>         { <control> }
+    rule statement:sym<declaration>     { <declaration> }
+    rule statement:sym<definition>      { <definition> }
+    rule statement:sym<EXPR>            { <EXPR> ';'? }
 
     rule statement:sym<yield_t> { 'yield' <name=.ident> ';'? }
     rule statement:sym<yield_x> { 'yield' <EXPR> ';'? }
@@ -296,16 +300,21 @@ grammar MO::Grammar is HLL::Grammar {
     token control:sym<with-1> { 'with'\s+ <with> }
     token control:sym<with-n> { 'for'\s+ <with> }
 
-    proto token with { <...> }
-    token with:sym«->» {:s <?before '->'> <node=.term> 'do' <with_action> }
-    token with:sym«$» {:s <?before '$'> <node=.variable> 'do'? <with_action> }
+    proto token with    { <...> }
+    token with:sym«->»  {:s <?before '->'> <node=.term> 'do' <with_action> }
+    token with:sym«$»   {:s <?before '$'> <node=.variable> 'do'? <with_action> }
 
-    proto token with_action { <...> }
-    token with_action:sym<scope> {:s '{' ~ '}' <newscope: 'with', '$', 1> }
-    token with_action:sym<yield> {:s <?before 'yield'> <statement> }
+    proto token with_action         { <...> }
+    token with_action:sym<scope>    {:s '{' ~ '}' <newscope: 'with', '$', 1> }
+    token with_action:sym<yield>    {:s <?before 'yield'> <statement> }
 
     token elsif { 'elsif' ~ [<else=.elsif>|<else>]? [ <.ws> <EXPR> <statements> ] }
-    token else { 'else' <statements> }
+    token else  { 'else' <statements> }
+
+    proto rule declaration { <...> }
+    rule declaration:sym<use> {
+        <sym>\s <name> ';'?
+    }
 
     proto rule definition { <...> }
 
@@ -318,10 +327,28 @@ grammar MO::Grammar is HLL::Grammar {
     rule template_stopper { \n? <.template_starter> 'end' }
     rule template_body { <template_atom>* }
 
-    proto token template_atom { <...> }
+    proto token template_atom   { <...> }
     token template_atom:sym<()> { '$(' ~ ')' <EXPR> }
     token template_atom:sym<{}> { '${' ~ '}' <statements> }
-    token template_atom:sym<.> {
-        [<!before <.template_stopper>><![$]>.]+
+    token template_atom:sym<.>  { [<!before <.template_stopper>><![$]>.]+ }
+
+    rule params { <param>+ %% ',' }
+    token param { <sigil> <name=.ident> }
+
+    rule definition:sym<sub> {
+        <sym>\s <name>
+        '(' ~ ')' [ { self.push_scope( 'sub' ) } <params> ]?
+        '{' ~ '}' <statements>
+    }
+
+    rule definition:sym<class> {
+        <sym>\s <name> '{' ~ '}' [<class_member>*]
+    }
+
+    proto rule class_member { <...> }
+    rule class_member:sym<method> {
+        <sym>\s <name>
+        '(' ~ ')' [ { self.push_scope( 'method' ) } <params> ]?
+        '{' ~ '}' <statements>
     }
 }

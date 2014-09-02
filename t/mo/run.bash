@@ -12,7 +12,7 @@ function run() {
         $PROVE "$RUNNER $(dirname $1)/test.xml" "$1.mo"
     fi
     #parrot -Igen -Lgen gen/xml.pbc --target=pir $(dirname $1)/test.xml > $1.pir
-    #parrot -Igen -Lgen gen/mo.pbc --target=pir $(dirname $1)/test.xml $1.mo > $1.pir
+    parrot -Igen -Lgen gen/mo.pbc --target=pir $(dirname $1)/test.xml $1.mo > $1.pir
 }
 
 #run $SRCDIR/hello.xml $SRCDIR/hello.mo
