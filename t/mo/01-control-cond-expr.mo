@@ -153,8 +153,8 @@ else
   say("fail\t\t- unless-else")
 end
 
-if 1 == 1 say("ok\t\t- if 1 == 1");
-if 0 == 1 say("fail\t\t- if 0 == 1");
+if 1 == 1 say("ok\t\t- if 1 == 1"); end
+if 0 == 1 say("fail\t\t- if 0 == 1"); end
 
 if 0 or 1
   say("ok\t\t- if 0 or 1")

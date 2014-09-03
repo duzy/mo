@@ -115,16 +115,16 @@ class MO::Actions is HLL::Actions {
         my $scope := $*W.current_scope;
         my $block := $scope<block>;
         my $name := $<sigil> ~ $<name>;
-        my $var := QAST::Var.new( :name($name), :scope<lexical> );
+        my $var := QAST::Var.new( :node($/), :name($name), :scope<lexical> );
         my $sym := $block.symbol($name);
-        if !$sym && $scope<outer> && $scope<outer><block>.symbol($name) {
-            nqp::say('outer: '~$name);
-        }
+        # if !$sym && $scope<outer> && $scope<outer><block>.symbol($name) {
+        #     nqp::say('outer: '~$name);
+        #     $var := QAST::WVal.new( :value($scope<outer><block>.symbol($name)) );
+        # }
         unless $sym {
             $sym := $block.symbol($name, :scope<lexical>, :decl<var>);
             $var.decl($sym<decl>);
         }
-        #$var.returns('P');
         make $var;
     }
 
@@ -213,7 +213,8 @@ class MO::Actions is HLL::Actions {
     method selector:sym<{ }>($/) {
         my $block := $*W.pop_scope()<block>;
         $block.push( $<newscope>.made );
-        make QAST::Op.new( :node($/), :op<callmethod>, :name<filter>, $MODEL, $block );
+        make QAST::Op.new( :node($/), :op<callmethod>, :name<filter>, $MODEL,
+            QAST::Op.new( :op<takeclosure>, $block ) );
     }
 
     method xml($/) {
@@ -307,9 +308,9 @@ class MO::Actions is HLL::Actions {
     }
 
     method control:sym<for>($/) {
-        my $scope := $*W.pop_scope()<block>;
-        $scope.push( $<newscope>.made );
-        make QAST::Op.new( :node($/), :op<for>, $<EXPR>.made, $scope );
+        my $block := $*W.pop_scope()<block>;
+        $block.push( $<newscope>.made );
+        make QAST::Op.new( :node($/), :op<for>, $<EXPR>.made, $block );
     }
 
     method control:sym<with-1>($/) {
@@ -324,9 +325,10 @@ class MO::Actions is HLL::Actions {
     method with:sym«$»($/)  { make $<with_action>.made; }
 
     method with_action:sym<scope>($/) {
-        my $scope := $*W.pop_scope()<block>;
-        $scope.push( $<newscope>.made );
-        make $scope;
+        my $block := $*W.pop_scope()<block>;
+        $block.push( $<newscope>.made );
+        #make QAST::Op.new( :op<takeclosure>, $block );
+        make $block;
     }
 
     method with_action:sym<yield>($/) {
@@ -355,12 +357,13 @@ class MO::Actions is HLL::Actions {
     }
 
     method definition:sym<template>($/) {
-        my $scope := $*W.pop_scope()<block>;
-        #$scope.namespace( ['MO', 'Template'] );
-        #$scope.blocktype('declaration_static');
-        $scope.name( ~$<name> );
-        $scope.push( $<template_body>.made );
-        make $scope;
+        my $scope := $*W.pop_scope();
+        my $block := $scope<block>;
+        #$block.namespace( ['MO', 'Template'] );
+        #$block.blocktype('declaration_static');
+        $block.name( ~$<name> );
+        $block.push( $<template_body>.made );
+        make QAST::Op.new( :node($/), :op<takeclosure>, $block );
     }
 
     method template_body($/) {
@@ -388,18 +391,16 @@ class MO::Actions is HLL::Actions {
             if $block.symbol($name);
 
         my $sym := $block.symbol($name, :scope<lexical>, :decl<param>);
-        make $block.push( QAST::Var.new( :name($name),
+        make $block.push( QAST::Var.new( :node($/), :name($name),
             :decl($sym<decl>), :scope<lexical> ) );
     }
 
     method definition:sym<sub>($/) {
-        my $block := $*W.pop_scope()<block>;
+        my $scope := $*W.pop_scope();
+        my $block := $scope<block>;
         $block.name(~$<name>);
-        # if $<params> {
-        #     $block.push($_.made) for $<params><param>;
-        # }
         $block.push( $<statements>.made );
-        make $block;
+        make QAST::Op.new( :node($/), :op<takeclosure>, $block );
     }
 
     method definition:sym<class>($/) {

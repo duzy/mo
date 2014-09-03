@@ -52,5 +52,5 @@ else
   say("fail")
 end
 
-if 1 say("ok");
-if 0 say("fail");
+if 1 say("ok"); end
+if 0 say("fail"); end

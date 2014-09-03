@@ -282,19 +282,17 @@ grammar MO::Grammar is HLL::Grammar {
 
     proto rule control { <...> }
 
-    token control:sym<cond> {
-        $<op>=['if'|'unless'] ~ ['end'|<?{ +$<statements><statement> == 1 }>';']
-        [ \s+ <EXPR> <statements> [<else=.elsif>|<else>]? ]
+    rule control:sym<cond> {
+        [ $<op>=['if'|'unless']\s <EXPR> ] ~ 'end'
+        [ <statements> [<else=.elsif>|<else>]? ]
     }
 
-    token control:sym<loop> {
-        [
-            $<op>=['while'|'until'] \s+ <EXPR>
-        ] ~ 'end' <statements>
+    rule control:sym<loop> {
+        [ $<op>=['while'|'until']\s <EXPR> ] ~ 'end' <statements>
     }
 
     token control:sym<for> {
-        [ <sym> \s+ <!before '->'><EXPR> ] ~ 'end' <newscope: 'for', '$'>
+        [ <sym>\s+ <!before '->'><EXPR> ] ~ 'end' <newscope: 'for', '$'>
     }
 
     token control:sym<with-1> { 'with'\s+ <with> }

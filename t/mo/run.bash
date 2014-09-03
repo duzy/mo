@@ -17,8 +17,8 @@ function run() {
 
 #run $SRCDIR/hello.xml $SRCDIR/hello.mo
 
-run $SRCDIR/00 -v
-exit
+#run $SRCDIR/00 -v
+#exit
 
 #run $SRCDIR/00-expression -v
 #run $SRCDIR/01-control-loop-for -v
@@ -43,7 +43,7 @@ run $SRCDIR/21-can
 run $SRCDIR/30-template
 run $SRCDIR/40-filesystem
 run $SRCDIR/41-io
-#exit
+exit
 run $SRCDIR/40-filesystem-filter -v
 run $SRCDIR/40-filesystem-selectors -v
 run $SRCDIR/40-filesystem-wildcard -v
