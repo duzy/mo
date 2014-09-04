@@ -235,14 +235,13 @@ grammar MO::Grammar is HLL::Grammar {
     token selector:sym«..» { <sym> }
     token selector:sym«.»  {:s <sym> <name=.ident> }
     token selector:sym«->» {:s <sym>
-        [
-        | <name=.ident>
-        | <quote>
-        | <?before '['>
-        | <.panic: 'confused selector'>
-        ]
-        <selector>?
+        [ <select> | <.panic: 'confused selector'> ] <selector>?
     }
+
+    proto token select { <...> }
+    token select:sym<name> { <name=.ident> }
+    token select:sym<quote> { <quote> }
+    token select:sym<[> { <?before '['> }
 
     token xml  { <data=.LANG('XML','TOP')> }
     token json { <.panic: 'JSON parser not implemented yet'> }

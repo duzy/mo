@@ -170,15 +170,7 @@ class MO::Actions is HLL::Actions {
     }
 
     method selector:sym«->»($/) {
-        if $<name> {
-            my $name := QAST::SVal.new( :value(~$<name>) );
-            make QAST::Op.new( :node($/), :op<callmethod>, :name<select_name>, $MODEL, $name );
-        } elsif $<quote> {
-            my $path := $<quote>.made;
-            make QAST::Op.new( :node($/), :op<callmethod>, :name<select_path>, $MODEL, $path );
-        } else {
-            make QAST::Op.new( :node($/), :op<callmethod>, :name<select_all>, $MODEL );
-        }
+        make $<select>.made;
     }
 
     method selector:sym<[ ]>($/) {
@@ -215,6 +207,20 @@ class MO::Actions is HLL::Actions {
         $block.push( $<newscope>.made );
         make QAST::Op.new( :node($/), :op<callmethod>, :name<filter>, $MODEL,
             QAST::Op.new( :op<takeclosure>, $block ) );
+    }
+
+    method select:sym<name>($/) {
+        my $name := QAST::SVal.new( :value(~$<name>) );
+        make QAST::Op.new( :node($/), :op<callmethod>, :name<select_name>, $MODEL, $name );
+    }
+
+    method select:sym<quote>($/) {
+        my $path := $<quote>.made;
+        make QAST::Op.new( :node($/), :op<callmethod>, :name<select_path>, $MODEL, $path );
+    }
+
+    method select:sym<[>($/) {
+        make QAST::Op.new( :node($/), :op<callmethod>, :name<select_all>, $MODEL );
     }
 
     method xml($/) {
