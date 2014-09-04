@@ -61,6 +61,7 @@ grammar MO::Grammar is HLL::Grammar {
             'execname', 'execname',
             'env',      'getenvhash',
             'null',     'null',
+            'isnull',     'isnull',
         );
     }
 
@@ -76,11 +77,12 @@ grammar MO::Grammar is HLL::Grammar {
 
     token term:sym<value>       { <value> }
     token term:sym<variable>    { <variable> }
-    token term:sym<name>  { <name> <?{ ~$<name> ne 'return' }> <args>? }
+    token term:sym<name>  { <name> <args>? }
     token term:sym«.»  { <?before <sym>> <selector> }
     token term:sym«->» { <?before <sym>> <selector> }
 
     token term:sym<yield> { <?before <sym>> <statement> }
+    token term:sym<return> {:s <sym> }
 
     # Operators - mostly stolen from NQP's Rubyish example
     token infix:sym<**> { <sym>  <O('%exponentiation, :op<pow_n>')> }
@@ -145,13 +147,13 @@ grammar MO::Grammar is HLL::Grammar {
     token postfix:sym«.» { <sym> <name=.ident> <args>? <O('%methodop')> }
     token postfix:sym«?» { <sym> <name=.ident> <O('%methodop')> }
 
-    proto token value { <...> }
-    token value:sym<quote> { <quote> }
-    token value:sym<number> { <number> }
+    proto token value           { <...> }
+    token value:sym<quote>      { <quote> }
+    token value:sym<number>     { <number> }
 
-    proto token quote { <...> }
-    token quote:sym<'> { <?[']> <quote_EXPR: ':q'>  }
-    token quote:sym<"> { <?["]> <quote_EXPR: ':qq'> }
+    proto token quote   { <...> }
+    token quote:sym<'>  { <?[']> <quote_EXPR: ':q'>  }
+    token quote:sym<">  { <?["]> <quote_EXPR: ':qq'> }
 
     token number { $<sign>=[<[+\-]>?] [ <dec_number> | <integer> ] }
 
@@ -181,6 +183,7 @@ grammar MO::Grammar is HLL::Grammar {
     token kw:sym<end>   { <sym> }
     token kw:sym<use>   { <sym> }
     token kw:sym<sub>   { <sym> }
+    token kw:sym<return>{ <sym> }
     token kw:sym<method>{ <sym> }
 
     token keyword { <kw> <!ww> }
@@ -234,14 +237,12 @@ grammar MO::Grammar is HLL::Grammar {
     token selector:sym<{ }> {:s '{' ~ '}' <newscope: 'selector', '$', 1> <selector>? }
     token selector:sym«..» { <sym> }
     token selector:sym«.»  {:s <sym> <name=.ident> }
-    token selector:sym«->» {:s <sym>
-        [ <select> | <.panic: 'confused selector'> ] <selector>?
-    }
+    token selector:sym«->» {:s <sym> [ <select> | <.panic: 'confused selector'> ] <selector>? }
 
-    proto token select { <...> }
-    token select:sym<name> { <name=.ident> }
-    token select:sym<quote> { <quote> }
-    token select:sym<[> { <?before '['> }
+    proto token select          { <...> }
+    token select:sym<name>      { <name=.ident> }
+    token select:sym<quote>     { <quote> }
+    token select:sym<[>         { <?before '['> } # ->[...]
 
     token xml  { <data=.LANG('XML','TOP')> }
     token json { <.panic: 'JSON parser not implemented yet'> }

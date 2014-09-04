@@ -57,6 +57,14 @@ class MO::Actions is HLL::Actions {
         $/.prune;
     }
 
+    method term:sym<return>($/) {
+        #make QAST::Op.new( :op('call'), :name('RETURN'),
+        #    $<EXPR> ?? $<EXPR>.ast !!  QAST::WVal.new( :value($*W.find_sym(['NQPMu'])) ));
+        make QAST::Op.new( :op('call'), :name('RETURN'),
+            QAST::Op.new(:op('null')));
+        $/.prune;
+    }
+
     method circumfix:sym<( )>($/) {
         make $<EXPR>.made;
         $/.prune;        

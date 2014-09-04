@@ -6,7 +6,8 @@ say('1..2')
 $global = 'test-global';
 
 sub test($arg) {
-say($global)
+say(isnull($global))
+return
     if $arg eq 'test-arg'
         say("ok\t\t- $arg eq 'test-arg'")
     else
