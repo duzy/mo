@@ -1,7 +1,7 @@
 say("1..11")
 
 $subset = ->child{ .. eq 'child' }
-for $subset do {
+for $subset {
     if .name eq 'test-child-1'
       say(.okay)
     elsif .name eq 'test-child-2'
@@ -12,7 +12,7 @@ for $subset do {
 }
 
 $subset = ->child[0]
-with $subset do {
+with $subset {
     if .name eq 'test-child-1'
       say(.okay)
     else

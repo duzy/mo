@@ -284,30 +284,37 @@ grammar MO::Grammar is HLL::Grammar {
 
     rule control:sym<cond> {
         [ $<op>=['if'|'unless']\s <EXPR> ] ~ 'end'
-        [ <statements> [<else=.elsif>|<else>]? ]
+        [ <statements> <else>? ]
     }
 
     rule control:sym<loop> {
-        [ $<op>=['while'|'until']\s <EXPR> ] ~ 'end' <statements>
+        $<op>=['while'|'until']\s <EXPR> <loop_block>
     }
 
-    token control:sym<for> {
-        [ <sym>\s+ <!before '->'><EXPR> ] ~ 'end' <newscope: 'for', '$'>
+    rule control:sym<for> {
+        <sym>\s <EXPR> [ <for_block> | <.panic: "expects 'for' block"> ]
     }
 
-    token control:sym<with-1> { 'with'\s+ <with> }
-    token control:sym<with-n> { 'for'\s+ <with> }
+    rule control:sym<with> {
+        <sym>\s <EXPR> [ <with_block> | <.panic: "expects 'with' block"> ]
+    }
 
-    proto token with    { <...> }
-    token with:sym«->»  {:s <?before '->'> <node=.term> 'do' <with_action> }
-    token with:sym«$»   {:s <?before '$'> <node=.variable> 'do'? <with_action> }
+    proto rule else { <...> }
+    rule else:sym<if> { [ 'elsif'\s ] ~ <else>? [ <EXPR> <statements> ] }
+    rule else:sym< > { 'else'\s <statements> }
 
-    proto token with_action         { <...> }
-    token with_action:sym<scope>    {:s '{' ~ '}' <newscope: 'with', '$', 1> }
-    token with_action:sym<yield>    {:s <?before 'yield'> <statement> }
+    proto rule loop_block { <...> }
+    rule loop_block:sym<{ }> { 'do'? '{' ~ '}' <newscope: 'loop'> }
+    rule loop_block:sym<end> { <![{]> ~ 'end' <newscope: 'loop'> }
 
-    token elsif { 'elsif' ~ [<else=.elsif>|<else>]? [ <.ws> <EXPR> <statements> ] }
-    token else  { 'else' <statements> }
+    proto rule for_block { <...> }
+    rule for_block:sym<{ }> { 'do'? '{' ~ '}' <newscope: 'for', '$'> }
+    rule for_block:sym<end> { <![{]> ~ 'end' <newscope: 'for', '$'> }
+
+    proto rule with_block { <...> }
+    rule with_block:sym<{ }> { 'do'? '{' ~ '}' <newscope: 'with', '$', 1> }
+    rule with_block:sym<end> { <![{]> ~ 'end' <newscope: 'with', '$', 1> }
+    rule with_block:sym<yield> { 'yield' <statement> }
 
     proto rule declaration { <...> }
     rule declaration:sym<use> {

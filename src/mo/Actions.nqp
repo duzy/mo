@@ -304,45 +304,41 @@ class MO::Actions is HLL::Actions {
     }
 
     method control:sym<loop>($/) {
-        make QAST::Op.new( :node($/), :op(~$<op>), $<EXPR>.made, $<statements>.made );
+        make QAST::Op.new( :node($/), :op(~$<op>), $<EXPR>.made, $<loop_block>.made );
     }
 
     method control:sym<for>($/) {
-        my $block := $*W.pop_scope()<block>;
-        $block.push( $<newscope>.made );
+        my $scope := $*W.pop_scope();
+        my $block := $scope<block>;
+        $block.push( $<for_block>.made );
         make QAST::Op.new( :node($/), :op<for>, $<EXPR>.made, $block );
     }
 
-    method control:sym<with-1>($/) {
-        make QAST::Op.new( :node($/), :op<call>, $<with>.made, $<with><node>.made );
+    method control:sym<with>($/) {
+        my $scope := $*W.pop_scope();
+        my $block := $scope<block>;
+        $block.push( $<with_block>.made );
+        make QAST::Op.new( :node($/), :op<call>, $block, $<EXPR>.made );
     }
 
-    method control:sym<with-n>($/) {
-        make QAST::Op.new( :node($/), :op<for>, $<with><node>.made, $<with>.made );
-    }
-
-    method with:sym«->»($/) { make $<with_action>.made; }
-    method with:sym«$»($/)  { make $<with_action>.made; }
-
-    method with_action:sym<scope>($/) {
-        my $block := $*W.pop_scope()<block>;
-        $block.push( $<newscope>.made );
-        #make QAST::Op.new( :op<takeclosure>, $block );
-        make $block;
-    }
-
-    method with_action:sym<yield>($/) {
-        nqp::say('with_action:sym<yield>: '~$/);
-    }
-
-    method elsif($/) {
+    method else:sym< >($/) { make $<statements>.made; }
+    method else:sym<if>($/) {
         my $ast := QAST::Op.new( :node($/), :op('if'), $<EXPR>.made, $<statements>.made );
         $ast.push($<else>.made) if $<else>;
         make $ast;
     }
 
-    method else($/) {
-        make $<statements>.made;
+    method loop_block:sym<{ }>($/) { make $<newscope>.made; }
+    method loop_block:sym<end>($/) { make $<newscope>.made; }
+
+    method for_block:sym<{ }>($/) { make $<newscope>.made; }
+    method for_block:sym<end>($/) { make $<newscope>.made; }
+
+    method with_block:sym<{ }>($/) { make $<newscope>.made; }
+    method with_block:sym<end>($/) { make $<newscope>.made; }
+    method with_block:sym<yield>($/) {
+        make QAST.Op.new( :node($/), :op<say>,
+            QAST.SVal.new( :value('with_block:sym<yield>: '~$/) ) );
     }
 
     method declaration:sym<use>($/) {
