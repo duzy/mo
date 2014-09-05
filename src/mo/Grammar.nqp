@@ -77,12 +77,20 @@ grammar MO::Grammar is HLL::Grammar {
 
     token term:sym<value>       { <value> }
     token term:sym<variable>    { <variable> }
-    token term:sym<name>  { <name> <args>? }
+    token term:sym<name>        { <name> <args>? }
     token term:sym«.»  { <?before <sym>> <selector> }
     token term:sym«->» { <?before <sym>> <selector> }
 
-    token term:sym<yield> { <?before <sym>> <statement> }
-    token term:sym<return> {:s <sym> }
+    rule definition:sym<sub> {
+        <sym>\s <name>
+    }
+
+    token term:sym<fun>  {:s
+        <sym> '(' ~ ')' [ { self.push_scope( ~$<sym> ) } <params>? ]
+        '{' ~ '}' <statements>
+    }
+    token term:sym<return> {:s <sym> [['(' ~ ')' <EXPR>] | <EXPR>]? }
+    token term:sym<yield>  { <?before <sym>> <statement> }
 
     # Operators - mostly stolen from NQP's Rubyish example
     token infix:sym<**> { <sym>  <O('%exponentiation, :op<pow_n>')> }
@@ -140,6 +148,7 @@ grammar MO::Grammar is HLL::Grammar {
 
     token circumfix:sym<( )> { '(' ~ ')' <EXPR> <O('%methodop')> }
 
+    token postcircumfix:sym<( )> { '(' ~ ')' <arglist> <O('%methodop')> }
     token postcircumfix:sym<[ ]> { '[' ~ ']' <EXPR> <O('%methodop')> }
     token postcircumfix:sym<{ }> { '{' ~ '}' <EXPR> <O('%methodop')> }
     token postcircumfix:sym<ang> { <?[<]> <quote_EXPR: ':q'> <O('%methodop')> }
@@ -159,7 +168,7 @@ grammar MO::Grammar is HLL::Grammar {
 
     token name { <!keyword> <.ident> ['::'<.ident>]* }
 
-    token args { '(' <arglist> ')' }
+    token args { '(' ~ ')' <arglist> }
     token arglist {
         <.ws>
         [
@@ -316,6 +325,10 @@ grammar MO::Grammar is HLL::Grammar {
     rule with_block:sym<end> { <![{]> ~ 'end' <newscope: 'with', '$', 1> }
     rule with_block:sym<yield> { 'yield' <statement> }
 
+    proto rule def_block { <...> }
+    rule def_block:sym<{ }> { '{' ~ '}' <statements> }
+    rule def_block:sym<end> { <![{]> ~ 'end' <statements> }
+
     proto rule declaration { <...> }
     rule declaration:sym<use> {
         <sym>\s <name> ';'?
@@ -340,10 +353,10 @@ grammar MO::Grammar is HLL::Grammar {
     rule params { <param>+ %% ',' }
     token param { <sigil> <name=.ident> }
 
-    rule definition:sym<sub> {
+    rule definition:sym<def> {
         <sym>\s <name>
-        '(' ~ ')' [ { self.push_scope( 'sub' ) } <params> ]?
-        '{' ~ '}' <statements>
+        '(' ~ ')' [ { self.push_scope( ~$<sym> ) } <params>? ]
+        [ <def_block> | <.panic: 'expects function body'> ]
     }
 
     rule definition:sym<class> {

@@ -52,16 +52,31 @@ class MO::Actions is HLL::Actions {
         $/.prune;
     }
 
+    method term:sym<fun>($/) {
+        my $scope := $*W.pop_scope();
+        my $block := $scope<block>;
+        $block.push( wrap_return_handler($scope, $<statements>.made) );
+        make QAST::Op.new( :node($/), :op<takeclosure>, $block );
+        $/.prune;
+    }
+
     method term:sym<yield>($/) {
         make $<statement>.made;
         $/.prune;
     }
 
     method term:sym<return>($/) {
-        #make QAST::Op.new( :op('call'), :name('RETURN'),
-        #    $<EXPR> ?? $<EXPR>.ast !!  QAST::WVal.new( :value($*W.find_sym(['NQPMu'])) ));
-        make QAST::Op.new( :op('call'), :name('RETURN'),
-            QAST::Op.new(:op('null')));
+        my $scope := $*W.current_scope;
+        my $block := $scope<block>;
+        my $ast := QAST::Op.new( :node($/), :op<call>, :name<RETURN> );
+        $scope<returns> := nqp::list() unless +$scope<returns>;
+        $scope<returns>.push( $ast );
+        if $<EXPR> {
+            $ast.push($<EXPR>.made);
+        } else {
+            # $ast.push(QAST::WVal.new( :value($*W.find_sym(['NQPMu'])) ));
+        }
+        make $ast;
         $/.prune;
     }
 
@@ -70,22 +85,25 @@ class MO::Actions is HLL::Actions {
         $/.prune;        
     }
 
-    # method postcircumfix:sym<( )>($/) {
-    #     nqp::say("postcircumfix:sym<( )>: "~$/);
-    #     make QAST::Op.new(:op('null'));
-    #     $/.prune;
-    # }
+    method postcircumfix:sym<( )>($/) {
+        nqp::say('postcircumfix:sym<( )>: '~$<arglist>);
+        make $<arglist>.made;
+        #$/.prune;
+    }
 
     method postcircumfix:sym<[ ]>($/) {
         make QAST::Var.new( :scope('positional'), $<EXPR>.made );
+        #$/.prune;
     }
 
     method postcircumfix:sym<{ }>($/) {
         make QAST::Var.new( :scope('associative'), $<EXPR>.made );
+        #$/.prune;
     }
 
     method postcircumfix:sym<ang>($/) {
         make QAST::Var.new( :scope('associative'), $<quote_EXPR>.made );
+        #$/.prune;
     }
 
     method postfix:sym«.»($/) {
@@ -120,6 +138,7 @@ class MO::Actions is HLL::Actions {
     }
 
     method variable($/) {
+        nqp::say('variable: '~$/);
         my $scope := $*W.current_scope;
         my $block := $scope<block>;
         my $name := $<sigil> ~ $<name>;
@@ -137,7 +156,7 @@ class MO::Actions is HLL::Actions {
     }
 
     method arglist($/) {
-        my $ast := QAST::Op.new( :op('call'), :node($/) );
+        my $ast := QAST::Op.new( :op<call>, :node($/) );
         if $<EXPR> {
             my $expr := $<EXPR>.ast;
             if nqp::istype($expr, QAST::Op) && $expr.name eq '&infix:<,>' && !$expr.named {
@@ -165,6 +184,14 @@ class MO::Actions is HLL::Actions {
 
     method newscope($/) {
         make $<statements>.made;
+    }
+
+    my sub wrap_return_handler($scope, $statements) {
+        if +$scope<returns> {
+            QAST::Op.new( :op<lexotic>, :name<RETURN>, $statements );
+        } else {
+            $statements;
+        }
     }
 
     method selector:sym«.»($/) {
@@ -211,7 +238,8 @@ class MO::Actions is HLL::Actions {
     }
 
     method selector:sym<{ }>($/) {
-        my $block := $*W.pop_scope()<block>;
+        my $scope := $*W.pop_scope();
+        my $block := $scope<block>;
         $block.push( $<newscope>.made );
         make QAST::Op.new( :node($/), :op<callmethod>, :name<filter>, $MODEL,
             QAST::Op.new( :op<takeclosure>, $block ) );
@@ -260,7 +288,8 @@ class MO::Actions is HLL::Actions {
             ),
         );
 
-        my $block := $*W.pop_scope()<block>;
+        my $scope := $*W.pop_scope();
+        my $block := $scope<block>;
         $block.unshift( $init );
         $block.push( $<statements>.made );
 
@@ -355,6 +384,9 @@ class MO::Actions is HLL::Actions {
             QAST.SVal.new( :value('with_block:sym<yield>: '~$/) ) );
     }
 
+    method def_block:sym<{ }>($/) { make $<statements>.made; }
+    method def_block:sym<end>($/) { make $<statements>.made; }
+
     method declaration:sym<use>($/) {
         # my $module := $*W.load_module(~$<name>, $*GLOBALish);
         # if nqp::defined($module) {
@@ -405,12 +437,12 @@ class MO::Actions is HLL::Actions {
             :decl($sym<decl>), :scope<lexical> ) );
     }
 
-    method definition:sym<sub>($/) {
+    method definition:sym<def>($/) {
         my $scope := $*W.pop_scope();
         my $block := $scope<block>;
         $block.name(~$<name>);
-        $block.push( $<statements>.made );
-        make QAST::Op.new( :node($/), :op<takeclosure>, $block );
+        $block.push( wrap_return_handler($scope, $<def_block>.made) );
+        make $block;
     }
 
     method definition:sym<class>($/) {
