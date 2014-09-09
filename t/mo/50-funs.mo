@@ -19,7 +19,7 @@ def test2($arg) {
 test1('test-arg')
 test2('test-arg')
 
-$test = fun ($arg) {
+$test = def ($arg) {
     if $arg eq 'test-arg'
         say("ok\t\t- $arg eq 'test-arg'")
     else
@@ -29,7 +29,7 @@ $test = fun ($arg) {
 
 $test('test-arg')
 
-fun ($arg) {
+def ($arg) {
     if $arg eq 'test-arg'
         say("ok\t\t- $arg eq 'test-arg'")
     else

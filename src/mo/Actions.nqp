@@ -52,7 +52,7 @@ class MO::Actions is HLL::Actions {
         $/.prune;
     }
 
-    method term:sym<fun>($/) {
+    method term:sym<def>($/) {
         my $scope := $*W.pop_scope();
         my $block := $scope<block>;
         $block.push( wrap_return_handler($scope, $<statements>.made) );
@@ -86,7 +86,6 @@ class MO::Actions is HLL::Actions {
     }
 
     method postcircumfix:sym<( )>($/) {
-        nqp::say('postcircumfix:sym<( )>: '~$<arglist>);
         make $<arglist>.made;
         #$/.prune;
     }
@@ -138,19 +137,18 @@ class MO::Actions is HLL::Actions {
     }
 
     method variable($/) {
-        nqp::say('variable: '~$/);
         my $scope := $*W.current_scope;
         my $block := $scope<block>;
         my $name := $<sigil> ~ $<name>;
         my $var := QAST::Var.new( :node($/), :name($name), :scope<lexical> );
         my $sym := $block.symbol($name);
-        # if !$sym && $scope<outer> && $scope<outer><block>.symbol($name) {
-        #     nqp::say('outer: '~$name);
-        #     $var := QAST::WVal.new( :value($scope<outer><block>.symbol($name)) );
-        # }
+        if !$sym && $scope<outer> && $scope<outer><block>.symbol($name) {
+            $var := $scope<outer><block>.symbol($name)<value>;
+        } else {
         unless $sym {
             $sym := $block.symbol($name, :scope<lexical>, :decl<var>);
             $var.decl($sym<decl>);
+        }
         }
         make $var;
     }

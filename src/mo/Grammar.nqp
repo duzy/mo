@@ -85,7 +85,7 @@ grammar MO::Grammar is HLL::Grammar {
         <sym>\s <name>
     }
 
-    token term:sym<fun>  {:s
+    token term:sym<def>  {:s
         <sym> '(' ~ ')' [ { self.push_scope( ~$<sym> ) } <params>? ]
         '{' ~ '}' <statements>
     }
@@ -191,7 +191,6 @@ grammar MO::Grammar is HLL::Grammar {
     token kw:sym<def>   { <sym> }
     token kw:sym<end>   { <sym> }
     token kw:sym<use>   { <sym> }
-    token kw:sym<sub>   { <sym> }
     token kw:sym<return>{ <sym> }
     token kw:sym<method>{ <sym> }
 

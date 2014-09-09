@@ -1,11 +1,23 @@
-say('1..3')
+say('1..1');
 
-$test = fun ($arg) {
-    if $arg eq 'test-arg'
-        say("ok\t\t- $arg eq 'test-arg'")
-    else
-        say("fail\t\t- $arg eq 'test-arg'")
+$g = 'global';
+
+say('$g = '~$g);
+
+def test($a) {
+    $v = 'local';
+
+    say('$g: '~isnull($g));
+    say('$v: '~isnull($v));
+
+    unless isnull($g)
+      say(~$g);
+    end
+    unless isnull($v)
+      say(~$v);
     end
 }
 
-$test('test-arg')
+test('arg');
+
+say('ok');
