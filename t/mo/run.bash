@@ -17,8 +17,10 @@ function run() {
 
 #run $SRCDIR/hello.xml $SRCDIR/hello.mo
 
-run $SRCDIR/00 -v
-exit
+if true; then
+    run $SRCDIR/00 -v
+    exit
+fi
 
 #run $SRCDIR/00-expression -v
 #run $SRCDIR/01-control-loop-for -v

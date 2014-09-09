@@ -1,6 +1,10 @@
-say('1..3')
+say('1..1')
+
+$var = 'test'
 
 $test = fun ($arg) {
+    say('var: '~isnull($var));
+
     if $arg eq 'test-arg'
         say("ok\t\t- $arg eq 'test-arg'")
     else

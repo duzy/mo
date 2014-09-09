@@ -86,7 +86,6 @@ class MO::Actions is HLL::Actions {
     }
 
     method postcircumfix:sym<( )>($/) {
-        nqp::say('postcircumfix:sym<( )>: '~$<arglist>);
         make $<arglist>.made;
         #$/.prune;
     }
@@ -138,7 +137,6 @@ class MO::Actions is HLL::Actions {
     }
 
     method variable($/) {
-        nqp::say('variable: '~$/);
         my $scope := $*W.current_scope;
         my $block := $scope<block>;
         my $name := $<sigil> ~ $<name>;
