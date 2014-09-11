@@ -1,4 +1,4 @@
-say('1..8')
+say('1..9')
 
 $var = 'test-var'
 

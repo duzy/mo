@@ -140,18 +140,15 @@ class MO::Actions is HLL::Actions {
         my $scope := $*W.current_scope;
         my $block := $scope<block>;
         my $name := $<sigil> ~ $<name>;
-        unless $block.symbol($name) {
-            my $found;
+        my $sym := $block.symbol($name);
+        unless $sym {
             my $outer := $scope<outer>;
             while $outer {
-                if $outer<block>.symbol($name) {
-                    $found := 1; #QAST::Op.new( :op<getlex>, QAST::SVal.new( :value($name) ) );
-                    last;
-                }
+                last if ($sym := $outer<block>.symbol($name));
                 $outer := $outer<outer>;
             }
-            unless $found {
-                $block.symbol($name, :scope<lexical>, :decl<var>);
+            unless $sym {
+                $sym := $block.symbol($name, :scope<lexical>, :decl<var>);
                 $block[0].push( QAST::Op.new( :op<bind>, :node($/),
                     QAST::Var.new( :name($name), :scope<lexical>, :decl<var> ),
                     QAST::Op.new( :op<null> ),
