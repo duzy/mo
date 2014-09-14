@@ -1,4 +1,5 @@
 $g = 'global';
+$var = 'test-var';
 
 say('$g = '~$g);
 
