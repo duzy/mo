@@ -17,7 +17,7 @@ function run() {
 
 #run $SRCDIR/hello.xml $SRCDIR/hello.mo
 
-if true ; then
+if false ; then
     run $SRCDIR/00 -v
     exit
 fi
@@ -41,6 +41,8 @@ run $SRCDIR/40-filesystem
 run $SRCDIR/41-io
 run $SRCDIR/50-funs
 run $SRCDIR/50-fun-returns
+run $SRCDIR/50-fun-lexical
+run $SRCDIR/50-fun-lexical-nested
 exit
 run $SRCDIR/40-filesystem-filter -v
 run $SRCDIR/40-filesystem-selectors -v

@@ -55,7 +55,7 @@ class MO::Actions is HLL::Actions {
     method term:sym<def>($/) {
         my $scope := $*W.pop_scope();
         my $block := $scope<block>;
-        $block.push( wrap_return_handler($scope, $<statements>.made) );
+        $block[0].push( wrap_return_handler($scope, $<statements>.made) );
         make QAST::Op.new( :node($/), :op<takeclosure>, $block );
         $/.prune;
     }
@@ -74,7 +74,7 @@ class MO::Actions is HLL::Actions {
         if $<EXPR> {
             $ast.push($<EXPR>.made);
         } else {
-            # $ast.push(QAST::WVal.new( :value($*W.find_sym(['NQPMu'])) ));
+            # $ast[0].push(QAST::WVal.new( :value($*W.find_sym(['NQPMu'])) ));
         }
         make $ast;
         $/.prune;
@@ -140,17 +140,22 @@ class MO::Actions is HLL::Actions {
         my $scope := $*W.current_scope;
         my $block := $scope<block>;
         my $name := $<sigil> ~ $<name>;
-        my $var := QAST::Var.new( :node($/), :name($name), :scope<lexical> );
         my $sym := $block.symbol($name);
-        if !$sym && $scope<outer> && $scope<outer><block>.symbol($name) {
-            $var := $scope<outer><block>.symbol($name)<value>;
-        } else {
         unless $sym {
-            $sym := $block.symbol($name, :scope<lexical>, :decl<var>);
-            $var.decl($sym<decl>);
+            my $outer := $scope<outer>;
+            while $outer {
+                last if ($sym := $outer<block>.symbol($name));
+                $outer := $outer<outer>;
+            }
+            unless $sym {
+                $sym := $block.symbol($name, :scope<lexical>, :decl<var>);
+                $block[0].push( QAST::Op.new( :op<bind>, :node($/),
+                    QAST::Var.new( :name($name), :scope<lexical>, :decl<var> ),
+                    QAST::Op.new( :op<null> ),
+                ) );
+            }
         }
-        }
-        make $var;
+        make QAST::Var.new( :node($/), :name($name), :scope<lexical> );
     }
 
     method arglist($/) {
@@ -431,16 +436,26 @@ class MO::Actions is HLL::Actions {
             if $block.symbol($name);
 
         my $sym := $block.symbol($name, :scope<lexical>, :decl<param>);
-        make $block.push( QAST::Var.new( :node($/), :name($name),
+        make $block[0].push( QAST::Var.new( :node($/), :name($name),
             :decl($sym<decl>), :scope<lexical> ) );
     }
 
     method definition:sym<def>($/) {
         my $scope := $*W.pop_scope();
         my $block := $scope<block>;
-        $block.name(~$<name>);
-        $block.push( wrap_return_handler($scope, $<def_block>.made) );
-        make $block;
+        my $name := ~$<name>;
+        $block.name($name);
+        $block[0].push( wrap_return_handler($scope, $<def_block>.made) );
+
+        my $outer := $*W.current_scope<block>;
+        #$outer.symbol('&'~$name, :scope<lexical>, :proto(1), :value($code), :declared(1) );
+        $outer.symbol('&'~$name, :scope<lexical>, :proto(1), :declared(1) );
+        $outer[0].push( QAST::Op.new( :op<bind>,
+            QAST::Var.new( :name('&'~$name), :scope<lexical>, :decl<var> ),
+            $block
+        ) );
+
+        make QAST::Var.new( :name('&'~$name), :scope<lexical> );
     }
 
     method definition:sym<class>($/) {

@@ -1,5 +1,3 @@
-say('1..1');
-
 $g = 'global';
 
 say('$g = '~$g);
@@ -16,8 +14,18 @@ def test($a) {
     unless isnull($v)
       say(~$v);
     end
+
+    if $var eq 'test-var'
+        say("ok\t\t- $var eq 'test-var'")
+    else
+        say("fail\t\t- $var eq 'test-var'")
+    end
+
+    if $var eq 'test-var'
+        say("ok\t\t- $var eq 'test-var'")
+    else
+        say("fail\t\t- $var eq 'test-var'")
+    end
 }
 
-test('arg');
-
-say('ok');
+test('test-arg')
