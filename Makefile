@@ -27,7 +27,7 @@ XML_SOURCES := \
 
 MODULELOADER_PBC := gen/mo/ModuleLoader.pbc
 MODULELOADER_PIR := gen/mo/ModuleLoader.pir
-MODULELOADER_NQP := src/mo/parrot/ModuleLoader.nqp
+MODULELOADER_NQP := src/mo/ModuleLoader.nqp
 
 MO_PBC := gen/mo.pbc
 MO_PIR := gen/mo.pir
@@ -38,6 +38,8 @@ MO_SOURCES := \
   src/mo/Compiler.nqp \
   src/mo/Model.nqp \
   src/mo/World.nqp \
+  \
+  src/mo/ModuleLoader.nqp \
 
 MO_SOURCES += src/mo/parrot/Ops.nqp
 

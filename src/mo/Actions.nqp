@@ -300,6 +300,8 @@ class MO::Actions is HLL::Actions {
             ),
         );
 
+        $init.push(self.CTXSAVE());
+
         my $scope := $*W.pop_scope();
         my $block := $scope<block>;
         $block.unshift( $init );
@@ -407,7 +409,17 @@ class MO::Actions is HLL::Actions {
         #             nqp::existskey($module<EXPORT>.WHO, 'DEFAULT');
         #     import_HOW_exports($module);
         # }
-        make QAST::Stmts.new();
+        my $ast := QAST::Stmts.new( :node($/) );
+        my $op := QAST::Op.new(
+            :op('callmethod'), :name('load_module'),
+            QAST::Op.new( :op('getcurhllsym'),
+                QAST::SVal.new( :value('ModuleLoader') ) ),
+            QAST::SVal.new( :value(~$<name>) ),
+            QAST::Op.new( :op('hash') ),
+            # $*W.symbol_lookup(['GLOBAL'], $/),
+        );
+        $ast.push( $op );
+        make $ast;
     }
 
     method definition:sym<template>($/) {
@@ -456,7 +468,10 @@ class MO::Actions is HLL::Actions {
         $block.name($name);
         $block[0].push( wrap_return_handler($scope, $<def_block>.made) );
 
-        my $outer := $*W.current_scope<block>;
+        # TODO: using code object (check rakudo or NQP implementations)
+        #my $code := QAST::Var.new( :name('&' ~ $name), :scope<lexical> );
+
+        my $outer := $scope<outer><block>;
         $outer.symbol('&' ~ $name, :scope<lexical>, :proto(1), :declared(1) );
         $outer[0].push( QAST::Op.new( :op<bind>,
             QAST::Var.new( :name('&' ~ $name), :scope<lexical>, :decl<var> ),
