@@ -1,4 +1,4 @@
-my knowhow MO::Routine {
+class MO::Routine {
     has $!code;
 
     method name() {

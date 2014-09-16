@@ -1,3 +1,5 @@
 use test::Module;
 
-Module::test('test-arg');
+say('ok');
+
+$s = 'string';

@@ -45,26 +45,6 @@ grammar MO::Grammar is HLL::Grammar {
         #MO::Grammar.O(':prec<d=>, :assoc<unary>', '%list_prefix');
     }
 
-    our %builtins; # ops
-
-    BEGIN {
-        %builtins := nqp::hash(
-            'die',      'die',
-            'say',      'say',
-            'exit',     'exit',
-            'print',    'print',
-            'sleep',    'sleep',
-            'open',     'open',
-            'pipe',     'openpipe',
-            'system',   'system',
-            'shell',    'shell',
-            'execname', 'execname',
-            'env',      'getenvhash',
-            'null',     'null',
-            'isnull',     'isnull',
-        );
-    }
-
     token ws {
         ||  <?MARKED('ws')>
         ||  <!ww>
@@ -77,7 +57,7 @@ grammar MO::Grammar is HLL::Grammar {
 
     token term:sym<value>       { <value> }
     token term:sym<variable>    { <variable> }
-    token term:sym<name>        { <name> <args>? }
+    token term:sym<name>        { <name> }
     token term:sym«.»  { <?before <sym>> <selector> }
     token term:sym«->» { <?before <sym>> <selector> }
 
@@ -197,18 +177,32 @@ grammar MO::Grammar is HLL::Grammar {
     token keyword { <kw> <!ww> }
 
     method TOP() {
+        # Language braid.
         my %*LANG;
         %*LANG<XML>         := XML::Grammar;
         %*LANG<XML-actions> := XML::Actions;
 
+        # Package declarator to meta-package mapping. Starts pretty much empty;
+        # we get the mappings either imported or supplied by the setting. One
+        # issue is that we may have no setting to provide them, e.g. when we
+        # compile the setting, but it still wants some kinda package. We just
+        # fudge in knowhow for that.
+        my %*HOW;
+        %*HOW<knowhow> := nqp::knowhow();
+        %*HOW<package> := nqp::knowhow();
+
+        # Symbol table and serialization context builder - keeps track of
+        # objects that cross the compile-time/run-time boundary that are
+        # associated with this compilation unit.
         my $source_id := nqp::sha1(self.target() ~ nqp::time_n());
         my $file := nqp::getlexdyn('$?FILES');
         my $*W := nqp::isnull($file) ??
             MO::World.new(:handle($source_id)) !!
             MO::World.new(:handle($source_id), :description($file));
 
-        # nqp::say('parsing: ' ~ $file);
-        
+        #$*W.add_initializations();
+        $*W.add_builtin_objects();
+       
         if $file ~~ / .*\.xml$ / {
             self.xml
         } elsif $file ~~ / .*\.json$ / {
@@ -256,6 +250,9 @@ grammar MO::Grammar is HLL::Grammar {
     token json { <.panic: 'JSON parser not implemented yet'> }
     rule  prog {
         {
+            my $*GLOBALish := $*W.pkg_create_mo($/, %*HOW<package>, :name('GLOBAL'));
+            $*W.pkg_compose($*GLOBALish);
+
             my $scope := self.push_scope('prog');
             my $*UNIT := $scope<block>;
             $*UNIT.symbol('$', :scope<lexical>, :decl<var>);

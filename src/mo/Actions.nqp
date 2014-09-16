@@ -5,34 +5,41 @@ class MO::Actions is HLL::Actions {
     method term:sym<variable>($/) { make $<variable>.made; $/.prune; }
     method term:sym<name>($/) {
         my $name := ~$<name>;
-        my $op := %MO::Grammar::builtins{$name};
-        if $<args> {
-            my $ast := $<args>.made;
-            if $op {
-                $ast.op($op);
-            } else {
-                my %sym := $*W.find_symbol(['&' ~ $name]);
-                if nqp::defined(%sym) {
-                    if 0 {
-                        $ast.unshift($*W.symbol_ast(%sym, '&' ~ $name, 1));
-                    } else {
-                        $ast.name('&' ~ $name);
-                    }
-                } else {
-                    $ast.name($name);
-                }
-            }
-            make $ast;
-        } elsif $op {
-            make QAST::Op.new(:op($op), :node($/));
-        } else {
-            my %sym := $*W.find_symbol(['&' ~ $name]);
-            if nqp::defined(%sym) {
-                make QAST::Op.new(:op<call>, :node($/), $*W.symbol_ast(%sym, '&' ~ $name, 1));
-            } else {
-                make QAST::Op.new(:op<call>, :node($/), :name($name));
-            }
+        my %sym := $*W.find_symbol(nqp::split('::', $name));
+        unless %sym {
+            $/.CURSOR.panic('undefined name '~$name);
         }
+        make $*W.symbol_ast($/, %sym, $name, 1);
+
+        # my $op := %MO::Grammar::builtins{$name};
+        # if $<args> {
+        #     my $ast := $<args>.made;
+        #     if $op {
+        #         $ast.op($op);
+        #     } else {
+        #         my %sym := $*W.find_symbol(['&' ~ $name]);
+        #         if nqp::defined(%sym) {
+        #             if 0 {
+        #                 $ast.unshift($*W.symbol_ast(%sym, '&' ~ $name, 1));
+        #             } else {
+        #                 $ast.name('&' ~ $name);
+        #             }
+        #         } else {
+        #             $ast.name($name);
+        #         }
+        #     }
+        #     make $ast;
+        # } elsif $op {
+        #     make QAST::Op.new(:op($op), :node($/));
+        # } else {
+        #     my %sym := $*W.find_symbol(['&' ~ $name]);
+        #     if nqp::defined(%sym) {
+        #         make QAST::Op.new(:op<call>, :node($/), $*W.symbol_ast(%sym, '&' ~ $name, 1));
+        #     } else {
+        #         make QAST::Op.new(:op<call>, :node($/), :name($name));
+        #     }
+        # }
+
         $/.prune;
     }
 
@@ -151,10 +158,11 @@ class MO::Actions is HLL::Actions {
     }
 
     method variable($/) {
-        my $name := $<sigil> ~ $<name>;
-        my %sym := $*W.find_symbol([$name]);
+        my $name := ~$/; # $<sigil> ~ $<name>;
+        nqp::say("variable: $name");
+        my %sym := $*W.find_symbol([~$name]);
         if nqp::defined(%sym) {
-            make $*W.symbol_ast(%sym, $name, 1);
+            make $*W.symbol_ast($/, %sym, $name, 1);
         } else {
             my $scope := $*W.current_scope;
             my $block := $scope<block>;
@@ -302,6 +310,14 @@ class MO::Actions is HLL::Actions {
 
         $init.push(self.CTXSAVE());
 
+        # GLOBAL
+        my $global_install := QAST::Op.new(
+            :op('bindcurhllsym'),
+            QAST::SVal.new( :value('GLOBAL') ),
+            QAST::WVal.new( :value($*GLOBALish) )
+        );
+        $*W.add_fixup_task(:deserialize_ast($global_install), :fixup_ast($global_install));
+
         my $scope := $*W.pop_scope();
         my $block := $scope<block>;
         $block.unshift( $init );
@@ -310,8 +326,33 @@ class MO::Actions is HLL::Actions {
         my $compunit := QAST::CompUnit.new(
             :hll('mo'),
 
+            # Serialization related bits.
+            :sc($*W.sc()),
+            :code_ref_blocks($*W.code_ref_blocks()),
+            :compilation_mode($*W.is_precompilation_mode()),
+            :pre_deserialize($*W.load_dependency_tasks()),
+            :post_deserialize($*W.fixup_tasks()),
+            :repo_conflict_resolver(QAST::Op.new(
+                :op('callmethod'), :name('resolve_repossession_conflicts'),
+                QAST::Op.new(
+                    :op('getcurhllsym'),
+                    QAST::SVal.new( :value('ModuleLoader') )
+                )
+            )),
+
+            # If this unit is loaded as a module, we want it to automatically
+            # execute the mainline code above after all other initializations
+            # have occurred.
+            :load(QAST::Op.new(
+                :op('call'),
+                QAST::BVal.new( :value($block) ),
+            )),
+
+            # Finally, the outer block, which in turn contains all of the
+            # other program elements.
             $block
         );
+
         make $compunit;
     }
 
