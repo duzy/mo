@@ -25,27 +25,25 @@ class MO::World is HLL::World {
 
         # If it's a single-part name, look through the lexical scopes.
         if +@name == 1 {
-            my $name := @name[0];
-            my $i := +@!scopes;
+            my $first := @name[0];
+            my int $i := +@!scopes;
             while 0 < $i {
                 $i := $i - 1;
-                my %sym := @!scopes[$i]<block>.symbol($name);
+                my %sym := @!scopes[$i]<block>.symbol($first);
                 if +%sym {
                     return %sym;
                 }
             }
 
-            if nqp::existskey(%builtins, $name) {
-                return %builtins{$name};
+            if nqp::existskey(%builtins, $first) {
+                return %builtins{$first};
             }
         }
-
-        nqp::say("variable: "~@name[0]);
 
         # If it's a multi-part name, see if the containing package
         # is a lexical somewhere. Otherwise we fall back to looking
         # in GLOBALish.
-        my $result;
+        my %result;
         if +@name >= 2 {
             my $first := @name[0];
             my int $i := +@!scopes;
@@ -53,7 +51,7 @@ class MO::World is HLL::World {
                 $i := $i - 1;
                 my %sym := @!scopes[$i]<block>.symbol($first);
                 if +%sym {
-                    $result := %sym;
+                    %result := %sym;
                     @name := nqp::clone(@name);
                     @name.shift();
                     $i := 0;
@@ -63,29 +61,28 @@ class MO::World is HLL::World {
 
         # If it has any other parts of the name, we try to chase down the parts.
         if +@name {
-            unless nqp::existskey($result, 'value') {
-                nqp::die("no compile-time value for symbol " ~ join('::', @name));
-            }
-
-            # Try to chase down the parts of the name.
-            my $value := $result<value>;
-
+            my $value := nqp::existskey(%result, 'value') ?? %result<value> !! $*GLOBALish;
             for @name {
                 if nqp::existskey($value.WHO, ~$_) {
                     $value := ($value.WHO){$_};
                 } else {
-                    nqp::die("no compile-time value for symbol " ~ join('::', @name));
+                    # nqp::die("no compile-time value for symbol " ~ nqp::join('::', @name));
+                    $value := NQPMu;
+                    last;
                 }
             }
 
-            $result := nqp::hash();
-            $result<value> := $value;
+            if nqp::defined($value) {
+                %result := nqp::hash();
+                %result<value> := $value;
+            }
         }
 
-        $result;
+        %result;
     }
 
     method symbol_ast($/, %sym, $name, int $die) {
+# nqp::say("symbol_ast: $name");
         if nqp::existskey(%sym, 'ast') {
             %sym<ast>;
         } elsif nqp::existskey(%sym, 'value') {
@@ -94,10 +91,22 @@ class MO::World is HLL::World {
             my $sigil := nqp::substr($name, 0, 1);
             if %sym<scope> eq 'lexical' && ($sigil eq '$' || $sigil eq '&') {
                 QAST::Var.new( :node($/), :name($name), :scope<lexical> );
+            } elsif $die {
+                if %sym {
+                    nqp::die("no compile-time value for $name");
+                } else {
+                    nqp::die("undefined symbol $name");
+                }
             } else {
-                $die ?? nqp::die("No compile-time value for $name") !! NQPMu
+                NQPMu;
             }
         }
+    }
+
+    method isexportname($name) {
+        my $s := nqp::substr($name, 0, 1);
+        # $s := nqp::substr($name, 1, 1) if $s eq '$' || $s eq '&';
+        $s eq nqp::uc($s);
     }
 
     # Creates a meta-object for a package, adds it to the root objects and

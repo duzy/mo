@@ -6,40 +6,8 @@ class MO::Actions is HLL::Actions {
     method term:sym<name>($/) {
         my $name := ~$<name>;
         my %sym := $*W.find_symbol(nqp::split('::', $name));
-        unless %sym {
-            $/.CURSOR.panic('undefined name '~$name);
-        }
+        # $/.CURSOR.panic('undefined name '~$name) unless %sym;
         make $*W.symbol_ast($/, %sym, $name, 1);
-
-        # my $op := %MO::Grammar::builtins{$name};
-        # if $<args> {
-        #     my $ast := $<args>.made;
-        #     if $op {
-        #         $ast.op($op);
-        #     } else {
-        #         my %sym := $*W.find_symbol(['&' ~ $name]);
-        #         if nqp::defined(%sym) {
-        #             if 0 {
-        #                 $ast.unshift($*W.symbol_ast(%sym, '&' ~ $name, 1));
-        #             } else {
-        #                 $ast.name('&' ~ $name);
-        #             }
-        #         } else {
-        #             $ast.name($name);
-        #         }
-        #     }
-        #     make $ast;
-        # } elsif $op {
-        #     make QAST::Op.new(:op($op), :node($/));
-        # } else {
-        #     my %sym := $*W.find_symbol(['&' ~ $name]);
-        #     if nqp::defined(%sym) {
-        #         make QAST::Op.new(:op<call>, :node($/), $*W.symbol_ast(%sym, '&' ~ $name, 1));
-        #     } else {
-        #         make QAST::Op.new(:op<call>, :node($/), :name($name));
-        #     }
-        # }
-
         $/.prune;
     }
 
@@ -158,11 +126,22 @@ class MO::Actions is HLL::Actions {
     }
 
     method variable($/) {
+        my @name := nqp::split('::', ~$<name>);
+        my $final_name := @name.pop;
+        if +@name {
+            my %sym := $*W.find_symbol(@name);
+            nqp::say("package: "~@name~', '~+%sym);
+        }
+
         my $name := ~$/; # $<sigil> ~ $<name>;
-        nqp::say("variable: $name");
         my %sym := $*W.find_symbol([~$name]);
-        if nqp::defined(%sym) {
+        if %sym {
             make $*W.symbol_ast($/, %sym, $name, 1);
+        } elsif $*W.isexportname(~$<name>) {
+            make QAST::Var.new( :node($/), :scope<associative>,
+                QAST::Op.new( :op<who>, QAST::WVal.new( :value($*GLOBALish) ) ),
+                QAST::SVal.new( :value($name) ),
+            );
         } else {
             my $scope := $*W.current_scope;
             my $block := $scope<block>;
@@ -443,23 +422,13 @@ class MO::Actions is HLL::Actions {
     method def_block:sym<end>($/) { make $<statements>.made; }
 
     method declaration:sym<use>($/) {
-        # my $module := $*W.load_module(~$<name>, $*GLOBALish);
-        # if nqp::defined($module) {
-        #     $*W.import($module<EXPORT>.WHO<DEFAULT>.WHO)
-        #         if nqp::existskey($module, 'EXPORT') &&
-        #             nqp::existskey($module<EXPORT>.WHO, 'DEFAULT');
-        #     import_HOW_exports($module);
-        # }
         my $ast := QAST::Stmts.new( :node($/) );
-        my $op := QAST::Op.new(
-            :op('callmethod'), :name('load_module'),
-            QAST::Op.new( :op('getcurhllsym'),
-                QAST::SVal.new( :value('ModuleLoader') ) ),
+        $ast.push( QAST::Op.new( :op<callmethod>, :name<load_module>,
+            QAST::Op.new( :op<getcurhllsym>, QAST::SVal.new(:value<ModuleLoader>) ),
             QAST::SVal.new( :value(~$<name>) ),
-            QAST::Op.new( :op('hash') ),
-            # $*W.symbol_lookup(['GLOBAL'], $/),
-        );
-        $ast.push( $op );
+            QAST::Op.new( :op<hash> ),
+            QAST::Op.new( :op<getcurhllsym>, QAST::SVal.new(:value<GLOBAL>) ),
+        ) );
         make $ast;
     }
 

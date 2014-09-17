@@ -55,18 +55,39 @@ class MO::ModuleLoader {
             %chosen := self.locate_module($module_name, ['t/mo/']);
         }
 
-        if %chosen<load> {
-            my $*CTX := nqp::null();
-            my $*CTXSAVE := self;
-            nqp::loadbytecode(%chosen<load>);
-        } elsif %chosen<source> {
-            my $*CTX := nqp::null();
-            my $*CTXSAVE := self;
-            my $source := self.load_source(%chosen<source>);
-            my $code := nqp::getcomp('mo').compile($source);
-            $code();
+        my $module_ctx;
+        if nqp::defined(%modules_loaded{%chosen<key>}) {
+            $module_ctx := %modules_loaded{%chosen<key>};
         } else {
-            nqp::die("missing module $module_name");
+            my $*CTX := nqp::null();
+            my $*CTXSAVE := self;
+            if %chosen<load> {
+                nqp::loadbytecode(%chosen<load>);
+            } elsif %chosen<source> {
+                my $?FILES := %chosen<source>;
+                my $source := self.load_source(%chosen<source>);
+                my $eval := nqp::getcomp('mo').compile($source);
+                $eval();
+            } else {
+                nqp::die("missing module $module_name");
+            }
+            %modules_loaded{%chosen<key>} := $module_ctx := $*CTX;
+        }
+
+        if nqp::defined($module_ctx) {
+            # Merge any globals.
+            my $unit := nqp::ctxlexpad($module_ctx);
+nqp::say('GLOBALish: '~$unit<$TestVar>);
+nqp::say('GLOBALish: '~$unit<$test>);
+nqp::say('GLOBALish: '~$unit<&Test>);
+            if +@GLOBALish {
+                my @name := nqp::split('::', $module_name);
+                my $final := @name[+@name - 1];
+                @GLOBALish[0].WHO{$final} := $unit;
+            }
+            return $unit;
+        } else {
+            return {};
         }
     }
 

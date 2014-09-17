@@ -61,10 +61,6 @@ grammar MO::Grammar is HLL::Grammar {
     token term:sym«.»  { <?before <sym>> <selector> }
     token term:sym«->» { <?before <sym>> <selector> }
 
-    rule definition:sym<sub> {
-        <sym>\s <name>
-    }
-
     token term:sym<def>  {:s
         <sym> '(' ~ ')' [ { self.push_scope( ~$<sym> ) } <params>? ]
         '{' ~ '}' <statements>
@@ -267,8 +263,8 @@ grammar MO::Grammar is HLL::Grammar {
     }
 
     token variable {
-        #<sigil> <twigil>? <name=.ident>
-        <sigil> <name=.ident>?
+        #<sigil> <twigil>? <name>
+        <sigil> <name>?
     }
 
     token sigil  { <[$@%&]> }
@@ -288,6 +284,7 @@ grammar MO::Grammar is HLL::Grammar {
     proto rule control { <...> }
 
     rule control:sym<cond> {
+        { nqp::say(~$/) }
         [ $<op>=['if'|'unless']\s <EXPR> ] ~ 'end'
         [ <statements> <else>? ]
     }
