@@ -17,7 +17,7 @@ function run() {
 
 #run $SRCDIR/hello.xml $SRCDIR/hello.mo
 
-if false ; then
+if true ; then
     run $SRCDIR/00 -v
     exit
 fi

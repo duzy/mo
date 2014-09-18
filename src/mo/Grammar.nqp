@@ -290,7 +290,6 @@ grammar MO::Grammar is HLL::Grammar {
     proto rule control { <...> }
 
     rule control:sym<cond> {
-        { nqp::say(~$/) }
         [ $<op>=['if'|'unless']\s <EXPR> ] ~ 'end'
         [ <statements> <else>? ]
     }
@@ -353,7 +352,7 @@ grammar MO::Grammar is HLL::Grammar {
     token param { <sigil> <name=.ident> }
 
     rule definition:sym<def> {
-        <sym>\s <name>
+        <sym>\s <name=.ident>
         '(' ~ ')' [ { self.push_scope( ~$<sym> ) } <params>? ]
         [ <def_block> | <.panic: 'expects function body'> ]
     }

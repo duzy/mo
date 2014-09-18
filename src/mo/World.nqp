@@ -142,7 +142,9 @@ class MO::World is HLL::World {
         my $module := nqp::gethllsym('mo', 'ModuleLoader').load_module(
             $module_name, $GLOBALish);
 
-        say("load_module: $module_name, "~$GLOBALish.WHO<Module>.WHO<$TestVar>);
+        # say("load_module: $module_name, "~$GLOBALish.WHO<Module>.WHO<$TestVar>);
+        # say("$module_name: "~$_.key) for $GLOBALish.WHO;
+        # say("$module_name: Module: "~$_.key) for $GLOBALish.WHO<Module>.WHO;
 
         # Make sure we do the loading during deserialization.
         if self.is_precompilation_mode() {
@@ -216,8 +218,8 @@ class MO::World is HLL::World {
 # I/O opcodes (vm/parrot/QAST/Operations.nqp)
 MO::World.add_builtin_code('print', -> $s { nqp::print($s) });
 MO::World.add_builtin_code('say', -> $s { nqp::say($s) });
+MO::World.add_builtin_code('die', -> $s { nqp::die($s) });
 
-# MO::World.add_builtin_code('die',            &nqp::die);
 # MO::World.add_builtin_code('say',            &nqp::say);
 # MO::World.add_builtin_code('exit',           &nqp::exit);
 # MO::World.add_builtin_code('print',          &nqp::print);

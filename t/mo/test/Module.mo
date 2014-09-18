@@ -1,6 +1,8 @@
-say("ok\t- test/Module.mo loaded");
+say('1..6');
+say("ok\t- 1. test/Module.mo loaded");
 
 def Test($arg) {
+    say("ok\t- 5. Test is defined in test::Module");
     if $arg eq 'test-arg'
         say("ok\t- Module::Test: "~$arg);
     else
@@ -8,5 +10,5 @@ def Test($arg) {
     end
 }
 
-$TestVar = 'test-export-var';
-$test = 'test-var';
+$TestVar = "ok\t- 2. $TestVar is defined in test::Module";
+$test = "ok\t- 3. $test is defined in test::Module";

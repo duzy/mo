@@ -4,10 +4,19 @@ class MO::Actions is HLL::Actions {
     method term:sym<value>($/) { make $<value>.made; $/.prune; }
     method term:sym<variable>($/) { make $<variable>.made; $/.prune; }
     method term:sym<name>($/) {
-        my $name := ~$<name>;
-        my %sym := $*W.find_symbol(nqp::split('::', $name));
-        # $/.CURSOR.panic('undefined name '~$name) unless %sym;
-        make $*W.symbol_ast($/, %sym, $name, 1);
+        my @name := nqp::split('::', ~$<name>);
+        my $final_name := @name.pop;
+        if +@name {
+            my %sym := $*W.find_symbol(@name);
+            $/.CURSOR.panic(nqp::join('::', @name)~' is undefined')
+                unless nqp::defined(%sym<value>);
+            my $who := QAST::Op.new( :op<who>, QAST::WVal.new( %sym<value> ) );
+            make QAST::Var.new( :node($/), :scope<associative>,
+                $who, QAST::SVal.new( :value($final_name) ) );
+        } else {
+            my %sym := $*W.find_symbol([$final_name]);
+            make $*W.symbol_ast($/, %sym, $final_name, 1);
+        }
         $/.prune;
     }
 
@@ -130,23 +139,23 @@ class MO::Actions is HLL::Actions {
         my $final_name := @name.pop;
         my $name := ~$<sigil> ~ $final_name;
 
+        my $who;
         if +@name {
             my %sym := $*W.find_symbol(@name);
-            nqp::say("variable: "~@name~', '~+%sym);
+            $/.CURSOR.panic(nqp::join('::', @name)~' is undefined')
+                unless nqp::defined(%sym<value>);
+            $who := QAST::Op.new( :op<who>, QAST::WVal.new( %sym<value> ) );
+        } else {
+            $who := QAST::Var.new( :name<EXPORT.WHO>, :scope<lexical> );
         }
 
         my %sym := $*W.find_symbol([$name]);
 
-        nqp::say("variable: "~@name~', '~$final_name~", $name, "~+%sym);
-
-        if %sym {
+        if +%sym {
             make $*W.symbol_ast($/, %sym, $name, 1);
         } elsif $*W.isexportname($final_name) {
             make QAST::Var.new( :node($/), :scope<associative>,
-                #QAST::Var.new( :name<GLOBAL.WHO>, :scope<lexical> ),
-                QAST::Var.new( :name<EXPORT.WHO>, :scope<lexical> ),
-                QAST::SVal.new( :value($name) ),
-            );
+                $who, QAST::SVal.new( :value($name) ) );
         } else {
             my $scope := $*W.current_scope;
             my $block := $scope<block>;
@@ -325,9 +334,6 @@ class MO::Actions is HLL::Actions {
             ),
         );
         $*W.add_fixup_task(:deserialize_ast($fixup), :fixup_ast($fixup));
-
-        say('$*GLOBALish: '~nqp::where($*GLOBALish));
-        say('$*EXPORT: '~nqp::where($*EXPORT));
 
         my $scope := $*W.pop_scope();
         my $block := $scope<block>;
@@ -511,6 +517,15 @@ class MO::Actions is HLL::Actions {
             QAST::Var.new( :name('&' ~ $name), :scope<lexical>, :decl<var> ),
             $block
         ) );
+
+        if $*W.isexportname($name) {
+            $outer[0].push( QAST::Op.new( :op<bind>,
+                QAST::Var.new( :node($/), :scope<associative>,
+                    QAST::Var.new( :name<EXPORT.WHO>, :scope<lexical> ),
+                    QAST::SVal.new( :value($name) ) ),
+                QAST::Var.new( :name('&' ~ $name), :scope<lexical> ),
+            ) );
+        }
 
         make QAST::Var.new( :name('&' ~ $name), :scope<lexical> );
     }
