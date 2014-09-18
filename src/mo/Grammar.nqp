@@ -187,6 +187,9 @@ grammar MO::Grammar is HLL::Grammar {
         %*HOW<knowhow> := nqp::knowhow();
         %*HOW<package> := nqp::knowhow();
 
+        my $*GLOBALish;
+        my $*EXPORT;
+
         # Symbol table and serialization context builder - keeps track of
         # objects that cross the compile-time/run-time boundary that are
         # associated with this compilation unit.
@@ -246,8 +249,11 @@ grammar MO::Grammar is HLL::Grammar {
     token json { <.panic: 'JSON parser not implemented yet'> }
     rule  prog {
         {
-            my $*GLOBALish := $*W.pkg_create_mo($/, %*HOW<package>, :name('GLOBAL'));
+            $*GLOBALish := $*W.pkg_create_mo($/, %*HOW<package>, :name('GLOBAL'));
             $*W.pkg_compose($*GLOBALish);
+
+            $*EXPORT := $*W.pkg_create_mo($/, %*HOW<package>, :name('EXPORT'));
+            $*W.pkg_compose($*EXPORT);
 
             my $scope := self.push_scope('prog');
             my $*UNIT := $scope<block>;

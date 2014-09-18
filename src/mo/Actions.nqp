@@ -128,18 +128,23 @@ class MO::Actions is HLL::Actions {
     method variable($/) {
         my @name := nqp::split('::', ~$<name>);
         my $final_name := @name.pop;
+        my $name := ~$<sigil> ~ $final_name;
+
         if +@name {
             my %sym := $*W.find_symbol(@name);
-            nqp::say("package: "~@name~', '~+%sym);
+            nqp::say("variable: "~@name~', '~+%sym);
         }
 
-        my $name := ~$/; # $<sigil> ~ $<name>;
-        my %sym := $*W.find_symbol([~$name]);
+        my %sym := $*W.find_symbol([$name]);
+
+        nqp::say("variable: "~@name~', '~$final_name~", $name, "~+%sym);
+
         if %sym {
             make $*W.symbol_ast($/, %sym, $name, 1);
-        } elsif $*W.isexportname(~$<name>) {
+        } elsif $*W.isexportname($final_name) {
             make QAST::Var.new( :node($/), :scope<associative>,
-                QAST::Op.new( :op<who>, QAST::WVal.new( :value($*GLOBALish) ) ),
+                #QAST::Var.new( :name<GLOBAL.WHO>, :scope<lexical> ),
+                QAST::Var.new( :name<EXPORT.WHO>, :scope<lexical> ),
                 QAST::SVal.new( :value($name) ),
             );
         } else {
@@ -277,9 +282,23 @@ class MO::Actions is HLL::Actions {
         my $init := QAST::Stmts.new(
             QAST::Op.new( :op<bind>,
                 QAST::Var.new( :scope<lexical>, :decl<var>, :name($MODEL.name) ),
-                QAST::Op.new( :op<callmethod>, :name<get>,
-                    QAST::WVal.new( :value(MO::Model) ),
-                ),
+                QAST::Op.new( :op<getcurhllsym>, QAST::SVal.new( :value<MODEL> ) ),
+            ),
+            QAST::Op.new( :op<bind>,
+                QAST::Var.new( :scope<lexical>, :decl<var>, :name<GLOBAL> ),
+                QAST::Op.new( :op<getcurhllsym>, QAST::SVal.new( :value<GLOBAL> ) ),
+            ),
+            QAST::Op.new( :op<bind>,
+                QAST::Var.new( :scope<lexical>, :decl<var>, :name<GLOBAL.WHO> ),
+                QAST::Op.new( :op<who>, QAST::Var.new( :scope<lexical>, :name<GLOBAL> ) ),
+            ),
+            QAST::Op.new( :op<bind>,
+                QAST::Var.new( :scope<lexical>, :decl<var>, :name<EXPORT> ),
+                QAST::Op.new( :op<getcurhllsym>, QAST::SVal.new( :value<EXPORT> ) ),
+            ),
+            QAST::Op.new( :op<bind>,
+                QAST::Var.new( :scope<lexical>, :decl<var>, :name<EXPORT.WHO> ),
+                QAST::Op.new( :op<who>, QAST::Var.new( :scope<lexical>, :name<EXPORT> ) ),
             ),
             QAST::Op.new( :op<bind>,
                 QAST::Var.new( :name<$>, :scope<lexical>, :decl<var> ),
@@ -289,13 +308,26 @@ class MO::Actions is HLL::Actions {
 
         $init.push(self.CTXSAVE());
 
-        # GLOBAL
-        my $global_install := QAST::Op.new(
-            :op('bindcurhllsym'),
-            QAST::SVal.new( :value('GLOBAL') ),
-            QAST::WVal.new( :value($*GLOBALish) )
+        my $fixup := QAST::Stmts.new(
+            QAST::Op.new( :op<bindcurhllsym>,
+                QAST::SVal.new( :value('MODEL') ),
+                QAST::Op.new( :op<callmethod>, :name<get>,
+                    QAST::WVal.new( :value(MO::Model) ),
+                )
+            ),
+            QAST::Op.new( :op<bindcurhllsym>,
+                QAST::SVal.new( :value('GLOBAL') ),
+                QAST::WVal.new( :value($*GLOBALish) )
+            ),
+            QAST::Op.new( :op<bindcurhllsym>,
+                QAST::SVal.new( :value('EXPORT') ),
+                QAST::WVal.new( :value($*EXPORT) )
+            ),
         );
-        $*W.add_fixup_task(:deserialize_ast($global_install), :fixup_ast($global_install));
+        $*W.add_fixup_task(:deserialize_ast($fixup), :fixup_ast($fixup));
+
+        say('$*GLOBALish: '~nqp::where($*GLOBALish));
+        say('$*EXPORT: '~nqp::where($*EXPORT));
 
         my $scope := $*W.pop_scope();
         my $block := $scope<block>;
@@ -312,9 +344,8 @@ class MO::Actions is HLL::Actions {
             :pre_deserialize($*W.load_dependency_tasks()),
             :post_deserialize($*W.fixup_tasks()),
             :repo_conflict_resolver(QAST::Op.new(
-                :op('callmethod'), :name('resolve_repossession_conflicts'),
-                QAST::Op.new(
-                    :op('getcurhllsym'),
+                :op<callmethod>, :name('resolve_repossession_conflicts'),
+                QAST::Op.new( :op<getcurhllsym>,
                     QAST::SVal.new( :value('ModuleLoader') )
                 )
             )),
@@ -322,10 +353,9 @@ class MO::Actions is HLL::Actions {
             # If this unit is loaded as a module, we want it to automatically
             # execute the mainline code above after all other initializations
             # have occurred.
-            :load(QAST::Op.new(
-                :op('call'),
-                QAST::BVal.new( :value($block) ),
-            )),
+            :load(QAST::Op.new(:op<call>, QAST::BVal.new( :value($block) ))),
+
+            :main(QAST::Op.new(:op<call>, QAST::BVal.new( :value($block) ))),
 
             # Finally, the outer block, which in turn contains all of the
             # other program elements.
@@ -422,14 +452,8 @@ class MO::Actions is HLL::Actions {
     method def_block:sym<end>($/) { make $<statements>.made; }
 
     method declaration:sym<use>($/) {
-        my $ast := QAST::Stmts.new( :node($/) );
-        $ast.push( QAST::Op.new( :op<callmethod>, :name<load_module>,
-            QAST::Op.new( :op<getcurhllsym>, QAST::SVal.new(:value<ModuleLoader>) ),
-            QAST::SVal.new( :value(~$<name>) ),
-            QAST::Op.new( :op<hash> ),
-            QAST::Op.new( :op<getcurhllsym>, QAST::SVal.new(:value<GLOBAL>) ),
-        ) );
-        make $ast;
+        my $module := $*W.load_module($/, ~$<name>, $*GLOBALish);
+        make QAST::Stmts.new( :node($/) );
     }
 
     method definition:sym<template>($/) {

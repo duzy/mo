@@ -50,7 +50,7 @@ class MO::ModuleLoader {
         $source;
     }
 
-    method load_module($module_name, %opts, *@GLOBALish, :$line, :$file, :%chosen) {
+    method load_module($module_name, *@GLOBALish, :$line, :$file, :%chosen) {
         unless %chosen {
             %chosen := self.locate_module($module_name, ['t/mo/']);
         }
@@ -77,18 +77,18 @@ class MO::ModuleLoader {
         if nqp::defined($module_ctx) {
             # Merge any globals.
             my $unit := nqp::ctxlexpad($module_ctx);
-nqp::say('GLOBALish: '~$unit<$TestVar>);
-nqp::say('GLOBALish: '~$unit<$test>);
-nqp::say('GLOBALish: '~$unit<&Test>);
             if +@GLOBALish {
+                # #for $unit<GLOBAL>.WHO {
+                # for $unit<EXPORT>.WHO {
+                #     nqp::say('import: '~$_.key~' from '~$module_name);
+                # }
                 my @name := nqp::split('::', $module_name);
                 my $final := @name[+@name - 1];
-                @GLOBALish[0].WHO{$final} := $unit;
+                @GLOBALish[0].WHO{$final} := $unit<EXPORT>;
             }
-            return $unit;
-        } else {
-            return {};
         }
+
+        $module_ctx;
     }
 
     method ctxsave() {

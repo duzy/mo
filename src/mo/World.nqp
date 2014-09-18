@@ -81,24 +81,51 @@ class MO::World is HLL::World {
         %result;
     }
 
+    ## Convert a symbol hash returned by find_symbol into a AST node.
     method symbol_ast($/, %sym, $name, int $die) {
-# nqp::say("symbol_ast: $name");
         if nqp::existskey(%sym, 'ast') {
-            %sym<ast>;
-        } elsif nqp::existskey(%sym, 'value') {
-            QAST::WVal.new( :node($/), :value(%sym<value>) );
-        } else {
-            my $sigil := nqp::substr($name, 0, 1);
-            if %sym<scope> eq 'lexical' && ($sigil eq '$' || $sigil eq '&') {
-                QAST::Var.new( :node($/), :name($name), :scope<lexical> );
-            } elsif $die {
-                if %sym {
-                    nqp::die("no compile-time value for $name");
-                } else {
-                    nqp::die("undefined symbol $name");
-                }
+            return %sym<ast>;
+        }
+
+        if nqp::existskey(%sym, 'value') {
+            return QAST::WVal.new( :value(%sym<value>) );
+
+            ## TODO: optimize WVal somehow:
+            %sym<usecount> := +%sym<usecount> + 1;
+            if +%sym<usecount> == 1 {
+                my $scope := @!scopes[0];
+                my $block := $scope<block>;
+                return QAST::Op.new( :op<bind>, :node($/),
+                    QAST::Var.new( :name($name), :scope<lexical>, :decl<var> ),
+                    QAST::WVal.new( :value(%sym<value>) ),
+                );
+            }
+            return QAST::Var.new( :name($name), :scope<lexical> );
+        }
+
+        my $sigil := nqp::substr($name, 0, 1);
+        if %sym<scope> eq 'lexical' && ($sigil eq '$' || $sigil eq '&') {
+            return QAST::Var.new( :node($/), :name($name), :scope<lexical> );
+        }
+
+        if $die {
+            if %sym {
+                nqp::die("no compile-time value for $name");
             } else {
-                NQPMu;
+                nqp::die("undefined symbol $name");
+            }
+        }
+
+        NQPMu;
+    }
+
+    # Takes a name and compiles it to a lookup for the symbol.
+    method symbol_lookup(@name, $/) {
+        if +@name == 0 { $/.CURSOR.panic("cannot compile empty name"); }
+        if +@name == 1 {
+            if @name[0] eq 'GLOBAL' {
+                # return QAST::Op.new( :op<getcurhllsym>, QAST::SVal.new(:value<GLOBAL>) );
+                return QAST::Var.new( :scope<lexical>, :name<GLOBAL> );
             }
         }
     }
@@ -107,6 +134,47 @@ class MO::World is HLL::World {
         my $s := nqp::substr($name, 0, 1);
         # $s := nqp::substr($name, 1, 1) if $s eq '$' || $s eq '&';
         $s eq nqp::uc($s);
+    }
+
+    # Loads a module immediately, and also makes sure we load it
+    # during the deserialization.
+    method load_module($/, $module_name, $GLOBALish) {
+        my $module := nqp::gethllsym('mo', 'ModuleLoader').load_module(
+            $module_name, $GLOBALish);
+
+        say("load_module: $module_name, "~$GLOBALish.WHO<Module>.WHO<$TestVar>);
+
+        # Make sure we do the loading during deserialization.
+        if self.is_precompilation_mode() {
+            self.add_load_dependency_task(:deserialize_ast(QAST::Stmts.new(
+                # Uses the NQP module loader to load Perl6::ModuleLoader, which
+                # is a normal NQP module.
+                QAST::Op.new( :op<loadbytecode>,
+                    QAST::VM.new(
+                        :parrot(QAST::SVal.new( :value('ModuleLoader.pbc') )),
+                        :jvm(QAST::SVal.new( :value('ModuleLoader.class') )),
+                        :moar(QAST::SVal.new( :value('ModuleLoader.moarvm') ))
+                    )),
+                QAST::Op.new( :op<callmethod>, :name<load_module>,
+                   QAST::Op.new( :op<gethllsym>,
+                       QAST::SVal.new( :value<nqp> ),
+                       QAST::SVal.new( :value<ModuleLoader> ),
+                   ),
+                   QAST::SVal.new( :value<mo::ModuleLoader> ),
+                ),
+
+                # Uses mo::ModuleLoader to load the MO module.
+                QAST::Op.new( :op<callmethod>, :name<load_module>,
+                   QAST::Op.new( :op<getcurhllsym>, QAST::SVal.new( :value<ModuleLoader> ) ),
+                   QAST::SVal.new( :value($module_name) ),
+                ),
+            )));
+        }
+
+        $/.CURSOR.panic("missing module $module_name")
+            unless nqp::defined($module);
+
+        nqp::ctxlexpad($module);
     }
 
     # Creates a meta-object for a package, adds it to the root objects and
@@ -121,7 +189,7 @@ class MO::World is HLL::World {
         self.add_object($mo);
 
         # Result is just the object.
-        return $mo;
+        $mo;
     }
 
     # Composes the package, and stores an event for this action.
