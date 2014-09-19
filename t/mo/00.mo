@@ -9,3 +9,9 @@ say($s);
 say($S);
 
 Module::Test('test-arg');
+
+def test($arg) {
+  say($arg);
+}
+
+&test("ok\t- test(...)");

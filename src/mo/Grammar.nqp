@@ -188,6 +188,7 @@ grammar MO::Grammar is HLL::Grammar {
         %*HOW<package> := nqp::knowhow();
 
         my $*GLOBALish;
+        my $*PACKAGE;
         my $*EXPORT;
 
         # Symbol table and serialization context builder - keeps track of
@@ -249,11 +250,40 @@ grammar MO::Grammar is HLL::Grammar {
     token json { <.panic: 'JSON parser not implemented yet'> }
     rule  prog {
         {
+            # The GLOBAL view from the internal of the unit.
             $*GLOBALish := $*W.pkg_create_mo($/, %*HOW<package>, :name('GLOBAL'));
             $*W.pkg_compose($*GLOBALish);
 
+            # The GLOBAL is also the starting package.
+            $*PACKAGE := $*GLOBALish;
+
+            # The package from the user's view.
             $*EXPORT := $*W.pkg_create_mo($/, %*HOW<package>, :name('EXPORT'));
             $*W.pkg_compose($*EXPORT);
+
+            # Add some very early fixup tasks.
+            $*W.add_fixup_package($*GLOBALish, 'GLOBAL');
+            $*W.add_fixup_package($*EXPORT, 'EXPORT');
+            $*W.add_fixup(QAST::Stmts.new(
+                QAST::Op.new( :op<bind>,
+                    QAST::Var.new( :scope<local>, :decl<var>, :name<MODEL> ),
+                    QAST::Op.new( :op<callmethod>, :name<get>,
+                        QAST::WVal.new( :value(MO::Model) ),
+                    )
+                ),
+                QAST::Op.new( :op<bindcurhllsym>,
+                    QAST::SVal.new( :value('MODEL') ),
+                    QAST::Var.new( :scope<local>, :name<MODEL> ),
+                ),
+                QAST::Op.new( :op<bindcurhllsym>,
+                    QAST::SVal.new( :value('GLOBAL') ),
+                    QAST::Var.new( :scope<local>, :name<GLOBAL> )
+                ),
+                QAST::Op.new( :op<bindcurhllsym>,
+                    QAST::SVal.new( :value('EXPORT') ),
+                    QAST::Var.new( :scope<local>, :name<EXPORT> )
+                ),
+            ));
 
             my $scope := self.push_scope('prog');
             my $*UNIT := $scope<block>;

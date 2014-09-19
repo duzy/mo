@@ -43,6 +43,7 @@ run $SRCDIR/50-funs
 run $SRCDIR/50-fun-returns
 run $SRCDIR/50-fun-lexical
 run $SRCDIR/50-fun-lexical-nested
+run $SRCDIR/60-module
 exit
 run $SRCDIR/40-filesystem-filter -v
 run $SRCDIR/40-filesystem-selectors -v

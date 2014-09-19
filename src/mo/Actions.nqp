@@ -135,6 +135,13 @@ class MO::Actions is HLL::Actions {
     }
 
     method variable($/) {
+        unless $<name> {
+            my $name := ~$<sigil>;
+            my %sym := $*W.find_symbol( [ $name ] );
+            make $*W.symbol_ast($/, %sym, $name, 1);
+            return 1;
+        }
+
         my @name := nqp::split('::', ~$<name>);
         my $final_name := @name.pop;
         my $name := ~$<sigil> ~ $final_name;
@@ -153,7 +160,7 @@ class MO::Actions is HLL::Actions {
 
         if +%sym {
             make $*W.symbol_ast($/, %sym, $name, 1);
-        } elsif $*W.isexportname($final_name) {
+        } elsif $*W.is_export_name($final_name) {
             make QAST::Var.new( :node($/), :scope<associative>,
                 $who, QAST::SVal.new( :value($name) ) );
         } else {
@@ -317,23 +324,7 @@ class MO::Actions is HLL::Actions {
 
         $init.push(self.CTXSAVE());
 
-        my $fixup := QAST::Stmts.new(
-            QAST::Op.new( :op<bindcurhllsym>,
-                QAST::SVal.new( :value('MODEL') ),
-                QAST::Op.new( :op<callmethod>, :name<get>,
-                    QAST::WVal.new( :value(MO::Model) ),
-                )
-            ),
-            QAST::Op.new( :op<bindcurhllsym>,
-                QAST::SVal.new( :value('GLOBAL') ),
-                QAST::WVal.new( :value($*GLOBALish) )
-            ),
-            QAST::Op.new( :op<bindcurhllsym>,
-                QAST::SVal.new( :value('EXPORT') ),
-                QAST::WVal.new( :value($*EXPORT) )
-            ),
-        );
-        $*W.add_fixup_task(:deserialize_ast($fixup), :fixup_ast($fixup));
+        $*W.install_fixups();
 
         my $scope := $*W.pop_scope();
         my $block := $scope<block>;
@@ -518,7 +509,9 @@ class MO::Actions is HLL::Actions {
             $block
         ) );
 
-        if $*W.isexportname($name) {
+        $*W.install_package_routine($*PACKAGE, $name, $block);
+
+        if $*W.is_export_name($name) {
             $outer[0].push( QAST::Op.new( :op<bind>,
                 QAST::Var.new( :node($/), :scope<associative>,
                     QAST::Var.new( :name<EXPORT.WHO>, :scope<lexical> ),

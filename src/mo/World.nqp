@@ -2,6 +2,8 @@ class MO::World is HLL::World {
     my %builtins;
 
     has @!scopes; # Hash with QAST::Block
+    has $!fixups; # Fixup tasks in one QAST::Stmts
+    has %!fixupPackages; # %!fixupPackages{nqp::where($package)} = name;
 
     method push_scope($/) {
         my $scope := nqp::hash();
@@ -19,6 +21,29 @@ class MO::World is HLL::World {
         @!scopes[+@!scopes - 1];
     }
 
+    method symbol_in_scopes($name) {
+        my %sym;
+        my int $i := +@!scopes;
+        while 0 < $i {
+            $i := $i - 1;
+            %sym := @!scopes[$i]<block>.symbol($name);
+            $i := 0 if +%sym;
+        }
+        %sym;
+    }
+
+    method symbol_value(@name, $value) {
+        for @name {
+            if nqp::existskey($value.WHO, ~$_) {
+                $value := ($value.WHO){$_};
+            } else {
+                $value := NQPMu;
+                last;
+            }
+        }
+        $value;
+    }
+
     method find_symbol(@name) {
         # Make sure it's not an empty name.
         unless +@name { nqp::die("cannot look up empty name"); }
@@ -26,14 +51,8 @@ class MO::World is HLL::World {
         # If it's a single-part name, look through the lexical scopes.
         if +@name == 1 {
             my $first := @name[0];
-            my int $i := +@!scopes;
-            while 0 < $i {
-                $i := $i - 1;
-                my %sym := @!scopes[$i]<block>.symbol($first);
-                if +%sym {
-                    return %sym;
-                }
-            }
+            my %sym := self.symbol_in_scopes($first);
+            return %sym if +%sym;
 
             if nqp::existskey(%builtins, $first) {
                 return %builtins{$first};
@@ -46,32 +65,17 @@ class MO::World is HLL::World {
         my %result;
         if +@name >= 2 {
             my $first := @name[0];
-            my int $i := +@!scopes;
-            while $i > 0 {
-                $i := $i - 1;
-                my %sym := @!scopes[$i]<block>.symbol($first);
-                if +%sym {
-                    %result := %sym;
-                    @name := nqp::clone(@name);
-                    @name.shift();
-                    $i := 0;
-                }
+            my %sym := self.symbol_in_scopes($first);
+            if +%sym {
+                %result := %sym;
+                @name := nqp::clone(@name);
+                @name.shift();
             }
         }
 
         # If it has any other parts of the name, we try to chase down the parts.
         if +@name {
-            my $value := nqp::existskey(%result, 'value') ?? %result<value> !! $*GLOBALish;
-            for @name {
-                if nqp::existskey($value.WHO, ~$_) {
-                    $value := ($value.WHO){$_};
-                } else {
-                    # nqp::die("no compile-time value for symbol " ~ nqp::join('::', @name));
-                    $value := NQPMu;
-                    last;
-                }
-            }
-
+            my $value := self.symbol_value(@name, nqp::existskey(%result, 'value') ?? %result<value> !! $*GLOBALish);
             if nqp::defined($value) {
                 %result := nqp::hash();
                 %result<value> := $value;
@@ -83,24 +87,16 @@ class MO::World is HLL::World {
 
     ## Convert a symbol hash returned by find_symbol into a AST node.
     method symbol_ast($/, %sym, $name, int $die) {
+        #my @name := nqp::split('::', ~$name);
+        #my $final_name := @name.pop;
+
         if nqp::existskey(%sym, 'ast') {
             return %sym<ast>;
         }
 
         if nqp::existskey(%sym, 'value') {
-            return QAST::WVal.new( :value(%sym<value>) );
-
             ## TODO: optimize WVal somehow:
-            %sym<usecount> := +%sym<usecount> + 1;
-            if +%sym<usecount> == 1 {
-                my $scope := @!scopes[0];
-                my $block := $scope<block>;
-                return QAST::Op.new( :op<bind>, :node($/),
-                    QAST::Var.new( :name($name), :scope<lexical>, :decl<var> ),
-                    QAST::WVal.new( :value(%sym<value>) ),
-                );
-            }
-            return QAST::Var.new( :name($name), :scope<lexical> );
+            return QAST::WVal.new( :value(%sym<value>) );
         }
 
         my $sigil := nqp::substr($name, 0, 1);
@@ -130,7 +126,7 @@ class MO::World is HLL::World {
         }
     }
 
-    method isexportname($name) {
+    method is_export_name($name) {
         my $s := nqp::substr($name, 0, 1);
         # $s := nqp::substr($name, 1, 1) if $s eq '$' || $s eq '&';
         $s eq nqp::uc($s);
@@ -199,6 +195,44 @@ class MO::World is HLL::World {
         $obj.HOW.compose($obj);
     }
 
+    method install_fixups() {
+        self.add_fixup_task(:deserialize_ast($!fixups), :fixup_ast($!fixups));
+        $!fixups := nqp::null();
+        # %!fixupPackages := nqp::hash();
+    }
+
+    # Adds a fixup to install a specified QAST::Block in a package under the
+    # specified name.
+    method install_package_routine($package, $name, $block_ast) {
+        my $pkg_var_name := self.add_fixup_package($package);
+        self.add_fixup(QAST::Op.new( :op<bindkey>,
+            QAST::Var.new( :scope<local>, :name($pkg_var_name~'_who') ),
+            QAST::SVal.new( :value(~$name) ),
+            QAST::BVal.new( :value($block_ast) )
+        ));
+    }
+
+    method add_fixup_package($package, :$name = QAST::Node.unique('temp_pkg')) {
+        my $pkg_var_name := %!fixupPackages{nqp::where($package)};
+        unless $pkg_var_name {
+            %!fixupPackages{nqp::where($package)} := $pkg_var_name := $name;
+            self.add_fixup(QAST::Op.new( :op<bind>,
+                QAST::Var.new( :scope<local>, :decl<var>, :name($pkg_var_name) ),
+                QAST::WVal.new( :value($package) ),
+            ));
+            self.add_fixup(QAST::Op.new( :op<bind>,
+                QAST::Var.new( :scope<local>, :decl<var>, :name($pkg_var_name~'_who') ),
+                QAST::Op.new( :op<who>, QAST::Var.new( :scope<local>, :name($pkg_var_name) ) ),
+            ));
+        }
+        $pkg_var_name;
+    }
+
+    method add_fixup($fixup) {
+        $!fixups := QAST::Stmts.new() unless nqp::defined($!fixups);
+        $!fixups.push($fixup);
+    }
+
     method add_builtin_objects() {
         self.add_object($_.value<value>) for %builtins;
     }
@@ -219,6 +253,7 @@ class MO::World is HLL::World {
 MO::World.add_builtin_code('print', -> $s { nqp::print($s) });
 MO::World.add_builtin_code('say', -> $s { nqp::say($s) });
 MO::World.add_builtin_code('die', -> $s { nqp::die($s) });
+MO::World.add_builtin_code('open', -> $s, $m { nqp::open($s, $m) });
 
 # MO::World.add_builtin_code('say',            &nqp::say);
 # MO::World.add_builtin_code('exit',           &nqp::exit);
