@@ -21,6 +21,7 @@ class MO::World is HLL::World {
         @!scopes[+@!scopes - 1];
     }
 
+    # Find the name in the scopes defined so far.
     method symbol_in_scopes($name) {
         my %sym;
         my int $i := +@!scopes;
@@ -29,10 +30,14 @@ class MO::World is HLL::World {
             %sym := @!scopes[$i]<block>.symbol($name);
             $i := 0 if +%sym;
         }
+
+        # %sym := %builtins{$first}
+        #    if !+%sym && nqp::existskey(%builtins, $first);
+
         %sym;
     }
 
-    method symbol_value(@name, $value) {
+    method value_of(@name, $value) {
         for @name {
             if nqp::existskey($value.WHO, ~$_) {
                 $value := ($value.WHO){$_};
@@ -44,73 +49,98 @@ class MO::World is HLL::World {
         $value;
     }
 
-    method find_symbol(@name) {
-        # Make sure it's not an empty name.
-        unless +@name { nqp::die("cannot look up empty name"); }
+    # method find_symbol(@name) {
+    #     # Make sure it's not an empty name.
+    #     unless +@name { nqp::die("cannot look up empty name"); }
 
-        # If it's a single-part name, look through the lexical scopes.
+    #     # If it's a single-part name, look through the lexical scopes.
+    #     if +@name == 1 {
+    #         my $first := @name[0];
+    #         my %sym := self.symbol_in_scopes($first);
+    #         return %sym if +%sym;
+
+    #         if nqp::existskey(%builtins, $first) {
+    #             return %builtins{$first};
+    #         }
+    #     }
+
+    #     # If it's a multi-part name, see if the containing package
+    #     # is a lexical somewhere. Otherwise we fall back to looking
+    #     # in GLOBALish.
+    #     my %result;
+    #     if +@name >= 2 {
+    #         my $first := @name[0];
+    #         my %sym := self.symbol_in_scopes($first);
+    #         if +%sym {
+    #             %result := %sym;
+    #             @name := nqp::clone(@name);
+    #             @name.shift();
+    #         }
+    #     }
+
+    #     # If it has any other parts of the name, we try to chase down the parts.
+    #     if +@name {
+    #         my $value := self.value_of(@name, nqp::existskey(%result, 'value') ?? %result<value> !! $*GLOBALish);
+    #         if nqp::defined($value) {
+    #             %result := nqp::hash();
+    #             %result<value> := $value;
+    #         }
+    #     }
+
+    #     %result;
+    # }
+
+    ## Convert a symbol into a AST node.
+    ## NOTE: Name of '$Module:Var' must be converted into ['Module', '$Var'].
+    method symbol_ast($/, @name, int $panic = 1) {
+        my $name := @name[0];
+        my %sym := self.symbol_in_scopes($name);
+        my $value;
+
+        # If it's a single-part name, we look for it in the scopes defined so
+        # far and the builtin symbol table.
         if +@name == 1 {
-            my $first := @name[0];
-            my %sym := self.symbol_in_scopes($first);
-            return %sym if +%sym;
-
-            if nqp::existskey(%builtins, $first) {
-                return %builtins{$first};
+            if nqp::existskey(%sym, 'ast') {
+                return %sym<ast>;
             }
-        }
 
-        # If it's a multi-part name, see if the containing package
-        # is a lexical somewhere. Otherwise we fall back to looking
-        # in GLOBALish.
-        my %result;
-        if +@name >= 2 {
-            my $first := @name[0];
-            my %sym := self.symbol_in_scopes($first);
+            if nqp::existskey(%sym, 'value') {
+                return QAST::WVal.new( :node($/), :value(%sym<value>) );
+            }
+
             if +%sym {
-                %result := %sym;
-                @name := nqp::clone(@name);
-                @name.shift();
-            }
-        }
-
-        # If it has any other parts of the name, we try to chase down the parts.
-        if +@name {
-            my $value := self.symbol_value(@name, nqp::existskey(%result, 'value') ?? %result<value> !! $*GLOBALish);
-            if nqp::defined($value) {
-                %result := nqp::hash();
-                %result<value> := $value;
-            }
-        }
-
-        %result;
-    }
-
-    ## Convert a symbol hash returned by find_symbol into a AST node.
-    method symbol_ast($/, %sym, $name, int $die) {
-        #my @name := nqp::split('::', ~$name);
-        #my $final_name := @name.pop;
-
-        if nqp::existskey(%sym, 'ast') {
-            return %sym<ast>;
-        }
-
-        if nqp::existskey(%sym, 'value') {
-            ## TODO: optimize WVal somehow:
-            return QAST::WVal.new( :value(%sym<value>) );
-        }
-
-        my $sigil := nqp::substr($name, 0, 1);
-        if %sym<scope> eq 'lexical' && ($sigil eq '$' || $sigil eq '&') {
-            return QAST::Var.new( :node($/), :name($name), :scope<lexical> );
-        }
-
-        if $die {
-            if %sym {
-                nqp::die("no compile-time value for $name");
+                return QAST::Var.new( :node($/), :name($name), :scope(%sym<scope>) );
+            } elsif nqp::existskey(%builtins, $name) {
+                %sym := %builtins{$name};
+                return %sym<ast> if nqp::existskey(%sym, 'ast');
+                return QAST::WVal.new( :node($/), :value(%sym<value>) )
+                    if nqp::existskey(%sym, 'value');
             } else {
-                nqp::die("undefined symbol $name");
+                # Finally try to lookup the GLOBAL
+                $value := self.value_of(@name, $*GLOBALish);
             }
         }
+
+        # Multi-part name
+        elsif +@name >= 2 {
+            if !+%sym && nqp::existskey(%builtins, $name) {
+                %sym := %builtins{$name};
+            }
+
+            my $root := nqp::existskey(%sym, 'value') ?? %sym<value> !! $*GLOBALish;
+
+            @name := nqp::clone(@name);
+            $name := @name.pop(); # reset the final name
+            $value := self.value_of(@name, $root);
+        }
+
+        if nqp::defined($value) {
+            my $who := QAST::Op.new( :op<who>, QAST::WVal.new( $value ) );
+            return QAST::Var.new( :node($/), :scope<associative>,
+                $who, QAST::SVal.new( :value($name) ) );
+        }
+
+        $/.CURSOR.panic('undefined symbol '~nqp::join('::', @name)) if $panic;
 
         NQPMu;
     }
@@ -195,21 +225,81 @@ class MO::World is HLL::World {
         $obj.HOW.compose($obj);
     }
 
-    method install_fixups() {
-        self.add_fixup_task(:deserialize_ast($!fixups), :fixup_ast($!fixups));
-        $!fixups := nqp::null();
-        # %!fixupPackages := nqp::hash();
-    }
-
     # Adds a fixup to install a specified QAST::Block in a package under the
     # specified name.
     method install_package_routine($package, $name, $block_ast) {
+        my $code_type := MO::Routine;
+
+        # Install stub that will dynamically compile the code if
+        # we ever try to run it during compilation. (similar approach as Perl6)
+        my $precomp;
+        my $compiler_thunk := {
+            # Fix up GLOBAL.
+            # nqp::bindhllsym('mo', 'GLOBAL', $*GLOBALish);
+
+            my $wrapper := QAST::Block.new(QAST::Stmts.new(), $block_ast);
+            $wrapper.annotate('DYNAMIC_COMPILE_WRAPPER', 1);
+
+            # Compile the block.
+            my $compunit := QAST::CompUnit.new(
+                :hll('mo'),
+                :sc(self.sc()),
+                :compilation_mode(0),
+                $wrapper
+            );
+            my $compiler := nqp::getcomp('mo');
+            my $compiled := $compiler.compile( $compunit,
+                :from<ast>, :compunit_ok(1), :lineposcache($*LINEPOSCACHE) );
+            my $mainline := $compiler.backend.compunit_mainline($compiled);
+            $mainline();
+
+            # Fix up Code object associations (including nested blocks).
+            my @coderefs := $compiler.backend.compunit_coderefs($compiled);
+            my int $num_subs := nqp::elems(@coderefs);
+            my int $i := 0;
+            while $i < $num_subs {
+                my $coderef := @coderefs[$i];
+                my $subid := nqp::getcodecuid($coderef);
+                if $subid eq $block_ast.cuid {
+                    $precomp := $coderef;
+                }
+                $i := $i + 1;
+    say(''~$name~', '~$subid);
+            }
+
+            # Flag block as dynamically compiled.
+            $block_ast.annotate('DYNAMICALLY_COMPILED', 1);
+        };
+
+        # This is a coderef to be installed to the code object.
+        my $stub := nqp::freshcoderef(sub (*@args, *%named) {
+            $compiler_thunk() unless $precomp;
+            $precomp(|@args, |%named);
+        });
+        my $routine := nqp::create($code_type);
+        nqp::bindattr($routine, $code_type, '$!code', $stub);
+        nqp::setcodeobj($stub, $routine);
+        nqp::setcodename($stub, $block_ast.name);
+
+        nqp::markcodestatic($stub);
+        nqp::markcodestub($stub);
+
+        # Install compile time code object.
+        ($package.WHO){$name} := $routine;
+        self.add_object( $routine );
+
         my $pkg_var_name := self.add_fixup_package($package);
         self.add_fixup(QAST::Op.new( :op<bindkey>,
             QAST::Var.new( :scope<local>, :name($pkg_var_name~'_who') ),
             QAST::SVal.new( :value(~$name) ),
             QAST::BVal.new( :value($block_ast) )
         ));
+    }
+
+    method install_fixups() {
+        self.add_fixup_task(:deserialize_ast($!fixups), :fixup_ast($!fixups));
+        $!fixups := nqp::null();
+        # %!fixupPackages := nqp::hash();
     }
 
     method add_fixup_package($package, :$name = QAST::Node.unique('temp_pkg')) {

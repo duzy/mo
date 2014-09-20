@@ -14,4 +14,4 @@ def test($arg) {
   say($arg);
 }
 
-&test("ok\t- test(...)");
+test("ok\t- test(...)");
