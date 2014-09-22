@@ -5,6 +5,10 @@ class MO::World is HLL::World {
     has $!fixups; # Fixup tasks in one QAST::Stmts
     has %!fixupPackages; # %!fixupPackages{nqp::where($package)} = name;
 
+    # A fixup list of dynamically compiled code objects.
+    #has %!dynamic_codeobjs_to_fix_up;
+    #has %!dynamic_codeobj_types;
+
     method push_scope($/) {
         my $scope := nqp::hash();
         $scope<block> := QAST::Block.new( QAST::Stmts.new(), :node($/) );
@@ -49,95 +53,49 @@ class MO::World is HLL::World {
         $value;
     }
 
-    # method find_symbol(@name) {
-    #     # Make sure it's not an empty name.
-    #     unless +@name { nqp::die("cannot look up empty name"); }
-
-    #     # If it's a single-part name, look through the lexical scopes.
-    #     if +@name == 1 {
-    #         my $first := @name[0];
-    #         my %sym := self.symbol_in_scopes($first);
-    #         return %sym if +%sym;
-
-    #         if nqp::existskey(%builtins, $first) {
-    #             return %builtins{$first};
-    #         }
-    #     }
-
-    #     # If it's a multi-part name, see if the containing package
-    #     # is a lexical somewhere. Otherwise we fall back to looking
-    #     # in GLOBALish.
-    #     my %result;
-    #     if +@name >= 2 {
-    #         my $first := @name[0];
-    #         my %sym := self.symbol_in_scopes($first);
-    #         if +%sym {
-    #             %result := %sym;
-    #             @name := nqp::clone(@name);
-    #             @name.shift();
-    #         }
-    #     }
-
-    #     # If it has any other parts of the name, we try to chase down the parts.
-    #     if +@name {
-    #         my $value := self.value_of(@name, nqp::existskey(%result, 'value') ?? %result<value> !! $*GLOBALish);
-    #         if nqp::defined($value) {
-    #             %result := nqp::hash();
-    #             %result<value> := $value;
-    #         }
-    #     }
-
-    #     %result;
-    # }
-
     ## Convert a symbol into a AST node.
     ## NOTE: Name of '$Module:Var' must be converted into ['Module', '$Var'].
     method symbol_ast($/, @name, int $panic = 1) {
-        my $name := @name[0];
-        my %sym := self.symbol_in_scopes($name);
-        my $value;
+        my $first := @name[0];
+        my %sym := self.symbol_in_scopes($first);
 
         # If it's a single-part name, we look for it in the scopes defined so
         # far and the builtin symbol table.
         if +@name == 1 {
-            if nqp::existskey(%sym, 'ast') {
-                return %sym<ast>;
-            }
-
-            if nqp::existskey(%sym, 'value') {
-                return QAST::WVal.new( :node($/), :value(%sym<value>) );
-            }
+            return %sym<ast> if nqp::existskey(%sym, 'ast');
+            return QAST::WVal.new( :node($/), :value(%sym<value>) )
+                if nqp::existskey(%sym, 'value');
 
             if +%sym {
-                return QAST::Var.new( :node($/), :name($name), :scope(%sym<scope>) );
-            } elsif nqp::existskey(%builtins, $name) {
-                %sym := %builtins{$name};
+                return QAST::Var.new( :node($/), :name($first), :scope(%sym<scope>) );
+            } elsif nqp::existskey(%builtins, $first) {
+                %sym := %builtins{$first};
                 return %sym<ast> if nqp::existskey(%sym, 'ast');
                 return QAST::WVal.new( :node($/), :value(%sym<value>) )
                     if nqp::existskey(%sym, 'value');
             } else {
                 # Finally try to lookup the GLOBAL
-                $value := self.value_of(@name, $*GLOBALish);
+                my $value := self.value_of(@name, $*GLOBALish);
+                return QAST::WVal.new( $value ) if nqp::defined($value);
             }
         }
 
         # Multi-part name
         elsif +@name >= 2 {
-            if !+%sym && nqp::existskey(%builtins, $name) {
-                %sym := %builtins{$name};
+            if !+%sym && nqp::existskey(%builtins, $first) {
+                %sym := %builtins{$first};
             }
 
             my $root := nqp::existskey(%sym, 'value') ?? %sym<value> !! $*GLOBALish;
 
             @name := nqp::clone(@name);
-            $name := @name.pop(); # reset the final name
-            $value := self.value_of(@name, $root);
-        }
-
-        if nqp::defined($value) {
-            my $who := QAST::Op.new( :op<who>, QAST::WVal.new( $value ) );
-            return QAST::Var.new( :node($/), :scope<associative>,
-                $who, QAST::SVal.new( :value($name) ) );
+            my $final_name := @name.pop();
+            my $value := self.value_of(@name, $root);
+            if nqp::defined($value) {
+                my $who := QAST::Op.new( :op<who>, QAST::WVal.new( $value ) );
+                return QAST::Var.new( :node($/), :scope<associative>,
+                    $who, QAST::SVal.new( :value($final_name) ) );
+            }
         }
 
         $/.CURSOR.panic('undefined symbol '~nqp::join('::', @name)) if $panic;
@@ -167,10 +125,6 @@ class MO::World is HLL::World {
     method load_module($/, $module_name, $GLOBALish) {
         my $module := nqp::gethllsym('mo', 'ModuleLoader').load_module(
             $module_name, $GLOBALish);
-
-        # say("load_module: $module_name, "~$GLOBALish.WHO<Module>.WHO<$TestVar>);
-        # say("$module_name: "~$_.key) for $GLOBALish.WHO;
-        # say("$module_name: Module: "~$_.key) for $GLOBALish.WHO<Module>.WHO;
 
         # Make sure we do the loading during deserialization.
         if self.is_precompilation_mode() {
@@ -227,20 +181,19 @@ class MO::World is HLL::World {
 
     # Adds a fixup to install a specified QAST::Block in a package under the
     # specified name.
-    method install_package_routine($package, $name, $block_ast) {
+    method install_package_routine($package, $name, $code_ast) {
         my $code_type := MO::Routine;
+
+        my $routine := nqp::create($code_type);
 
         # Install stub that will dynamically compile the code if
         # we ever try to run it during compilation. (similar approach as Perl6)
-        my $precomp;
+        my $compiled_trunk;
         my $compiler_thunk := {
-            # Fix up GLOBAL.
-            # nqp::bindhllsym('mo', 'GLOBAL', $*GLOBALish);
-
-            my $wrapper := QAST::Block.new(QAST::Stmts.new(), $block_ast);
+            my $wrapper := QAST::Block.new(QAST::Stmts.new(), $code_ast);
             $wrapper.annotate('DYNAMIC_COMPILE_WRAPPER', 1);
 
-            # Compile the block.
+            # Compile the code in a new unit.
             my $compunit := QAST::CompUnit.new(
                 :hll('mo'),
                 :sc(self.sc()),
@@ -254,35 +207,48 @@ class MO::World is HLL::World {
             $mainline();
 
             # Fix up Code object associations (including nested blocks).
+            my $wrapper_id := $wrapper.cuid();
             my @coderefs := $compiler.backend.compunit_coderefs($compiled);
             my int $num_subs := nqp::elems(@coderefs);
             my int $i := 0;
             while $i < $num_subs {
                 my $coderef := @coderefs[$i];
                 my $subid := nqp::getcodecuid($coderef);
-                if $subid eq $block_ast.cuid {
-                    $precomp := $coderef;
+                if $subid eq $wrapper_id {
+                    # discard it...
+                }
+                elsif $subid eq $code_ast.cuid {
+                    $compiled_trunk := $coderef;
+                    nqp::bindattr($routine, $code_type, '$!code', $coderef);
+                    nqp::setcodename($coderef, $code_ast.name);
+                    nqp::setcodeobj($coderef, $routine);
+                    nqp::markcodestatic($coderef);
+                }
+                else {
+                    say('compiled: '~$subid);
                 }
                 $i := $i + 1;
-    say(''~$name~', '~$subid);
             }
 
             # Flag block as dynamically compiled.
-            $block_ast.annotate('DYNAMICALLY_COMPILED', 1);
+            $code_ast.annotate('DYNAMICALLY_COMPILED', 1);
         };
 
         # This is a coderef to be installed to the code object.
         my $stub := nqp::freshcoderef(sub (*@args, *%named) {
-            $compiler_thunk() unless $precomp;
-            $precomp(|@args, |%named);
+            $compiler_thunk() unless $compiled_trunk;
+            $compiled_trunk(|@args, |%named);
         });
-        my $routine := nqp::create($code_type);
         nqp::bindattr($routine, $code_type, '$!code', $stub);
+        nqp::setcodename($stub, $code_ast.name);
         nqp::setcodeobj($stub, $routine);
-        nqp::setcodename($stub, $block_ast.name);
 
         nqp::markcodestatic($stub);
         nqp::markcodestub($stub);
+
+        # Add it to the dynamic compilation fixup todo list
+        #%!dynamic_codeobjs_to_fix_up{$code_ast.cuid} := $routine;
+        #%!dynamic_codeobj_types{$code_ast.cuid} := $code_type;
 
         # Install compile time code object.
         ($package.WHO){$name} := $routine;
@@ -291,8 +257,8 @@ class MO::World is HLL::World {
         my $pkg_var_name := self.add_fixup_package($package);
         self.add_fixup(QAST::Op.new( :op<bindkey>,
             QAST::Var.new( :scope<local>, :name($pkg_var_name~'_who') ),
-            QAST::SVal.new( :value(~$name) ),
-            QAST::BVal.new( :value($block_ast) )
+            QAST::SVal.new( :value($name) ),
+            QAST::BVal.new( :value($code_ast) )
         ));
     }
 

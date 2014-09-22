@@ -136,43 +136,26 @@ class MO::Actions is HLL::Actions {
 
         my $ast := $*W.symbol_ast($/, @name, 0);
         if $ast {
-           make $ast;
+            make $ast;
+        } elsif +@name == 1 && $*W.is_export_name($final_name) {
+            make QAST::Var.new( :node($/), :scope<associative>,
+                QAST::Var.new( :name<EXPORT.WHO>, :scope<lexical> ),
+                QAST::SVal.new( :value($name) ) );
+        } elsif $*IN_DECL ne 'var' {
+            $/.CURSOR.panic("undeclared variable "~$/);
         }
+    }
 
-        # Add new variable.
-        else {
-            @name.pop; # pop out the last part
-
-            my $who;
-            if +@name {
-                $who := $*W.symbol_ast($/, @name, 1);
-            } elsif $*W.is_export_name($final_name) {
-                $who := QAST::Var.new( :name<EXPORT.WHO>, :scope<lexical> );
-            }
-
-            if nqp::defined($who) {
-                make QAST::Var.new( :node($/), :scope<associative>,
-                    $who, QAST::SVal.new( :value($name) ) );
-            } elsif +@name == 0 {
-                my $scope := $*W.current_scope;
-                my $block := $scope<block>;
-                $block.symbol($name, :scope<lexical>, :decl<var>);
-                $block[0].push( QAST::Op.new( :op<bind>, :node($/),
-                    QAST::Var.new( :name($name), :scope<lexical>, :decl<var> ),
-                    QAST::Op.new( :op<null> ),
-                ) );
-                make QAST::Var.new( :node($/), :name($name), :scope<lexical> );
-            } else {
-                $/.CURSOR.panic('undefined '~$/);
-            }
-        }
+    method initializer($/) {
+        make $<EXPR>.made;
+        $/.prune;
     }
 
     method args($/) { make $<arglist>.made; }
     method arglist($/) {
         my $ast := QAST::Op.new( :op<call>, :node($/) );
         if $<EXPR> {
-            my $expr := $<EXPR>.ast;
+            my $expr := $<EXPR>.made;
             if nqp::istype($expr, QAST::Op) && $expr.name eq '&infix:<,>' && !$expr.named {
                 for $expr.list { $ast.push($_); }
             }
@@ -437,6 +420,43 @@ class MO::Actions is HLL::Actions {
 
     method def_block:sym<{ }>($/) { make $<statements>.made; }
     method def_block:sym<end>($/) { make $<statements>.made; }
+
+    method declaration:sym<var>($/) {
+        unless $<variable><name> {
+            $/.CURSOR.panic('variable $ already defined');
+        }
+
+        my @name := nqp::split('::', ~$<variable><name>);
+        my $final_name := @name.pop;
+        my $name := ~$<variable><sigil> ~ $final_name;
+
+        my $who;
+        if +@name {
+            $who := $*W.symbol_ast($/, @name, 1);
+        } elsif $*W.is_export_name($final_name) {
+            $who := QAST::Var.new( :name<EXPORT.WHO>, :scope<lexical> );
+        }
+
+        my $scope := $*W.current_scope;
+        my $block := $scope<block>;
+        my $initializer := $<initializer> ?? $<initializer>.made
+            !! QAST::Op.new( :op<null> );
+
+        if nqp::defined($who) {
+            $block[0].push( QAST::Op.new( :op<bindkey>, $who,
+                QAST::SVal.new( :value($name) ), $initializer ) );
+            make QAST::Var.new( :node($/), :scope<associative>,
+                $who, QAST::SVal.new( :value($name) ) );
+        } elsif +@name == 0 {
+            $block.symbol( $name, :scope<lexical>, :decl<var> );
+            $block[0].push( QAST::Op.new( :op<bind>, :node($/),
+                QAST::Var.new( :name($name), :scope<lexical>, :decl<var> ),
+                $initializer ) );
+            make QAST::Var.new( :node($/), :name($name), :scope<lexical> );
+        } else {
+            $/.CURSOR.panic('undefined '~$/);
+        }
+    }
 
     method declaration:sym<use>($/) {
         my $module := $*W.load_module($/, ~$<name>, $*GLOBALish);

@@ -10,5 +10,5 @@ def Test($arg) {
     end
 }
 
-$TestVar = "ok\t- 2. $TestVar is defined in test::Module";
-$test = "ok\t- 3. $test is defined in test::Module";
+var $TestVar = "ok\t- 2. $TestVar is defined in test::Module";
+var $test = "ok\t- 3. $test is defined in test::Module";

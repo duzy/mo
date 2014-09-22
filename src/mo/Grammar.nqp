@@ -167,6 +167,7 @@ grammar MO::Grammar is HLL::Grammar {
     token kw:sym<def>   { <sym> }
     token kw:sym<end>   { <sym> }
     token kw:sym<use>   { <sym> }
+    token kw:sym<var>   { <sym> }
     token kw:sym<return>{ <sym> }
     token kw:sym<method>{ <sym> }
 
@@ -298,13 +299,16 @@ grammar MO::Grammar is HLL::Grammar {
         ^ ~ $ <statements> || <.panic: 'Confused'>
     }
 
-    token variable {
-        #<sigil> <twigil>? <name>
-        <sigil> <name>?
-    }
-
     token sigil  { <[$@%&]> }
     token twigil { <[*!?]> }
+    token variable {
+        #<sigil> <twigil>? <name>
+        <sigil> [$<name>=[<.ident> ['::'<.ident>]*]]?
+    }
+
+    token initializer {
+        '=' <.ws> <EXPR>
+    }
 
     rule statements { <.ws> <statement>* }
 
@@ -358,8 +362,17 @@ grammar MO::Grammar is HLL::Grammar {
     rule def_block:sym<end> { <![{]> ~ 'end' <statements> }
 
     proto rule declaration { <...> }
+
+    rule declaration:sym<var> {
+        :my $*IN_DECL;
+        <sym>\s { $*IN_DECL := ~$<sym>; }
+        <variable> <initializer>? ';'? { $*IN_DECL := 0; }
+    }
+
     rule declaration:sym<use> {
-        <sym>\s <name> ';'?
+        :my $*IN_DECL;
+        <sym>\s { $*IN_DECL := ~$<sym>; }
+        <name> ';'? { $*IN_DECL := 0; }
     }
 
     proto rule definition { <...> }
@@ -382,7 +395,11 @@ grammar MO::Grammar is HLL::Grammar {
     token param { <sigil> <name=.ident> }
 
     rule definition:sym<def> {
-        <sym>\s <name=.ident>
+        <sym>\s
+        [
+        | <?keyword> <.panic: 'keyword used as name'>
+        | <name=.ident>
+        ]
         '(' ~ ')' [ { self.push_scope( ~$<sym> ) } <params>? ]
         [ <def_block> | <.panic: 'expects function body'> ]
     }
