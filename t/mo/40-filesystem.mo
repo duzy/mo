@@ -86,6 +86,7 @@ var $a = ->'.'
    "test/many/2.txt",
   ]
   {
+  say('~~~~')
       if $.name eq './test/many/1.txt'
         say("ok\t\t- $.name eq './test/many/1.txt'")
       elsif $.name eq './test/many/2.txt'

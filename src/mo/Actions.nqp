@@ -448,18 +448,16 @@ class MO::Actions is HLL::Actions {
             #     $initializer ) );
             # make QAST::Var.new( :node($/), :name($name), :scope<lexical> );
 
-            my $v;
-            $v := $initializer.value if nqp::can($initializer, 'value');
-
             # TODO: need a replacement for this 'attribute' approach!
-            my $value := $*W.install_variable(:$name, :value($v));
+            my $var := $*W.install_variable(:$name);
             my $ast := QAST::Var.new( :node($/), :name('$!value'), :scope<attribute>,
-                QAST::WVal.new( :$value ), QAST::WVal.new( :value(MO::Variable) ) );
-            $scope.symbol( $name, :scope<lexical>, :$value, :$ast );
-            $scope[0].push( QAST::Op.new( :op<bindattr>, :node($/),
-                QAST::WVal.new( :$value ), QAST::WVal.new( :value(MO::Variable) ),
-                QAST::SVal.new( :value('$!value') ), $initializer ) );
-            make $ast;
+                QAST::WVal.new( :value($var) ), QAST::WVal.new( :value(MO::Variable) ) );
+            $scope.symbol( $name, :scope<lexical>, :$ast );
+            make QAST::Stmts.new(
+                QAST::Op.new( :op<bindattr>, :node($/),
+                    QAST::WVal.new( :value($var) ), QAST::WVal.new( :value(MO::Variable) ),
+                    QAST::SVal.new( :value('$!value') ), $initializer ),
+                $ast );
         } else {
             $/.CURSOR.panic('undefined '~$/);
         }

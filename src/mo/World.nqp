@@ -61,6 +61,11 @@ class MO::World is HLL::World {
         # If it's a single-part name, we look for it in the scopes defined so
         # far and the builtin symbol table.
         if +@name == 1 {
+            if $first eq 'GLOBAL' {
+                # return QAST::Op.new( :op<getcurhllsym>, QAST::SVal.new(:value<GLOBAL>) );
+                return QAST::Var.new( :scope<lexical>, :name<GLOBAL> );
+            }
+
             return %sym<ast> if nqp::existskey(%sym, 'ast');
             return QAST::WVal.new( :node($/), :value(%sym<value>) )
                 if nqp::existskey(%sym, 'value');
@@ -100,17 +105,6 @@ class MO::World is HLL::World {
         $/.CURSOR.panic('undefined symbol '~nqp::join('::', @name)) if $panic;
 
         NQPMu;
-    }
-
-    # Takes a name and compiles it to a lookup for the symbol.
-    method symbol_lookup(@name, $/) {
-        if +@name == 0 { $/.CURSOR.panic("cannot compile empty name"); }
-        if +@name == 1 {
-            if @name[0] eq 'GLOBAL' {
-                # return QAST::Op.new( :op<getcurhllsym>, QAST::SVal.new(:value<GLOBAL>) );
-                return QAST::Var.new( :scope<lexical>, :name<GLOBAL> );
-            }
-        }
     }
 
     method is_export_name($name) {
@@ -225,12 +219,10 @@ class MO::World is HLL::World {
         }
     }
 
-    method install_variable(:$name, :$value) {
+    method install_variable(:$name) {
         my $variable_type := MO::Variable;
         my $variable := nqp::create($variable_type);
-
         self.add_object($variable);
-
         $variable;
     }
 
