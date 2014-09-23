@@ -1,7 +1,7 @@
 class MO::World is HLL::World {
     my %builtins;
 
-    has @!scopes; # Hash with QAST::Block
+    has @!scopes; # QAST::Block stack
     has $!fixups; # Fixup tasks in one QAST::Stmts
     has %!fixupPackages; # %!fixupPackages{nqp::where($package)} = name;
 
@@ -10,9 +10,8 @@ class MO::World is HLL::World {
     #has %!dynamic_codeobj_types;
 
     method push_scope($/) {
-        my $scope := nqp::hash();
-        $scope<block> := QAST::Block.new( QAST::Stmts.new(), :node($/) );
-        $scope<outer> := @!scopes[+@!scopes - 1] if +@!scopes;
+        my $scope := QAST::Block.new( QAST::Stmts.new(), :node($/) );
+        $scope.annotate('outer', @!scopes[+@!scopes - 1]) if +@!scopes;
         @!scopes[+@!scopes] := $scope;
         $scope;
     }
@@ -31,7 +30,7 @@ class MO::World is HLL::World {
         my int $i := +@!scopes;
         while 0 < $i {
             $i := $i - 1;
-            %sym := @!scopes[$i]<block>.symbol($name);
+            %sym := @!scopes[$i].symbol($name);
             $i := 0 if +%sym;
         }
 
@@ -53,8 +52,9 @@ class MO::World is HLL::World {
         $value;
     }
 
-    ## Convert a symbol into a AST node.
-    ## NOTE: Name of '$Module:Var' must be converted into ['Module', '$Var'].
+    ## Convert a symbol into an AST node.
+    ## Names of '$Module:Var' form must be converted into ['Module', '$Var']
+    ## to be converted.
     method symbol_ast($/, @name, int $panic = 1) {
         my $first := @name[0];
         my %sym := self.symbol_in_scopes($first);
@@ -184,6 +184,7 @@ class MO::World is HLL::World {
     method install_package_routine($package, $name, $code_ast) {
         my $code_type := MO::Routine;
 
+        my $root_code_ref_idx;
         my $routine := nqp::create($code_type);
 
         # Install stub that will dynamically compile the code if
@@ -223,6 +224,7 @@ class MO::World is HLL::World {
                     nqp::setcodename($coderef, $code_ast.name);
                     nqp::setcodeobj($coderef, $routine);
                     nqp::markcodestatic($coderef);
+                    self.update_root_code_ref($root_code_ref_idx, $coderef);
                 }
                 else {
                     say('compiled: '~$subid);
@@ -245,6 +247,8 @@ class MO::World is HLL::World {
 
         nqp::markcodestatic($stub);
         nqp::markcodestub($stub);
+
+        $root_code_ref_idx := self.add_root_code_ref($stub, $code_ast);
 
         # Add it to the dynamic compilation fixup todo list
         #%!dynamic_codeobjs_to_fix_up{$code_ast.cuid} := $routine;

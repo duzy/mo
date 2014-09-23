@@ -217,13 +217,12 @@ grammar MO::Grammar is HLL::Grammar {
 
     my method push_scope($type, $params?) {
         my $scope := $*W.push_scope($/);
-        my $block := $scope<block>;
-        $scope<type> := $type;
+        $scope.annotate('type', $type);
         if $params {
            $params := [$params] unless nqp::islist($params);
            for $params {
-               $block.symbol($_, :scope<lexical>, :decl<param>);
-               $block.push( QAST::Var.new( :name($_), :scope<lexical>, :decl<param> ) );
+               $scope.symbol($_, :scope<lexical>, :decl<param>);
+               $scope.push( QAST::Var.new( :name($_), :scope<lexical>, :decl<param> ) );
            }
         }
         $scope;
@@ -231,7 +230,7 @@ grammar MO::Grammar is HLL::Grammar {
 
     method newscope($type, $params?, $with = 0) {
         my $scope := self.push_scope($type, $params);
-        $scope<with> := 1 if $with;
+        $scope.annotate('with', 1) if $with;
         self.statements;
     }
 
@@ -287,7 +286,7 @@ grammar MO::Grammar is HLL::Grammar {
             ));
 
             my $scope := self.push_scope('prog');
-            my $*UNIT := $scope<block>;
+            my $*UNIT := $scope;
             $*UNIT.symbol('$', :scope<lexical>, :decl<var>);
             # $*UNIT.push( QAST::Op.new( :op<bind>,
             #     QAST::Var.new( :name<$>, :scope<lexical>, :decl<var> ),

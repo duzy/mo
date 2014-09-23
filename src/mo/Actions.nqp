@@ -41,9 +41,8 @@ class MO::Actions is HLL::Actions {
 
     method term:sym<def>($/) {
         my $scope := $*W.pop_scope();
-        my $block := $scope<block>;
-        $block[0].push( wrap_return_handler($scope, $<statements>.made) );
-        make QAST::Op.new( :node($/), :op<takeclosure>, $block );
+        $scope[0].push( wrap_return_handler($scope, $<statements>.made) );
+        make QAST::Op.new( :node($/), :op<takeclosure>, $scope );
         $/.prune;
     }
 
@@ -54,10 +53,10 @@ class MO::Actions is HLL::Actions {
 
     method term:sym<return>($/) {
         my $scope := $*W.current_scope;
-        my $block := $scope<block>;
         my $ast := QAST::Op.new( :node($/), :op<call>, :name<RETURN> );
-        $scope<returns> := nqp::list() unless +$scope<returns>;
-        $scope<returns>.push( $ast );
+        my $returns := $scope.ann('returns') // nqp::list();
+        $returns.push( $ast );
+        $scope.annotate('returns', $returns);
         if $<EXPR> {
             $ast.push($<EXPR>.made);
         } else {
@@ -180,7 +179,7 @@ class MO::Actions is HLL::Actions {
     }
 
     my sub wrap_return_handler($scope, $statements) {
-        if +$scope<returns> {
+        if +$scope.ann('returns') {
             QAST::Op.new( :op<lexotic>, :name<RETURN>, $statements );
         } else {
             $statements;
@@ -232,10 +231,9 @@ class MO::Actions is HLL::Actions {
 
     method selector:sym<{ }>($/) {
         my $scope := $*W.pop_scope();
-        my $block := $scope<block>;
-        $block.push( $<newscope>.made );
+        $scope.push( $<newscope>.made );
         make QAST::Op.new( :node($/), :op<callmethod>, :name<filter>, $MODEL,
-            QAST::Op.new( :op<takeclosure>, $block ) );
+            QAST::Op.new( :op<takeclosure>, $scope ) );
     }
 
     method select:sym<name>($/) {
@@ -300,9 +298,8 @@ class MO::Actions is HLL::Actions {
         $*W.install_fixups();
 
         my $scope := $*W.pop_scope();
-        my $block := $scope<block>;
-        $block.unshift( $init );
-        $block.push( $<statements>.made );
+        $scope.unshift( $init );
+        $scope.push( $<statements>.made );
 
         my $compunit := QAST::CompUnit.new(
             :hll('mo'),
@@ -323,13 +320,13 @@ class MO::Actions is HLL::Actions {
             # If this unit is loaded as a module, we want it to automatically
             # execute the mainline code above after all other initializations
             # have occurred.
-            :load(QAST::Op.new(:op<call>, QAST::BVal.new( :value($block) ))),
+            :load(QAST::Op.new(:op<call>, QAST::BVal.new( :value($scope) ))),
 
-            :main(QAST::Op.new(:op<call>, QAST::BVal.new( :value($block) ))),
+            :main(QAST::Op.new(:op<call>, QAST::BVal.new( :value($scope) ))),
 
             # Finally, the outer block, which in turn contains all of the
             # other program elements.
-            $block
+            $scope
         );
 
         make $compunit;
@@ -360,7 +357,7 @@ class MO::Actions is HLL::Actions {
     }
 
     method statement:sym<yield_t>($/) {
-        my $scope := $*W.current_scope<block>;
+        my $scope := $*W.current_scope;
         my $ast := QAST::Op.new( :node($/), :op<call>, :name(~$<name>) );
         if $scope.symbol('$') {
             $ast.push( QAST::Var.new( :name<$>, :scope<lexical> ) );
@@ -386,16 +383,14 @@ class MO::Actions is HLL::Actions {
 
     method control:sym<for>($/) {
         my $scope := $*W.pop_scope();
-        my $block := $scope<block>;
-        $block.push( $<for_block>.made );
-        make QAST::Op.new( :node($/), :op<for>, $<EXPR>.made, $block );
+        $scope.push( $<for_block>.made );
+        make QAST::Op.new( :node($/), :op<for>, $<EXPR>.made, $scope );
     }
 
     method control:sym<with>($/) {
         my $scope := $*W.pop_scope();
-        my $block := $scope<block>;
-        $block.push( $<with_block>.made );
-        make QAST::Op.new( :node($/), :op<call>, $block, $<EXPR>.made );
+        $scope.push( $<with_block>.made );
+        make QAST::Op.new( :node($/), :op<call>, $scope, $<EXPR>.made );
     }
 
     method else:sym< >($/) { make $<statements>.made; }
@@ -438,18 +433,17 @@ class MO::Actions is HLL::Actions {
         }
 
         my $scope := $*W.current_scope;
-        my $block := $scope<block>;
         my $initializer := $<initializer> ?? $<initializer>.made
             !! QAST::Op.new( :op<null> );
 
         if nqp::defined($who) {
-            $block[0].push( QAST::Op.new( :op<bindkey>, $who,
+            $scope[0].push( QAST::Op.new( :op<bindkey>, $who,
                 QAST::SVal.new( :value($name) ), $initializer ) );
             make QAST::Var.new( :node($/), :scope<associative>,
                 $who, QAST::SVal.new( :value($name) ) );
         } elsif +@name == 0 {
-            $block.symbol( $name, :scope<lexical>, :decl<var> );
-            $block[0].push( QAST::Op.new( :op<bind>, :node($/),
+            $scope.symbol( $name, :scope<lexical>, :decl<var> );
+            $scope[0].push( QAST::Op.new( :op<bind>, :node($/),
                 QAST::Var.new( :name($name), :scope<lexical>, :decl<var> ),
                 $initializer ) );
             make QAST::Var.new( :node($/), :name($name), :scope<lexical> );
@@ -465,12 +459,11 @@ class MO::Actions is HLL::Actions {
 
     method definition:sym<template>($/) {
         my $scope := $*W.pop_scope();
-        my $block := $scope<block>;
-        #$block.namespace( ['MO', 'Template'] );
-        #$block.blocktype('declaration_static');
-        $block.name( ~$<name> );
-        $block.push( $<template_body>.made );
-        make QAST::Op.new( :node($/), :op<takeclosure>, $block );
+        #$scope.namespace( ['MO', 'Template'] );
+        #$scope.blocktype('declaration_static');
+        $scope.name( ~$<name> );
+        $scope.push( $<template_body>.made );
+        make QAST::Op.new( :node($/), :op<takeclosure>, $scope );
     }
 
     method template_body($/) {
@@ -493,33 +486,32 @@ class MO::Actions is HLL::Actions {
 
     method param($/) {
         my $name := $<sigil> ~ $<name>;
-        my $block := $*W.current_scope<block>;
+        my $scope := $*W.current_scope;
         $/.CURSOR.panic('duplicated parameter '~$name)
-            if $block.symbol($name);
+            if $scope.symbol($name);
 
-        my $sym := $block.symbol($name, :scope<lexical>, :decl<param>);
-        make $block[0].push( QAST::Var.new( :node($/), :name($name),
+        my $sym := $scope.symbol($name, :scope<lexical>, :decl<param>);
+        make $scope[0].push( QAST::Var.new( :node($/), :name($name),
             :decl($sym<decl>), :scope<lexical> ) );
     }
 
     method definition:sym<def>($/) {
         my $scope := $*W.pop_scope();
-        my $block := $scope<block>;
         my $name := ~$<name>;
-        $block.name($name);
-        $block[0].push( wrap_return_handler($scope, $<def_block>.made) );
+        $scope.name($name);
+        $scope[0].push( wrap_return_handler($scope, $<def_block>.made) );
 
         # TODO: using code object (check rakudo or NQP implementations)
         #my $code := QAST::Var.new( :name('&' ~ $name), :scope<lexical> );
 
-        my $outer := $scope<outer><block>;
+        my $outer := $scope.ann('outer');
         $outer.symbol('&' ~ $name, :scope<lexical>, :proto(1), :declared(1) );
         $outer[0].push( QAST::Op.new( :op<bind>,
             QAST::Var.new( :name('&' ~ $name), :scope<lexical>, :decl<var> ),
-            $block
+            $scope
         ) );
 
-        $*W.install_package_routine($*PACKAGE, $name, $block);
+        $*W.install_package_routine($*PACKAGE, $name, $scope);
 
         if $*W.is_export_name($name) {
             $outer[0].push( QAST::Op.new( :op<bind>,
