@@ -1,6 +1,6 @@
 say("1..5")
 
-$v = ->child
+var $v = ->child
 if $v?push
   say("ok\t\t- $v?push")
 else

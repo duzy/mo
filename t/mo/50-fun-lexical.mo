@@ -1,6 +1,6 @@
 say('1..4')
 
-$var = 'test-var'
+var $var = 'test-var'
 
 def test($arg) {
     if $arg eq 'test-arg'
@@ -16,7 +16,7 @@ def test($arg) {
     end
 }
 
-$test = def ($arg) {
+var $test = def ($arg) {
     if $arg eq 'test-arg'
         say("ok\t\t- $arg eq 'test-arg'")
     else

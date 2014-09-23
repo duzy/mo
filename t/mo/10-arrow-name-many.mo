@@ -1,5 +1,7 @@
 say("1..11")
 
+var $subset;
+
 $subset = ->child{ .. eq 'child' }
 for $subset {
     if .name eq 'test-child-1'

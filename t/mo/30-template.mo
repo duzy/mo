@@ -8,5 +8,5 @@ end
 
 say(yield T0)
 
-$v = yield T0
+var $v = yield T0
 say($v)

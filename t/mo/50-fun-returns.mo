@@ -12,6 +12,12 @@ def test2($arg) {
     say("fail\t\t- $arg eq 'test-arg'")
 }
 
+var $res1;
+var $res2;
+var $res3;
+var $res4;
+var $test;
+
 $res1 = test1('test-arg')
 $res2 = test2('test-arg')
 

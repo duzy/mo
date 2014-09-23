@@ -7,6 +7,7 @@ COMMON_PBC := gen/common.pbc
 COMMON_PIR := gen/common.pir
 COMMON_NQP := gen/common.nqp
 COMMON_SOURCES := \
+  src/core/Variable.nqp \
   src/core/Routine.nqp \
   src/how/NodeClassHOW.nqp \
   src/how/FilesystemNodeHOW.nqp \

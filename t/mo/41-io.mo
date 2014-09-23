@@ -4,8 +4,8 @@ with ->'t/mo/test'['text.txt'] do
       if .EXISTS
           say("ok\t\t- found "~..)
 
-          $h = open(.PATH, 'r')
-          $s = $h.readline
+          var $h = open(.PATH, 'r')
+          var $s = $h.readline
           if $s eq "text\n"
               say("ok\t\t- text")
           else

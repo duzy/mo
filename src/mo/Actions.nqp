@@ -442,11 +442,24 @@ class MO::Actions is HLL::Actions {
             make QAST::Var.new( :node($/), :scope<associative>,
                 $who, QAST::SVal.new( :value($name) ) );
         } elsif +@name == 0 {
-            $scope.symbol( $name, :scope<lexical>, :decl<var> );
-            $scope[0].push( QAST::Op.new( :op<bind>, :node($/),
-                QAST::Var.new( :name($name), :scope<lexical>, :decl<var> ),
-                $initializer ) );
-            make QAST::Var.new( :node($/), :name($name), :scope<lexical> );
+            # $scope.symbol( $name, :scope<lexical>, :decl<var> );
+            # $scope[0].push( QAST::Op.new( :op<bind>, :node($/),
+            #     QAST::Var.new( :name($name), :scope<lexical>, :decl<var> ),
+            #     $initializer ) );
+            # make QAST::Var.new( :node($/), :name($name), :scope<lexical> );
+
+            my $v;
+            $v := $initializer.value if nqp::can($initializer, 'value');
+
+            # TODO: need a replacement for this 'attribute' approach!
+            my $value := $*W.install_variable(:$name, :value($v));
+            my $ast := QAST::Var.new( :node($/), :name('$!value'), :scope<attribute>,
+                QAST::WVal.new( :$value ), QAST::WVal.new( :value(MO::Variable) ) );
+            $scope.symbol( $name, :scope<lexical>, :$value, :$ast );
+            $scope[0].push( QAST::Op.new( :op<bindattr>, :node($/),
+                QAST::WVal.new( :$value ), QAST::WVal.new( :value(MO::Variable) ),
+                QAST::SVal.new( :value('$!value') ), $initializer ) );
+            make $ast;
         } else {
             $/.CURSOR.panic('undefined '~$/);
         }
@@ -500,9 +513,6 @@ class MO::Actions is HLL::Actions {
         my $name := ~$<name>;
         $scope.name($name);
         $scope[0].push( wrap_return_handler($scope, $<def_block>.made) );
-
-        # TODO: using code object (check rakudo or NQP implementations)
-        #my $code := QAST::Var.new( :name('&' ~ $name), :scope<lexical> );
 
         my $outer := $scope.ann('outer');
         $outer.symbol('&' ~ $name, :scope<lexical>, :proto(1), :declared(1) );

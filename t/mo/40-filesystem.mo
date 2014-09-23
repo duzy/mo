@@ -80,7 +80,7 @@ for ->'test/many'['1.txt', "2.txt"] do
       end
   }
 
-$a = ->'.'
+var $a = ->'.'
   [
    "test/many/1.txt",
    "test/many/2.txt",

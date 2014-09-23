@@ -1,5 +1,8 @@
 say("1..6")
 
+var $node0;
+var $nodes;
+
 $node0 = ->child[0]
 $nodes = ->child[0, 1]
 

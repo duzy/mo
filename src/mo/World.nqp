@@ -52,9 +52,8 @@ class MO::World is HLL::World {
         $value;
     }
 
-    ## Convert a symbol into an AST node.
-    ## Names of '$Module:Var' form must be converted into ['Module', '$Var']
-    ## to be converted.
+    ## Convert a symbol into an AST node. Names of '$Module:Var' form must be
+    ## converted into ['Module', '$Var'] to be converted.
     method symbol_ast($/, @name, int $panic = 1) {
         my $first := @name[0];
         my %sym := self.symbol_in_scopes($first);
@@ -179,6 +178,62 @@ class MO::World is HLL::World {
         $obj.HOW.compose($obj);
     }
 
+    # Add currently visible symbols to a QAST block.
+    method add_visible_symbols($block, $cur) {
+        my %seen;
+        my $mu := NQPMu;
+        my $outer := $cur;
+        while $outer {
+            my %symbols := $outer.symtable();
+            for %symbols {
+                my str $name := $_.key;
+                unless %seen{$name} {
+                    my %sym   := $_.value;
+                    my $value := nqp::existskey(%sym, 'value') || nqp::existskey(%sym, 'lazy_value_from')
+                        ?? self.force_value(%sym, $name, 0)
+                        !! $mu;
+                    if nqp::isnull(nqp::getobjsc($value)) {
+                        $value := self.try_add_to_sc($value, $mu);
+                    }
+                    $block.symbol($name, :scope<lexical>);
+                    $block[0].push(QAST::Var.new(
+                        :name($name), :scope<lexical>, :decl<var>, :$value
+                    ));
+                }
+                %seen{$name} := 1;
+            }
+            $outer := $outer.ann('outer');
+        }
+    }
+
+    method try_add_to_sc($value, $fallback) {
+        self.add_object($value);
+        CATCH { $value := $fallback; }
+        $value
+    }
+
+    # Forces a value to be made available.
+    method force_value(%sym, $key, int $die) {
+        if nqp::existskey(%sym, 'value') {
+            %sym<value>
+        }
+        elsif nqp::existskey(%sym, 'lazy_value_from') {
+            %sym<value> := nqp::atkey(nqp::atkey(%sym, 'lazy_value_from'), $key)
+        }
+        else {
+            $die ?? nqp::die("No compile-time value for $key") !! NQPMu
+        }
+    }
+
+    method install_variable(:$name, :$value) {
+        my $variable_type := MO::Variable;
+        my $variable := nqp::create($variable_type);
+
+        self.add_object($variable);
+
+        $variable;
+    }
+
     # Adds a fixup to install a specified QAST::Block in a package under the
     # specified name.
     method install_package_routine($package, $name, $code_ast) {
@@ -193,6 +248,8 @@ class MO::World is HLL::World {
         my $compiler_thunk := {
             my $wrapper := QAST::Block.new(QAST::Stmts.new(), $code_ast);
             $wrapper.annotate('DYNAMIC_COMPILE_WRAPPER', 1);
+
+            self.add_visible_symbols($wrapper, $code_ast);
 
             # Compile the code in a new unit.
             my $compunit := QAST::CompUnit.new(
@@ -224,7 +281,7 @@ class MO::World is HLL::World {
                     nqp::setcodename($coderef, $code_ast.name);
                     nqp::setcodeobj($coderef, $routine);
                     nqp::markcodestatic($coderef);
-                    self.update_root_code_ref($root_code_ref_idx, $coderef);
+                    # self.update_root_code_ref($root_code_ref_idx, $coderef);
                 }
                 else {
                     say('compiled: '~$subid);
@@ -248,7 +305,7 @@ class MO::World is HLL::World {
         nqp::markcodestatic($stub);
         nqp::markcodestub($stub);
 
-        $root_code_ref_idx := self.add_root_code_ref($stub, $code_ast);
+        # $root_code_ref_idx := self.add_root_code_ref($stub, $code_ast);
 
         # Add it to the dynamic compilation fixup todo list
         #%!dynamic_codeobjs_to_fix_up{$code_ast.cuid} := $routine;

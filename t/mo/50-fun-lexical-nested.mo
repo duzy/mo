@@ -1,6 +1,6 @@
 say('1..9')
 
-$var = 'test-var'
+var $var = 'test-var'
 
 def test($arg) {
     if $arg eq 'test-arg'
@@ -48,7 +48,7 @@ def test($arg) {
     test_nested('test-arg-nested')
 }
 
-$test = def ($arg) {
+var $test = def ($arg) {
     if $arg eq 'test-arg'
         say("ok\t\t- $arg eq 'test-arg'")
     else

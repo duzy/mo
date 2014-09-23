@@ -191,6 +191,7 @@ grammar MO::Grammar is HLL::Grammar {
         my $*GLOBALish;
         my $*PACKAGE;
         my $*EXPORT;
+        my $*UNIT; # the top-level block of the current compile unit.
 
         # Symbol table and serialization context builder - keeps track of
         # objects that cross the compile-time/run-time boundary that are
@@ -201,7 +202,6 @@ grammar MO::Grammar is HLL::Grammar {
             MO::World.new(:handle($source_id)) !!
             MO::World.new(:handle($source_id), :description($file));
 
-        #$*W.add_initializations();
         $*W.add_builtin_objects();
        
         if $file ~~ / .*\.xml$ / {
@@ -285,15 +285,8 @@ grammar MO::Grammar is HLL::Grammar {
                 ),
             ));
 
-            my $scope := self.push_scope('prog');
-            my $*UNIT := $scope;
+            my $*UNIT := self.push_scope('unit');
             $*UNIT.symbol('$', :scope<lexical>, :decl<var>);
-            # $*UNIT.push( QAST::Op.new( :op<bind>,
-            #     QAST::Var.new( :name<$>, :scope<lexical>, :decl<var> ),
-            #     QAST::Op.new( :op<callmethod>, :name<root>,
-            #         QAST::Var.new( :scope<lexical>, :name($MODEL.name) ),
-            #     ),
-            # ) );
         }
         ^ ~ $ <statements> || <.panic: 'Confused'>
     }

@@ -1,4 +1,4 @@
-say('1..6');
+say('1..10');
 say("ok\t- 1. test/Module.mo loaded");
 
 def Test($arg) {

@@ -11,8 +11,6 @@ say($S);
 Module::Test('test-arg');
 
 var $var = 'test-var-1';
-say("ok\t- "~$var);
-
 def _var() { 'test-var-2' }
 def test($arg) {
     say($arg~' - '~$var);
