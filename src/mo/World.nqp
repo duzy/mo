@@ -9,6 +9,11 @@ class MO::World is HLL::World {
     #has %!dynamic_codeobjs_to_fix_up;
     #has %!dynamic_codeobj_types;
 
+    method create_data_model() {
+        my @files := $*DATAFILES;
+        say(nqp::join(',', @files));
+    }
+
     method push_scope($/) {
         my $scope := QAST::Block.new( QAST::Stmts.new(), :node($/) );
         $scope.annotate('outer', @!scopes[+@!scopes - 1]) if +@!scopes;
@@ -217,6 +222,16 @@ class MO::World is HLL::World {
         else {
             $die ?? nqp::die("No compile-time value for $key") !! NQPMu
         }
+    }
+
+    method install_type($type) {
+        self.add_object($type);
+
+        ($*PACKAGE.WHO){$type.HOW.name} := $type;
+    }
+
+    method install_package_symbol($package, $name, $value) {
+        
     }
 
     method install_variable(:$name) {

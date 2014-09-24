@@ -534,6 +534,17 @@ class MO::Actions is HLL::Actions {
     }
 
     method definition:sym<class>($/) {
+        my $ctor := $*W.pop_scope;
+        make QAST::Stmts.new();
+    }
+
+    method class_member:sym<method>($/) {
+        my $scope := $*W.pop_scope;
+        my $ctor := $scope.ann('outer');
+        my $type := $ctor.ann('class');
+        # my $how := $type.HOW;
+        # $how.add_method($type, ~$<name>, );
+        say('member: '~$how.name~'.'~$<name>);
         make QAST::Stmts.new();
     }
 }

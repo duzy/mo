@@ -1,4 +1,4 @@
-knowhow MO::NodeClassHOW {
+knowhow MO::NodeHOW {
     my $type;
 
     # ''                tag (e.g. XML tag name, <name/>)
@@ -24,7 +24,7 @@ knowhow MO::NodeClassHOW {
                 nqp::getattr($node, $type, '.'~$name);
             };
             %methods<set> := -> $node, $name, $value {
-                MO::NodeClassHOW.node_bindattr($node, $name, $value);
+                MO::NodeHOW.node_bindattr($node, $name, $value);
             };
             %methods<count> := -> $node, $name = nqp::null() {
                 +nqp::getattr($node, $type, nqp::isnull($name) ?? '*' !! $name);

@@ -187,6 +187,7 @@ grammar MO::Grammar is HLL::Grammar {
         my %*HOW;
         %*HOW<knowhow> := nqp::knowhow();
         %*HOW<package> := nqp::knowhow();
+        %*HOW<class> := MO::ClassHOW;
 
         my $*GLOBALish;
         my $*PACKAGE;
@@ -202,8 +203,9 @@ grammar MO::Grammar is HLL::Grammar {
             MO::World.new(:handle($source_id)) !!
             MO::World.new(:handle($source_id), :description($file));
 
+        $*W.create_data_model();
         $*W.add_builtin_objects();
-       
+
         if $file ~~ / .*\.xml$ / {
             self.xml
         } elsif $file ~~ / .*\.json$ / {
@@ -397,12 +399,27 @@ grammar MO::Grammar is HLL::Grammar {
     }
 
     rule definition:sym<class> {
-        <sym>\s <name> '{' ~ '}' [<class_member>*]
+        <sym>\s <name=.ident> '{' ~ '}'
+        [
+            {
+                my $how := %*HOW{~$<sym>};
+                my $type := $how.new_type(:name(~$<name>));
+
+                my $*OUTERPACKAGE := $*PACKAGE;
+                my $*PACKAGE := $type;
+
+                $*W.install_package_symbol($*OUTERPACKAGE, ~$<name>, $*PACKAGE);
+
+                my $scope := self.push_scope( ~$<sym> );
+                $scope.annotate('class', $type);
+            }
+            <class_member>*
+        ]
     }
 
     proto rule class_member { <...> }
     rule class_member:sym<method> {
-        <sym>\s <name>
+        <sym>\s <name=.ident>
         '(' ~ ')' [ { self.push_scope( 'method' ) } <params> ]?
         '{' ~ '}' <statements>
     }

@@ -19,7 +19,7 @@ function run() {
 
 if true ; then
     run $SRCDIR/00 -v
-    # exit
+    exit
 fi
 
 run $SRCDIR/00-say

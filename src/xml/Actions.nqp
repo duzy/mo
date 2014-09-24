@@ -12,7 +12,7 @@ class XML::Actions is HLL::Actions {
 
         $stmts.push(QAST::Op.new( :op<bind>,
             QAST::Var.new( :name($NODEHOW.name), :scope<local>, :decl<var> ),
-            QAST::WVal.new( :value(MO::NodeClassHOW) ),
+            QAST::WVal.new( :value(MO::NodeHOW) ),
         ));
         $stmts.push(QAST::Op.new( :op<bind>,
             QAST::Var.new( :name($NODETYPE.name), :scope<local>, :decl<var> ),

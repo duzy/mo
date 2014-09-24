@@ -25,8 +25,7 @@ class MO::Compiler is HLL::Compiler {
             }
         }
 
-        #nqp::say('data: '~nqp::join(' ', @datafiles));
-        #nqp::say('code: '~nqp::join(' ', @codefiles));
+        my $*DATAFILES := @datafiles;
 
         self.command_eval_data(|@datafiles, :encoding('utf8'));
         self.command_eval_code(|@codefiles, |%adverbs);

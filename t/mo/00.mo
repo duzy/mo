@@ -1,12 +1,13 @@
 say('1..3');
 
-def value($v) {
-    say("ok\t1. value("~$v~")");
-    $v
+class A
+{
+    method test1() {
+        say('ok - A.test1');
+    }
+
+    method test2($arg) {
+        say('ok - A.test2('~$arg~')');
+    }
 }
 
-var $var1 = "ok\t2. test-var-1";
-var $var2 = value("test-var-2");
-
-say($var1);
-say("ok\t3. "~$var2);
