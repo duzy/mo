@@ -224,12 +224,6 @@ class MO::World is HLL::World {
         }
     }
 
-    method install_type($type) {
-        self.add_object($type);
-
-        ($*PACKAGE.WHO){$type.HOW.name} := $type;
-    }
-
     method install_variable(:$name) {
         my $variable_type := MO::Variable;
         my $variable := nqp::create($variable_type);

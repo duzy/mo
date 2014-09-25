@@ -288,8 +288,9 @@ grammar MO::Grammar is HLL::Grammar {
                 ),
             ));
 
-            my $*UNIT := self.push_scope('unit');
+            $*UNIT := self.push_scope('unit');
             $*UNIT.symbol('$', :scope<lexical>, :decl<var>);
+            $*UNIT.annotate('package', $*PACKAGE);
         }
         ^ ~ $ <statements> || <.panic: 'Confused'>
     }

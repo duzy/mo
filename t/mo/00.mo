@@ -6,8 +6,7 @@ class A
     $.attribute = 123;
 
     method test1() {
-        #say('ok - A.test1 - ' ~ $static_var);
-        say('ok - A.test1 - ');
+        say('ok - A.test1 - ' ~ $static_var);
     }
 
     method test2($arg) {
