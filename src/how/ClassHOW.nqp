@@ -2,13 +2,18 @@ knowhow MO::ClassHOW {
     has str $!name;
 
     has @!attributes;
-    has %!methods;
-    has @!method_order;
+    has %!methods; # methods keyed by name
+    has @!methods; # methods in presented order
     has @!parents;
+
+    # Call tracing.
+    has int $!trace;
+    has int $!trace_depth;
+    has @!trace_exclude;
 
     has @!mro;
 
-    has $!composed;
+    has int $!composed;
 
     # Create a new instance of this meta-class.
     method new(:$name = '<class>') {
@@ -29,7 +34,33 @@ knowhow MO::ClassHOW {
         $!name := $name;
         @!attributes := [];
         %!methods := {};
+        @!methods := [];
         @!parents := [];
+
+        $!composed := 0;
+
+        $!trace := 1;
+        $!trace_depth := 0;
+    }
+
+    method find_method($obj, $name, :$no_fallback = 0, :$no_trace = 0) {
+        for @!mro {
+            my %meths := $_.HOW.methods($obj);
+            if nqp::existskey(%meths, $name) {
+                my $found := %meths{$name};
+                return $!trace && !$no_trace && self.should_trace($obj, $name)
+                    ?? self.make_tracer($name, $found)
+                    !! $found;
+            }
+        }
+        nqp::null()
+    }
+
+    method find_attribute($obj, $name) {
+        for @!attributes {
+            return $_ if $_.name eq $name;
+        }
+        nqp::null()
     }
 
     method add_method($obj, $name, $code_obj) {
@@ -41,7 +72,7 @@ knowhow MO::ClassHOW {
         }
         nqp::setmethcacheauth($obj, 0);
         # %!caches{nqp::where(self)} := {} unless nqp::isnull(%!caches);
-        nqp::push(@!method_order, %!methods{$name} := $code_obj);
+        nqp::push(@!methods, %!methods{$name} := $code_obj);
     }
 
     method add_attribute($obj, $meta_attr) {
@@ -79,7 +110,9 @@ knowhow MO::ClassHOW {
         $local ?? @!parents !! @!mro
     }
 
-    method name() { $!name }
+    method name($obj) {
+        $!name
+    }
 
     # Compose the type (MRO entries).
     method compose($obj) {
@@ -133,8 +166,8 @@ knowhow MO::ClassHOW {
             # and following an array of hashes per attribute, and a list of
             # immediate parents.
             my @type_info;
-            nqp::push(@type_info, @attrs);
             nqp::push(@type_info, $type);
+            nqp::push(@type_info, @attrs);
             nqp::push(@type_info, $type.HOW.parents($type));
 
             nqp::push(@attribute, @type_info);
@@ -148,7 +181,13 @@ knowhow MO::ClassHOW {
     # Compute the MRO.
     my sub compute_mro($class) {
         my @immediate_parents := $class.HOW.parents($class, :local);
-        @immediate_parents;
+        my @result;
+
+        
+
+        # Put this class on the start of the list, and we're done.
+        nqp::unshift(@result, $class);
+        @result;
     }
 
     my method publish_type_cache($obj) {
@@ -185,5 +224,23 @@ knowhow MO::ClassHOW {
         my @out;
         for @in { nqp::unshift(@out, $_) }
         @out
+    }
+
+    my method make_tracer($name, $found) {
+        -> *@pos, *%named { 
+            nqp::say(nqp::x('  ', $!trace_depth) ~ "Calling $name");
+            $!trace_depth := $!trace_depth + 1;
+            my $result := $found(|@pos, |%named);
+            $!trace_depth := $!trace_depth - 1;
+            $result
+        }
+    }
+
+    my method should_trace($obj, $name) {
+        return 0 if nqp::substr($name, 0, 1) eq '!';
+        for @!trace_exclude {
+            return 0 if $name eq $_;
+        }
+        1;
     }
 }

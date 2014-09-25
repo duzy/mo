@@ -230,15 +230,16 @@ class MO::World is HLL::World {
         ($*PACKAGE.WHO){$type.HOW.name} := $type;
     }
 
-    method install_package_symbol($package, $name, $value) {
-        
-    }
-
     method install_variable(:$name) {
         my $variable_type := MO::Variable;
         my $variable := nqp::create($variable_type);
         self.add_object($variable);
         $variable;
+    }
+
+    method install_package_symbol($package, $name, $value) {
+        self.add_object($value);
+        ($package.WHO){$name} := $value;
     }
 
     # Adds a fixup to install a specified QAST::Block in a package under the
@@ -291,7 +292,7 @@ class MO::World is HLL::World {
                     # self.update_root_code_ref($root_code_ref_idx, $coderef);
                 }
                 else {
-                    say('compiled: '~$subid);
+                    say('DYNAMICALLY_COMPILED: '~$subid);
                 }
                 $i := $i + 1;
             }
@@ -328,6 +329,9 @@ class MO::World is HLL::World {
             QAST::SVal.new( :value($name) ),
             QAST::BVal.new( :value($code_ast) )
         ));
+
+        # return the created code object
+        $routine
     }
 
     method install_fixups() {
@@ -372,6 +376,12 @@ class MO::World is HLL::World {
         %builtins{$name} := %sym;
     }
 }
+
+MO::World.add_builtin_code('new', -> $t {
+    my $obj := nqp::create($t);
+    $obj.'~ctor'();
+    $obj;
+});
 
 # I/O opcodes (vm/parrot/QAST/Operations.nqp)
 MO::World.add_builtin_code('print', -> $s { nqp::print($s) });

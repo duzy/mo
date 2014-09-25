@@ -188,6 +188,7 @@ grammar MO::Grammar is HLL::Grammar {
         %*HOW<knowhow> := nqp::knowhow();
         %*HOW<package> := nqp::knowhow();
         %*HOW<class> := MO::ClassHOW;
+        %*HOW<attribute> := MO::AttributeHOW;
 
         my $*GLOBALish;
         my $*PACKAGE;
@@ -224,7 +225,7 @@ grammar MO::Grammar is HLL::Grammar {
            $params := [$params] unless nqp::islist($params);
            for $params {
                $scope.symbol($_, :scope<lexical>, :decl<param>);
-               $scope.push( QAST::Var.new( :name($_), :scope<lexical>, :decl<param> ) );
+               $scope[0].push( QAST::Var.new( :name($_), :scope<lexical>, :decl<param> ) );
            }
         }
         $scope;
@@ -294,10 +295,9 @@ grammar MO::Grammar is HLL::Grammar {
     }
 
     token sigil  { <[$@%&]> }
-    token twigil { <[*!?]> }
+    token twigil { <[.]> } #{ <[*!?]> }
     token variable {
-        #<sigil> <twigil>? <name>
-        <sigil> [$<name>=[<.ident> ['::'<.ident>]*]]?
+        <sigil> <twigil>? [$<name>=[<.ident> ['::'<.ident>]*]]?
     }
 
     token initializer {
@@ -399,18 +399,18 @@ grammar MO::Grammar is HLL::Grammar {
     }
 
     rule definition:sym<class> {
+        :my $*OUTERPACKAGE := $*PACKAGE;
         <sym>\s <name=.ident> '{' ~ '}'
         [
             {
                 my $how := %*HOW{~$<sym>};
                 my $type := $how.new_type(:name(~$<name>));
 
-                my $*OUTERPACKAGE := $*PACKAGE;
-                my $*PACKAGE := $type;
+                $*PACKAGE := $type;
 
                 $*W.install_package_symbol($*OUTERPACKAGE, ~$<name>, $*PACKAGE);
 
-                my $scope := self.push_scope( ~$<sym> );
+                my $scope := self.push_scope( ~$<sym>, 'me' );
                 $scope.annotate('class', $type);
             }
             <class_member>*
@@ -420,7 +420,13 @@ grammar MO::Grammar is HLL::Grammar {
     proto rule class_member { <...> }
     rule class_member:sym<method> {
         <sym>\s <name=.ident>
-        '(' ~ ')' [ { self.push_scope( 'method' ) } <params> ]?
+        '(' ~ ')' [ { self.push_scope( 'method', 'me' ) } <params> ]?
         '{' ~ '}' <statements>
+    }
+
+    rule class_member:sym<$> {
+        :my $*IN_DECL;
+        { $*IN_DECL := 'member'; }
+        <variable> <initializer>? ';'? { $*IN_DECL := 0; }
     }
 }

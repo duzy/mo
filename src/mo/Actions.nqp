@@ -130,7 +130,7 @@ class MO::Actions is HLL::Actions {
 
         my @name := nqp::split('::', ~$<name>);
         my $final_name := @name.pop;
-        my $name := ~$<sigil> ~ $final_name;
+        my $name := ~$<sigil> ~$<twigil> ~ $final_name;
         @name.push($name);
 
         my $ast := $*W.symbol_ast($/, @name, 0);
@@ -140,7 +140,21 @@ class MO::Actions is HLL::Actions {
             make QAST::Var.new( :node($/), :scope<associative>,
                 QAST::Var.new( :name<EXPORT.WHO>, :scope<lexical> ),
                 QAST::SVal.new( :value($name) ) );
-        } elsif $*IN_DECL ne 'var' {
+        } elsif $*IN_DECL eq 'var' {
+            # null
+        } elsif $*IN_DECL eq 'member' {
+            # null
+        } elsif ~$<twigil> eq '.' {
+            my $class := $*PACKAGE;
+            my $attr := $class.HOW.find_attribute($class, $name);
+            unless nqp::defined($attr) {
+                $/.CURSOR.panic(($class.HOW).name($class)~' has no attribute '~$name);
+            }
+            make QAST::Var.new( :node($/), :name($name), :scope<attribute>,
+                QAST::Var.new( :name<me>, :scope<lexical> ),
+                QAST::WVal.new( :value($class) ),
+            );
+        } else {
             $/.CURSOR.panic("undeclared variable "~$/);
         }
     }
@@ -534,17 +548,53 @@ class MO::Actions is HLL::Actions {
     }
 
     method definition:sym<class>($/) {
+        my $ctor_name := '~ctor';
         my $ctor := $*W.pop_scope;
-        make QAST::Stmts.new();
+        my $class := $ctor.ann('class');
+        $ctor.name( ~$<name> ~'::'~$ctor_name );
+
+        my $code := $*W.install_package_routine($class, $ctor_name, $ctor);
+        $class.HOW.add_method($class, $ctor_name, $code);
+
+        $*W.pkg_compose($class);
+        make $ctor;
     }
 
     method class_member:sym<method>($/) {
         my $scope := $*W.pop_scope;
         my $ctor := $scope.ann('outer');
-        my $type := $ctor.ann('class');
-        # my $how := $type.HOW;
-        # $how.add_method($type, ~$<name>, );
-        say('member: '~$how.name~'.'~$<name>);
-        make QAST::Stmts.new();
+        my $class := $ctor.ann('class');
+        $scope.push( $<statements>.made );
+        $scope.name( ~$<name> );
+        $ctor[0].push($scope);
+
+        my $code := $*W.install_package_routine($class, $scope.name, $scope);
+        $class.HOW.add_method($class, $scope.name, $code);
+    }
+
+    method class_member:sym<$>($/) {
+        my $sigil := ~$<variable><sigil>;
+        my $twigil := ~$<variable><twigil>;
+        my $ctor := $*W.current_scope;
+        my $class := $ctor.ann('class');
+        if ~$twigil eq '.' {
+            my $name := ~$<variable>;
+            my %lit_args;
+            my %obj_args;
+            %lit_args<name> := $name;
+
+            my $attr := (%*HOW<attribute>).new(|%lit_args, |%obj_args);
+            $class.HOW.add_attribute($class, $attr);
+
+            if $<initializer> {
+                $ctor[0].push( QAST::Op.new( :node($/), :op<bindattr>,
+                    QAST::Var.new( :name<me>, :scope<lexical> ),
+                    QAST::WVal.new( :value($class) ),
+                    QAST::SVal.new( :value($name) ),
+                    $<initializer>.made ) );
+            }
+        } else {
+            
+        }
     }
 }
