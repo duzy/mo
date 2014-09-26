@@ -239,7 +239,7 @@ grammar MO::Grammar is HLL::Grammar {
 
     proto token selector { <...> }
     token selector:sym<[ ]> {:s '[' ~ ']' <EXPR> <selector>? } #[<EXPR>+ %% ',']
-    token selector:sym<{ }> {:s '{' ~ '}' <newscope: 'selector', '$', 1> <selector>? }
+    token selector:sym<{ }> {:s '{' ~ '}' <newscope: 'selector', '$_', 1> <selector>? }
     token selector:sym«..» { <sym> }
     token selector:sym«.»  {:s <sym> <name=.ident> }
     token selector:sym«->» {:s <sym> [ <select> | <.panic: 'confused selector'> ] <selector>? }
@@ -289,7 +289,7 @@ grammar MO::Grammar is HLL::Grammar {
             ));
 
             $*UNIT := self.push_scope('unit');
-            $*UNIT.symbol('$', :scope<lexical>, :decl<var>);
+            $*UNIT.symbol('$_', :scope<lexical>, :decl<var>);
             $*UNIT.annotate('package', $*PACKAGE);
         }
         ^ ~ $ <statements> || <.panic: 'Confused'>
@@ -298,7 +298,7 @@ grammar MO::Grammar is HLL::Grammar {
     token sigil  { <[$@%&]> }
     token twigil { <[.]> } #{ <[*!?]> }
     token variable {
-        <sigil> <twigil>? [$<name>=[<.ident> ['::'<.ident>]*]]?
+        <sigil> <twigil>? [$<name>=[<.ident> ['::'<.ident>]*]]
     }
 
     token initializer {
@@ -344,12 +344,12 @@ grammar MO::Grammar is HLL::Grammar {
     rule loop_block:sym<end> { <![{]> ~ 'end' <newscope: 'loop'> }
 
     proto rule for_block { <...> }
-    rule for_block:sym<{ }> { 'do'? '{' ~ '}' <newscope: 'for', '$'> }
-    rule for_block:sym<end> { <![{]> ~ 'end' <newscope: 'for', '$'> }
+    rule for_block:sym<{ }> { 'do'? '{' ~ '}' <newscope: 'for', '$_'> }
+    rule for_block:sym<end> { <![{]> ~ 'end' <newscope: 'for', '$_'> }
 
     proto rule with_block { <...> }
-    rule with_block:sym<{ }> { 'do'? '{' ~ '}' <newscope: 'with', '$', 1> }
-    rule with_block:sym<end> { <![{]> ~ 'end' <newscope: 'with', '$', 1> }
+    rule with_block:sym<{ }> { 'do'? '{' ~ '}' <newscope: 'with', '$_', 1> }
+    rule with_block:sym<end> { <![{]> ~ 'end' <newscope: 'with', '$_', 1> }
     rule with_block:sym<yield> { 'yield' <statement> }
 
     proto rule def_block { <...> }
@@ -375,7 +375,7 @@ grammar MO::Grammar is HLL::Grammar {
     rule definition:sym<template> {
         <sym>\s <name=.ident>
         <template_starter> ~ <template_stopper>
-        [ { self.push_scope( 'template', '$' ) } <template_body> ]
+        [ { self.push_scope( 'template', '$_' ) } <template_body> ]
     }
     rule template_starter { ^^ '-'**3..*\n }
     rule template_stopper { \n? <.template_starter> 'end' }

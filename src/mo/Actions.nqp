@@ -1,6 +1,4 @@
 class MO::Actions is HLL::Actions {
-    my $MODEL := QAST::Var.new( :scope<lexical>, :name<MODEL> );
-
     method term:sym<value>($/) { make $<value>.made; $/.prune; }
     method term:sym<variable>($/) { make $<variable>.made; $/.prune; }
     method term:sym<name>($/) {
@@ -11,7 +9,7 @@ class MO::Actions is HLL::Actions {
 
     method term:sym«.»($/) {
         my $ast := $<selector>.made;
-        $ast.push( QAST::Var.new( :name<$>, :scope<lexical> ) );
+        $ast.push( QAST::Var.new( :name<$_>, :scope<lexical> ) );
         make $ast;
         $/.prune;
     }
@@ -24,7 +22,7 @@ class MO::Actions is HLL::Actions {
     method term:sym«->»($/) {
         my $sel := $<selector>;
         my $ast := $sel.made;
-        $ast.push( QAST::Var.new( :name<$>, :scope<lexical> ) );
+        $ast.push( QAST::Var.new( :name<$_>, :scope<lexical> ) );
 
         ## Chain all selectors
         $sel := next_selector($sel); #$sel<selector>;
@@ -141,20 +139,32 @@ class MO::Actions is HLL::Actions {
                 QAST::Var.new( :name<EXPORT.WHO>, :scope<lexical> ),
                 QAST::SVal.new( :value($name) ) );
         } elsif $*IN_DECL eq 'var' {
-            # null
+            # null, nothing made
         } elsif $*IN_DECL eq 'member' {
-            # null
+            # null, nothing made
         } elsif ~$<twigil> eq '.' {
             my $class := $*PACKAGE;
-            my $attr := $class.HOW.find_attribute($class, $name);
+            my $how := $class.HOW;
+            unless nqp::can($how, 'find_attribute') {
+                $/.CURSOR.panic($how.name($class)~' cannot have attributes');
+            }
+
+            my $attr := $how.find_attribute($class, $name);
             unless nqp::defined($attr) {
-                $/.CURSOR.panic(($class.HOW).name($class)~' has no attribute '~$name);
+                $/.CURSOR.panic($how.name($class)~' has no attribute '~$name);
             }
             make QAST::Var.new( :node($/), :name($name), :scope<attribute>,
                 QAST::Var.new( :name<me>, :scope<lexical> ),
                 QAST::WVal.new( :value($class) ),
             );
         } else {
+            # my $scope := $*W.current_scope;
+            # while $scope {
+            #     my $pkg := $scope.ann('package') // $scope.ann('class');
+            #     if $pkg {
+            #     }
+            #     $scope := $scope.ann('outer');
+            # }
             $/.CURSOR.panic("undeclared variable "~$/);
         }
     }
@@ -201,13 +211,15 @@ class MO::Actions is HLL::Actions {
     }
 
     method selector:sym«.»($/) {
-        make QAST::Op.new( :node($/), :op<callmethod>, :name<dot>, $MODEL,
+        make QAST::Op.new( :node($/), :op<callmethod>, :name<dot>,
+            QAST::Var.new( :scope<lexical>, :name<MODEL> ),
             QAST::SVal.new( :value(~$<name>) ),
         );
     }
 
     method selector:sym«..»($/) {
-        make QAST::Op.new( :node($/), :op<callmethod>, :name<dotdot>, $MODEL );
+        make QAST::Op.new( :node($/), :op<callmethod>, :name<dotdot>,
+            QAST::Var.new( :scope<lexical>, :name<MODEL> ) );
     }
 
     method selector:sym«->»($/) {
@@ -216,7 +228,8 @@ class MO::Actions is HLL::Actions {
 
     method selector:sym<[ ]>($/) {
         my $expr := $<EXPR>.made;
-        my $ast := QAST::Op.new( :node($/), :op<callmethod>, $MODEL, $expr );
+        my $ast := QAST::Op.new( :node($/), :op<callmethod>,
+            QAST::Var.new( :scope<lexical>, :name<MODEL> ), $expr );
         if nqp::istype($expr, QAST::Op) && $expr.op eq 'list' {
             my $countAll := +$expr.list;
             my $countIVal := 0;
@@ -246,22 +259,26 @@ class MO::Actions is HLL::Actions {
     method selector:sym<{ }>($/) {
         my $scope := $*W.pop_scope();
         $scope.push( $<newscope>.made );
-        make QAST::Op.new( :node($/), :op<callmethod>, :name<filter>, $MODEL,
+        make QAST::Op.new( :node($/), :op<callmethod>, :name<filter>,
+            QAST::Var.new( :scope<lexical>, :name<MODEL> ),
             QAST::Op.new( :op<takeclosure>, $scope ) );
     }
 
     method select:sym<name>($/) {
         my $name := QAST::SVal.new( :value(~$<name>) );
-        make QAST::Op.new( :node($/), :op<callmethod>, :name<select_name>, $MODEL, $name );
+        make QAST::Op.new( :node($/), :op<callmethod>, :name<select_name>,
+            QAST::Var.new( :scope<lexical>, :name<MODEL> ), $name );
     }
 
     method select:sym<quote>($/) {
         my $path := $<quote>.made;
-        make QAST::Op.new( :node($/), :op<callmethod>, :name<select_path>, $MODEL, $path );
+        make QAST::Op.new( :node($/), :op<callmethod>, :name<select_path>,
+            QAST::Var.new( :scope<lexical>, :name<MODEL> ), $path );
     }
 
     method select:sym<[>($/) {
-        make QAST::Op.new( :node($/), :op<callmethod>, :name<select_all>, $MODEL );
+        make QAST::Op.new( :node($/), :op<callmethod>, :name<select_all>,
+            QAST::Var.new( :scope<lexical>, :name<MODEL> ) );
     }
 
     method xml($/) {
@@ -282,7 +299,7 @@ class MO::Actions is HLL::Actions {
     method prog($/) {
         my $init := QAST::Stmts.new(
             QAST::Op.new( :op<bind>,
-                QAST::Var.new( :scope<lexical>, :decl<var>, :name($MODEL.name) ),
+                QAST::Var.new( :scope<lexical>, :decl<var>, :name<MODEL> ),
                 QAST::Op.new( :op<getcurhllsym>, QAST::SVal.new( :value<MODEL> ) ),
             ),
             QAST::Op.new( :op<bind>,
@@ -302,8 +319,8 @@ class MO::Actions is HLL::Actions {
                 QAST::Op.new( :op<who>, QAST::Var.new( :scope<lexical>, :name<EXPORT> ) ),
             ),
             QAST::Op.new( :op<bind>,
-                QAST::Var.new( :name<$>, :scope<lexical>, :decl<var> ),
-                QAST::Op.new( :op<callmethod>, :name<root>, $MODEL ),
+                QAST::Var.new( :name<$_>, :scope<lexical>, :decl<var> ),
+                QAST::Op.new( :op<callmethod>, :name<root>, QAST::Var.new( :scope<lexical>, :name<MODEL> ) ),
             ),
         );
 
@@ -373,10 +390,10 @@ class MO::Actions is HLL::Actions {
     method statement:sym<yield_t>($/) {
         my $scope := $*W.current_scope;
         my $ast := QAST::Op.new( :node($/), :op<call>, :name(~$<name>) );
-        if $scope.symbol('$') {
-            $ast.push( QAST::Var.new( :name<$>, :scope<lexical> ) );
+        if $scope.symbol('$_') {
+            $ast.push( QAST::Var.new( :name<$_>, :scope<lexical> ) );
         } else {
-            $ast.push( QAST::Op.new( :op<callmethod>, :name<root>, $MODEL ) );
+            $ast.push( QAST::Op.new( :op<callmethod>, :name<root>, QAST::Var.new( :scope<lexical>, :name<MODEL> ) ) );
         }
         make $ast;
     }
@@ -439,6 +456,10 @@ class MO::Actions is HLL::Actions {
         my $final_name := @name.pop;
         my $name := ~$<variable><sigil> ~ $final_name;
 
+        my $scope := $*W.current_scope;
+        #my $package := $scope.ann('package') // $scope.ann('class');
+        #say('package: '~$package.HOW.name) if nqp::defined($package);
+
         my $who;
         if +@name {
             $who := $*W.symbol_ast($/, @name, 1);
@@ -446,7 +467,6 @@ class MO::Actions is HLL::Actions {
             $who := QAST::Var.new( :name<EXPORT.WHO>, :scope<lexical> );
         }
 
-        my $scope := $*W.current_scope;
         my $initializer := $<initializer> ?? $<initializer>.made
             !! QAST::Op.new( :op<null> );
 
@@ -575,10 +595,12 @@ class MO::Actions is HLL::Actions {
     method class_member:sym<$>($/) {
         my $sigil := ~$<variable><sigil>;
         my $twigil := ~$<variable><twigil>;
+        my $name := ~$<variable>;
+        my $initializer := $<initializer>
+            ?? $<initializer>.made !! QAST::Op.new( :op<null> );
         my $ctor := $*W.current_scope;
         my $class := $ctor.ann('class');
-        if ~$twigil eq '.' {
-            my $name := ~$<variable>;
+        if $twigil eq '.' {
             my %lit_args;
             my %obj_args;
             %lit_args<name> := $name;
@@ -586,15 +608,19 @@ class MO::Actions is HLL::Actions {
             my $attr := (%*HOW<attribute>).new(|%lit_args, |%obj_args);
             $class.HOW.add_attribute($class, $attr);
 
-            if $<initializer> {
-                $ctor[0].push( QAST::Op.new( :node($/), :op<bindattr>,
-                    QAST::Var.new( :name<me>, :scope<lexical> ),
-                    QAST::WVal.new( :value($class) ),
-                    QAST::SVal.new( :value($name) ),
-                    $<initializer>.made ) );
-            }
+            $ctor[0].push( QAST::Op.new( :node($/), :op<bindattr>,
+                QAST::Var.new( :name<me>, :scope<lexical> ),
+                QAST::WVal.new( :value($class) ),
+                QAST::SVal.new( :value($name) ),
+                $initializer ) );
         } else {
-            
+            my $ast := QAST::Var.new( :scope<associative>,
+                QAST::Op.new( :op<who>, QAST::WVal.new( :value($class) ) ),
+                QAST::SVal.new( :value($name) ) );
+            $ctor.symbol($name, :scope<package>, :ast($ast));
+            $ctor[0].push( QAST::Op.new( :node($/), :op<bindkey>,
+                QAST::Op.new( :op<who>, QAST::WVal.new( :value($class) ) ),
+                QAST::SVal.new( :value($name) ), $initializer ) );
         }
     }
 }

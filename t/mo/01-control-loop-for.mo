@@ -10,11 +10,11 @@ for ->child do
       say("fail\t- "~.name)
     end
 
-    var $s = $.get('okay')
+    var $s = $_.get('okay')
     if .okay eq $s
-      say($.get('okay'))
+      say($_.get('okay'))
     else
-      say("fail\t- .okay eq $.okay")
+      say("fail\t- .okay eq $_.okay")
     end
   }
 
@@ -28,11 +28,11 @@ for ->child{1} do
       say("fail\t- "~.name)
     end
 
-    var $s = $.get('okay')
+    var $s = $_.get('okay')
     if .okay eq $s
-      say($.get('okay'))
+      say($_.get('okay'))
     else
-      say("fail\t- .okay eq $.okay")
+      say("fail\t- .okay eq $_.okay")
     end
   }
 
@@ -46,10 +46,10 @@ for $list
     say("fail\t- "~.name)
   end
 
-  var $s = $.get('okay')
+  var $s = $_.get('okay')
   if .okay eq $s
-    say($.get('okay'))
+    say($_.get('okay'))
   else
-    say("fail\t- .okay eq $.okay")
+    say("fail\t- .okay eq $_.okay")
   end
 end

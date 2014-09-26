@@ -19,7 +19,7 @@ function run() {
 
 if true ; then
     run $SRCDIR/00 -v
-    exit
+    # exit
 fi
 
 run $SRCDIR/00-say
@@ -45,6 +45,8 @@ run $SRCDIR/50-fun-returns
 run $SRCDIR/50-fun-lexical
 run $SRCDIR/50-fun-lexical-nested
 run $SRCDIR/60-module
+run $SRCDIR/61-class
+run $SRCDIR/61-class-static-variable
 exit
 run $SRCDIR/40-filesystem-filter -v
 run $SRCDIR/40-filesystem-selectors -v
