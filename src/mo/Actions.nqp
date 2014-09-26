@@ -121,11 +121,6 @@ class MO::Actions is HLL::Actions {
     }
 
     method variable($/) {
-        unless $<name> {
-            make $*W.symbol_ast($/, [ ~$<sigil> ]);
-            return;
-        }
-
         my @name := nqp::split('::', ~$<name>);
         my $final_name := @name.pop;
         my $name := ~$<sigil> ~$<twigil> ~ $final_name;
@@ -145,7 +140,7 @@ class MO::Actions is HLL::Actions {
         } elsif ~$<twigil> eq '.' {
             my $class := $*PACKAGE;
             my $how := $class.HOW;
-            unless nqp::can($how, 'find_attribute') {
+            unless nqp::can($how, 'find_attribute') && nqp::can($how, 'add_attribute') {
                 $/.CURSOR.panic($how.name($class)~' cannot have attributes');
             }
 
@@ -158,13 +153,6 @@ class MO::Actions is HLL::Actions {
                 QAST::WVal.new( :value($class) ),
             );
         } else {
-            # my $scope := $*W.current_scope;
-            # while $scope {
-            #     my $pkg := $scope.ann('package') // $scope.ann('class');
-            #     if $pkg {
-            #     }
-            #     $scope := $scope.ann('outer');
-            # }
             $/.CURSOR.panic("undeclared variable "~$/);
         }
     }
@@ -457,8 +445,6 @@ class MO::Actions is HLL::Actions {
         my $name := ~$<variable><sigil> ~ $final_name;
 
         my $scope := $*W.current_scope;
-        #my $package := $scope.ann('package') // $scope.ann('class');
-        #say('package: '~$package.HOW.name) if nqp::defined($package);
 
         my $who;
         if +@name {
@@ -471,27 +457,33 @@ class MO::Actions is HLL::Actions {
             !! QAST::Op.new( :op<null> );
 
         if nqp::defined($who) {
-            $scope[0].push( QAST::Op.new( :op<bindkey>, $who,
-                QAST::SVal.new( :value($name) ), $initializer ) );
-            make QAST::Var.new( :node($/), :scope<associative>,
-                $who, QAST::SVal.new( :value($name) ) );
-        } elsif +@name == 0 {
-            # $scope.symbol( $name, :scope<lexical>, :decl<var> );
-            # $scope[0].push( QAST::Op.new( :op<bind>, :node($/),
-            #     QAST::Var.new( :name($name), :scope<lexical>, :decl<var> ),
-            #     $initializer ) );
-            # make QAST::Var.new( :node($/), :name($name), :scope<lexical> );
-
-            # TODO: need a replacement for this 'attribute' approach!
-            my $var := $*W.install_variable(:$name);
-            my $ast := QAST::Var.new( :node($/), :name('$!value'), :scope<attribute>,
-                QAST::WVal.new( :value($var) ), QAST::WVal.new( :value(MO::Variable) ) );
-            $scope.symbol( $name, :scope<lexical>, :$ast );
             make QAST::Stmts.new(
-                QAST::Op.new( :op<bindattr>, :node($/),
-                    QAST::WVal.new( :value($var) ), QAST::WVal.new( :value(MO::Variable) ),
-                    QAST::SVal.new( :value('$!value') ), $initializer ),
-                $ast );
+                QAST::Op.new( :op<bindkey>, $who,
+                    QAST::SVal.new( :value($name) ), $initializer ),
+                QAST::Var.new( :node($/), :scope<associative>,
+                    $who, QAST::SVal.new( :value($name) ) ),
+            );
+        } elsif +@name == 0 {
+            my $package := $scope.ann('package');
+            if nqp::defined($package) {
+                $scope.symbol($name, :scope<package>, :$package );
+                make QAST::Stmts.new(
+                    QAST::Op.new( :node($/), :op<bindkey>,
+                        QAST::Op.new( :op<who>, QAST::WVal.new( :value($package) ) ),
+                        QAST::SVal.new( :value($name) ), $initializer ),
+                    QAST::Var.new( :node($/), :scope<associative>,
+                        QAST::Op.new( :op<who>, QAST::WVal.new( :value($package) ) ),
+                        QAST::SVal.new( :value($name) ) ),
+                );
+            } else {
+                $scope.symbol( $name, :scope<lexical> );
+                make QAST::Stmts.new(
+                    QAST::Op.new( :node($/), :op<bind>,
+                        QAST::Var.new( :name($name), :scope<lexical>, :decl<var> ),
+                        $initializer ),
+                    QAST::Var.new( :node($/), :name($name), :scope<lexical> ),
+                );
+            }
         } else {
             $/.CURSOR.panic('undefined '~$/);
         }
@@ -556,10 +548,9 @@ class MO::Actions is HLL::Actions {
         $*W.install_package_routine($*PACKAGE, $name, $scope);
 
         if $*W.is_export_name($name) {
-            $outer[0].push( QAST::Op.new( :op<bind>,
-                QAST::Var.new( :node($/), :scope<associative>,
-                    QAST::Var.new( :name<EXPORT.WHO>, :scope<lexical> ),
-                    QAST::SVal.new( :value($name) ) ),
+            $outer[0].push( QAST::Op.new( :node($/), :op<bindkey>,
+                QAST::Var.new( :name<EXPORT.WHO>, :scope<lexical> ),
+                QAST::SVal.new( :value($name) ),
                 QAST::Var.new( :name('&' ~ $name), :scope<lexical> ),
             ) );
         }
@@ -570,7 +561,7 @@ class MO::Actions is HLL::Actions {
     method definition:sym<class>($/) {
         my $ctor_name := '~ctor';
         my $ctor := $*W.pop_scope;
-        my $class := $ctor.ann('class');
+        my $class := $ctor.ann('package');
         $ctor.name( ~$<name> ~'::'~$ctor_name );
 
         my $code := $*W.install_package_routine($class, $ctor_name, $ctor);
@@ -583,7 +574,7 @@ class MO::Actions is HLL::Actions {
     method class_member:sym<method>($/) {
         my $scope := $*W.pop_scope;
         my $ctor := $scope.ann('outer');
-        my $class := $ctor.ann('class');
+        my $class := $ctor.ann('package');
         $scope.push( $<statements>.made );
         $scope.name( ~$<name> );
         $ctor[0].push($scope);
@@ -599,7 +590,7 @@ class MO::Actions is HLL::Actions {
         my $initializer := $<initializer>
             ?? $<initializer>.made !! QAST::Op.new( :op<null> );
         my $ctor := $*W.current_scope;
-        my $class := $ctor.ann('class');
+        my $class := $ctor.ann('package');
         if $twigil eq '.' {
             my %lit_args;
             my %obj_args;
@@ -614,10 +605,7 @@ class MO::Actions is HLL::Actions {
                 QAST::SVal.new( :value($name) ),
                 $initializer ) );
         } else {
-            my $ast := QAST::Var.new( :scope<associative>,
-                QAST::Op.new( :op<who>, QAST::WVal.new( :value($class) ) ),
-                QAST::SVal.new( :value($name) ) );
-            $ctor.symbol($name, :scope<package>, :ast($ast));
+            $ctor.symbol($name, :scope<package>, :package($class) );
             $ctor[0].push( QAST::Op.new( :node($/), :op<bindkey>,
                 QAST::Op.new( :op<who>, QAST::WVal.new( :value($class) ) ),
                 QAST::SVal.new( :value($name) ), $initializer ) );

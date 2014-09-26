@@ -412,7 +412,7 @@ grammar MO::Grammar is HLL::Grammar {
                 $*W.install_package_symbol($*OUTERPACKAGE, ~$<name>, $*PACKAGE);
 
                 my $scope := self.push_scope( ~$<sym>, 'me' );
-                $scope.annotate('class', $type);
+                $scope.annotate('package', $type);
             }
             <class_member>*
         ]

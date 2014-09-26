@@ -76,6 +76,12 @@ class MO::World is HLL::World {
                 if nqp::existskey(%sym, 'value');
 
             if +%sym {
+                if %sym<scope> eq 'package' {
+                    my $package := %sym<package>;
+                    return QAST::Var.new( :scope<associative>,
+                        QAST::Op.new( :op<who>, QAST::WVal.new( :value($package) ) ),
+                        QAST::SVal.new( :value($first) ) );
+                }
                 return QAST::Var.new( :node($/), :name($first), :scope(%sym<scope>) );
             } elsif nqp::existskey(%builtins, $first) {
                 %sym := %builtins{$first};
@@ -224,12 +230,12 @@ class MO::World is HLL::World {
         }
     }
 
-    method install_variable(:$name) {
-        my $variable_type := MO::Variable;
-        my $variable := nqp::create($variable_type);
-        self.add_object($variable);
-        $variable;
-    }
+    # method install_variable(:$name) {
+    #     my $variable_type := MO::Variable;
+    #     my $variable := nqp::create($variable_type);
+    #     self.add_object($variable);
+    #     $variable;
+    # }
 
     method install_package_symbol($package, $name, $value) {
         self.add_object($value);
