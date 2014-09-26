@@ -538,14 +538,14 @@ class MO::Actions is HLL::Actions {
         $scope.name($name);
         $scope[0].push( wrap_return_handler($scope, $<def_block>.made) );
 
+        $*W.install_package_routine($*PACKAGE, $name, $scope);
+
         my $outer := $scope.ann('outer');
         $outer.symbol('&' ~ $name, :scope<lexical>, :proto(1), :declared(1) );
         $outer[0].push( QAST::Op.new( :op<bind>,
             QAST::Var.new( :name('&' ~ $name), :scope<lexical>, :decl<var> ),
             $scope
         ) );
-
-        $*W.install_package_routine($*PACKAGE, $name, $scope);
 
         if $*W.is_export_name($name) {
             $outer[0].push( QAST::Op.new( :node($/), :op<bindkey>,

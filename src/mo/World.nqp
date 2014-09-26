@@ -11,7 +11,10 @@ class MO::World is HLL::World {
 
     method create_data_model() {
         my @files := $*DATAFILES;
-        say(nqp::join(',', @files));
+        my $source := MO::ModuleLoader.load_source(@files[0]);
+        my $compiler := nqp::getcomp('xml');
+        my $code := $compiler.compile($source);
+        say($code);
     }
 
     method push_scope($/) {
