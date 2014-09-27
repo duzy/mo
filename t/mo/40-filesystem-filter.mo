@@ -1,4 +1,4 @@
-for ->'.'['test/text.txt']{ .ISREG } do
+for -><.>['test/text.txt']{ .ISREG } do
   {
     $ha = <-(.path)
     $ascii = <($ha 1024)

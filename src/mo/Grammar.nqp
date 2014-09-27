@@ -204,18 +204,19 @@ grammar MO::Grammar is HLL::Grammar {
             MO::World.new(:handle($source_id)) !!
             MO::World.new(:handle($source_id), :description($file));
 
-        $*W.create_data_model();
+        $*W.create_data_models();
         $*W.add_builtin_objects();
 
-        if $file ~~ / .*\.xml$ / {
-            self.xml
-        } elsif $file ~~ / .*\.json$ / {
-            self.json;
-        } elsif $file ~~ / .*\.mo$ / {
-            self.prog;
-        } else {
-            self.panic("Unrecognized source: "~$file);
-        }
+        # if $file ~~ / .*\.xml$ / {
+        #     self.xml
+        # } elsif $file ~~ / .*\.json$ / {
+        #     self.json;
+        # } elsif $file ~~ / .*\.mo$ / {
+        #     self.prog;
+        # } else {
+        #     self.panic("Unrecognized source: "~$file);
+        # }
+        self.prog
     }
 
     my method push_scope($type, $params?) {
@@ -241,13 +242,15 @@ grammar MO::Grammar is HLL::Grammar {
     token selector:sym<[ ]> {:s '[' ~ ']' <EXPR> <selector>? } #[<EXPR>+ %% ',']
     token selector:sym<{ }> {:s '{' ~ '}' <newscope: 'selector', '$_', 1> <selector>? }
     token selector:sym«..» { <sym> }
-    token selector:sym«.»  {:s <sym> <name=.ident> }
+    token selector:sym«.»  {:s <sym> $<name>=[[<.ident>':']?<.ident>] }
     token selector:sym«->» {:s <sym> [ <select> | <.panic: 'confused selector'> ] <selector>? }
 
     proto token select          { <...> }
     token select:sym<name>      { <name=.ident> }
     token select:sym<quote>     { <quote> }
-    token select:sym<[>         { <?before '['> } # ->[...]
+    token select:sym<path>      { '<' ~ '>' [ <quote> | $<path>=[[<![>]>.]+] ] }
+    token select:sym<me>        { <?before '['|'{'> }
+    token select:sym<*>         { <sym> }
 
     token xml  { <data=.LANG('XML','TOP')> }
     token json { <.panic: 'JSON parser not implemented yet'> }
@@ -328,11 +331,11 @@ grammar MO::Grammar is HLL::Grammar {
     }
 
     rule control:sym<for> {
-        <sym>\s <EXPR> [ <for_block> | <.panic: "expects 'for' block"> ]
+        <sym>\s <EXPR> [ <for_block> | <.panic: "expect 'for' block"> ]
     }
 
     rule control:sym<with> {
-        <sym>\s <EXPR> [ <with_block> | <.panic: "expects 'with' block"> ]
+        <sym>\s <EXPR> [ <with_block> | <.panic: "expect 'with' block"> ]
     }
 
     proto rule else { <...> }
@@ -396,7 +399,7 @@ grammar MO::Grammar is HLL::Grammar {
         | <name=.ident>
         ]
         '(' ~ ')' [ { self.push_scope( ~$<sym> ) } <params>? ]
-        [ <def_block> | <.panic: 'expects function body'> ]
+        [ <def_block> | <.panic: 'expect function body'> ]
     }
 
     rule definition:sym<class> {

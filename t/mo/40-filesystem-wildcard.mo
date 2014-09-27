@@ -1,4 +1,4 @@
-for ->"t/mo"[ "test/many/*.txt" ] do
+for -><t/mo>[ "test/many/*.txt" ] do
   {
       if .NAME eq '1.txt'
         say("ok\t\t- 1.txt")

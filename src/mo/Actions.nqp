@@ -199,10 +199,9 @@ class MO::Actions is HLL::Actions {
     }
 
     method selector:sym«.»($/) {
+        my $name := QAST::SVal.new( :value(~$<name>) );
         make QAST::Op.new( :node($/), :op<callmethod>, :name<dot>,
-            QAST::Var.new( :scope<lexical>, :name<MODEL> ),
-            QAST::SVal.new( :value(~$<name>) ),
-        );
+            QAST::Var.new( :scope<lexical>, :name<MODEL> ), $name );
     }
 
     method selector:sym«..»($/) {
@@ -259,25 +258,37 @@ class MO::Actions is HLL::Actions {
     }
 
     method select:sym<quote>($/) {
-        my $path := $<quote>.made;
+        my $name := $<quote>.made;
+        make QAST::Op.new( :node($/), :op<callmethod>, :name<select_name>,
+            QAST::Var.new( :scope<lexical>, :name<MODEL> ), $name );
+    }
+
+    method select:sym<path>($/) {
+        my $path := $<quote> ?? $<quote>.made !! QAST::SVal.new( :value(~$<path>) );
         make QAST::Op.new( :node($/), :op<callmethod>, :name<select_path>,
             QAST::Var.new( :scope<lexical>, :name<MODEL> ), $path );
     }
 
-    method select:sym<[>($/) {
+    method select:sym<me>($/) {
+        make QAST::Op.new( :node($/), :op<callmethod>, :name<select_me>,
+            QAST::Var.new( :scope<lexical>, :name<MODEL> ) );
+    }
+
+    method select:sym<*>($/) {
         make QAST::Op.new( :node($/), :op<callmethod>, :name<select_all>,
             QAST::Var.new( :scope<lexical>, :name<MODEL> ) );
     }
 
     method xml($/) {
-        my $data := $<data>.made;
-        make QAST::Stmts.new(
-            QAST::Op.new( :op<callmethod>, :name<init>,
-                QAST::WVal.new( :value(MO::Model) ),
-                QAST::Op.new( :op<call>, QAST::BVal.new( :value($data) ) ),
-            ),
-            $data
-        );
+        # my $data := $<data>.made;
+        # make QAST::Stmts.new(
+        #     QAST::Op.new( :op<callmethod>, :name<init>,
+        #         QAST::WVal.new( :value(MO::Model) ),
+        #         QAST::Op.new( :op<call>, QAST::BVal.new( :value($data) ) ),
+        #     ),
+        #     $data
+        # );
+        make $<data>.made;
     }
 
     method json($/) {

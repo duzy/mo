@@ -1,6 +1,6 @@
 say("1..22")
 
-with ->'t/mo/test' do
+with -><t/mo/test> do
   {
       if .EXISTS
         say("ok\t\t- test exists")
@@ -21,7 +21,7 @@ with ->'t/mo/test' do
       end
   }
 
-with ->'t/mo'['test'] do
+with -><t/mo>['test'] do
   {
       if .EXISTS
         say("ok\t\t- test exists")
@@ -42,7 +42,7 @@ with ->'t/mo'['test'] do
       end
   }
 
-for ->'.'['test/many/1.txt', "test/many/2.txt"] do
+for -><.>['test/many/1.txt', "test/many/2.txt"] do
   {
       if $_.name eq './test/many/1.txt'
         say("ok\t\t- $_.name eq './test/many/1.txt'")
@@ -61,7 +61,7 @@ for ->'.'['test/many/1.txt', "test/many/2.txt"] do
       end
   }
 
-for ->'test/many'['1.txt', "2.txt"] do
+for -><test/many>['1.txt', "2.txt"] do
   {
       if $_.name eq 'test/many/1.txt'
         say("ok\t\t- $_.name eq 'test/many/1.txt'")
@@ -80,7 +80,7 @@ for ->'test/many'['1.txt', "2.txt"] do
       end
   }
 
-var $a = ->'.'
+var $a = -><.>
   [
    "test/many/1.txt",
    "test/many/2.txt",
@@ -112,7 +112,7 @@ else
     say('fail - +$a == 2')
 end
 
-$a = ->"test/many"
+$a = -><"test/many">
   [
    "1.txt",
    "2.txt",

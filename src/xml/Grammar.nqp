@@ -11,26 +11,39 @@ grammar XML::Grammar is HLL::Grammar {
     }
 
     token go {
-        ^<declaration>? \s* ~ $ <markup_content>* || <.panic: 'Syntax Error!'>
+        ^<declaration>?\s* ~ $ <markup_content>* || <.panic: 'Syntax Error!'>
     }
 
     token declaration {
-        '<?xml' \s+ <declaration_info>* '?>'
+        '<?xml'\s+ ~ '?>' <declaration_info>*
     }
 
     rule declaration_info {
         <name: 'version','encoding'> '=' <value>
     }
 
-    token markup_content {
-        | <tag>
-        | <cdata>
-        | <content>
+    proto token markup_content { <...> }
+    token markup_content:sym<tag>     { <tag> }
+    token markup_content:sym<cdata>   { <cdata> }
+    token markup_content:sym<content> { <content> }
+
+    proto token tag { <...> }
+    token tag:sym<start> {
+        '<' <name=.tag_name> \s* <attribute>* $<delimiter>=['>'|'/>']
+    }
+    token tag:sym<end> {
+        '</' <name=.tag_name> \s* $<delimiter>='>'
     }
 
-    token tag {
-        | $<end>='</' <name> \s* $<delimiter>='>'
-        | $<start>='<' <name> \s* <attribute>* $<delimiter>=['>'|'/>']
+    # Names can contain letters, numbers, and other characters
+    # Names cannot start with a number or punctuation character
+    # Names cannot start with the letters xml (or XML, or Xml, etc)
+    # Names cannot contain spaces
+    token tag_name {
+        [<ns=.ident>':']? $<ident>=[
+            [<![0..9]>\S]
+            [<![<>?/]>\S]*
+        ]
     }
 
     token cdata {
@@ -46,7 +59,11 @@ grammar XML::Grammar is HLL::Grammar {
     }
 
     rule attribute {
-        <name> '=' <value>
+        <name=.attribute_name> '=' <value>
+    }
+
+    token attribute_name {
+        [<ns=.ident>':']? <.ident>
     }
 
     token name(*@names) {
@@ -60,13 +77,12 @@ grammar XML::Grammar is HLL::Grammar {
                 }
             }
             if +@names && !$known {
-                self.panic('Unknown name: '~$/);
+                self.panic('unknown name "'~$/~'"');
             }
         }
     }
 
-    token value {
-        #| <number>
-        | <?["]> <quote_EXPR: ':qq'>
-    }
+    proto token value { <...> }
+    # token value:sym<number> { <number> }
+    token value:sym<quote> { <?["]> <quote_EXPR: ':qq'> }
 }

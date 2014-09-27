@@ -30,83 +30,71 @@ class XML::Actions is HLL::Actions {
         make $block;
     }
 
-    method markup_content($/) {
-        my $a;
-        if $<tag> {
-            $a := $<tag>.made;
-        } elsif $<cdata> {
-            # ...
-        } elsif $<content> {
-            $a := $<content>.made;
-        } else {
-            $/.CURSOR.panic("Unexpected tag: "~$/);
-        }
-        make $a;
-    }
+    method markup_content:sym<tag>($/)     { make $<tag>.made; }
+    method markup_content:sym<cdata>($/)   { make $<cdata>.made; }
+    method markup_content:sym<content>($/) { make $<content>.made; }
 
-    method tag($/) {
+    method tag:sym<start>($/) {
         my $ast;
-        if $<start> {
-            my $nodestub := $*W.push_node($/);
-            $ast := $nodestub<ast>;
+        my $nodestub := $*W.push_node($/);
+        $ast := $nodestub<ast>;
 
-            my $parent := $nodestub<parent>;
-            my $prev := $PREV;
-            $PREV := $nodestub;
+        my $parent := $nodestub<parent>;
+        my $prev := $PREV;
+        $PREV := $nodestub;
 
-            my $prefix := '';
-            my $num := 0;
-            if 1 {
-                $num := +%NAMES{~$<name>};
-                %NAMES{~$<name>} := $num + 1;
-            } elsif nqp::defined($parent) {
-                $num := +$parent<TAGS>{~$<name>};
-                $parent<TAGS>{~$<name>} := $num + 1;
-                $prefix := $parent ?? $parent<node>.name~'.' !! '';
-            }
+        my $prefix := '';
+        my $num := 0;
+        if 1 {
+            $num := +%NAMES{~$<name>};
+            %NAMES{~$<name>} := $num + 1;
+        } elsif nqp::defined($parent) {
+            $num := +$parent<TAGS>{~$<name>};
+            $parent<TAGS>{~$<name>} := $num + 1;
+            $prefix := $parent ?? $parent<node>.name~'.' !! '';
+        }
 
-            if $num eq 1 && $prev<name> eq ~$<name> {
-                ## Rename the first child of the name $<name>
-                $prev<node>.name($prefix ~ $<name> ~ '~0');
-                $prev<node_decl>.name($prefix ~ $<name> ~ '~0');
-            }
+        if $num eq 1 && $prev<name> eq ~$<name> {
+            ## Rename the first child of the name $<name>
+            $prev<node>.name($prefix ~ $<name> ~ '~0');
+            $prev<node_decl>.name($prefix ~ $<name> ~ '~0');
+        }
 
-            my $lex := $prefix ~ $<name> ~ ($num ?? '~' ~ $num !! '');
-            my $node := QAST::Var.new( :name(~$lex), :scope<lexical> );
-            my $node_decl := QAST::Var.new( :name($node.name), :scope<lexical>, :decl<var> );
+        my $lex := $prefix ~ $<name> ~ ($num ?? '~' ~ $num !! '');
+        my $node := QAST::Var.new( :name(~$lex), :scope<lexical> );
+        my $node_decl := QAST::Var.new( :name($node.name), :scope<lexical>, :decl<var> );
 
-            $nodestub<num>  := $num;
-            $nodestub<name> := ~$<name>;
-            $nodestub<node> := $node;
-            $nodestub<node_decl> := $node_decl;
+        $nodestub<num>  := $num;
+        $nodestub<name> := ~$<name>;
+        $nodestub<node> := $node;
+        $nodestub<node_decl> := $node_decl;
 
-            $ast.push(QAST::Op.new( :op<bind>, $node_decl,
-                QAST::Op.new( :op<callmethod>, :name<node_new>, $NODEHOW ),
-            ));
+        $ast.push(QAST::Op.new( :op<bind>, $node_decl,
+            QAST::Op.new( :op<callmethod>, :name<node_new>, $NODEHOW ),
+        ));
 
-            $ast.push(QAST::Op.new( :op<bind>,
-                QAST::Var.new( :scope<attribute>, :name(''), $node, $NODETYPE ),
-                QAST::SVal.new( :value(~$<name>) ),
-            ));
+        $ast.push(QAST::Op.new( :op<bind>,
+            QAST::Var.new( :scope<attribute>, :name(''), $node, $NODETYPE ),
+            QAST::SVal.new( :value(~$<name>) ),
+        ));
 
-            $ast.push( QAST::Op.new( :op<callmethod>, :name<node_child>, $NODEHOW, $parent<node>, $node ) )
-                if $parent;
+        $ast.push( QAST::Op.new( :op<callmethod>, :name<node_child>, $NODEHOW, $parent<node>, $node ) )
+            if $parent;
 
-            if +$<attribute> {
-                $ast.push( QAST::Op.new( :op<callmethod>, :name<node_bindattr>, $NODEHOW, $node,
-                    QAST::SVal.new(:value(~$_<name>)), $_<value>.made )
-                ) for $<attribute>;
-            }
+        if +$<attribute> {
+            $ast.push( QAST::Op.new( :op<callmethod>, :name<node_bindattr>, $NODEHOW, $node,
+                QAST::SVal.new(:value(~$_<name>)), $_<value>.made )
+            ) for $<attribute>;
+        }
 
-            if ~$<delimiter> eq '/>' {
-                $*W.pop_node();
-            }
-        } elsif $<end> {
+        if ~$<delimiter> eq '/>' {
             $*W.pop_node();
-        } else {
-            $/.CURSOR.panic("Unexpected tag: "~$<name>);
         }
         make $ast;
+    }
+
+    method tag:sym<end>($/) {
+        $*W.pop_node();
     }
 
     method content($/) {
@@ -119,7 +107,7 @@ class XML::Actions is HLL::Actions {
         make $ast;
     }
 
-    method value($/) {
+    method value:sym<quote>($/) {
         my $str := nqp::join('', $<quote_EXPR><quote_delimited><quote_atom>);
         make QAST::SVal.new( :node($/), :value($str) );
     }

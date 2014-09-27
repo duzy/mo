@@ -1,6 +1,7 @@
 class MO::World is HLL::World {
     my %builtins;
 
+    has @!models;
     has @!scopes; # QAST::Block stack
     has $!fixups; # Fixup tasks in one QAST::Stmts
     has %!fixupPackages; # %!fixupPackages{nqp::where($package)} = name;
@@ -9,12 +10,24 @@ class MO::World is HLL::World {
     #has %!dynamic_codeobjs_to_fix_up;
     #has %!dynamic_codeobj_types;
 
-    method create_data_model() {
+    method create_data_models() {
         my @files := $*DATAFILES;
-        my $source := MO::ModuleLoader.load_source(@files[0]);
-        my $compiler := nqp::getcomp('xml');
-        my $code := $compiler.compile($source);
-        say($code);
+        my @models := [];
+        for @files {
+            my $source := MO::ModuleLoader.load_source($_);
+            my $compiler := nqp::getcomp('xml');
+            my $code := $compiler.compile($source);
+            @models.push($code());
+        }
+
+        unless +@models {
+            my $node := MO::NodeHOW.node_new();
+            @models.push($node);
+        }
+
+        @!models := @models;
+
+        MO::Model.init(@models[0]);
     }
 
     method push_scope($/) {

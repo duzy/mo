@@ -127,3 +127,5 @@ test-json: ; @echo "JSON..."
 test-mo: t/mo/run.bash $(MO_PBC)
 	@$(BASH) $<
 
+run-examples: examples/run.bash $(MO_PBC)
+	@$(BASH) $<

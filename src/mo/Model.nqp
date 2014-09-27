@@ -35,97 +35,106 @@ class MO::Model {
         $node.name;
     }
 
-    method select_name($name, $nodes) { # ->child, parent->child
-        my $result := nqp::list();
-        if nqp::islist($nodes) {
-            for $nodes -> $node {
-                $result.push($_) for $node.children($name);
+    method select_me($a) { $a }
+
+    method select_name($name, $a) { # ->child, parent->child
+        my @result;
+        if nqp::islist($a) {
+            for $a {
+                @result.push($_) for $_.children($name);
             }
         } else {
-            my $node := $nodes;
-            $result := $node.children($name);
+            @result := $a.children($name);
         }
-        $result;
+        @result;
     }
 
-    method select_all($nodes) { # ->, node->
-        my $result := nqp::list();
-        if nqp::islist($nodes) {
-            for $nodes -> $node {
-                $result.push($_) for $node.children;
+    method select_all($a) { # ->, node->
+        my @result;
+        if nqp::islist($a) {
+            for $a -> $node {
+                @result.push($_) for $node.children;
             }
         } else {
-            $result := $nodes.children;
+            @result := $a.children;
         }
-        $result;
+        @result;
     }
 
-    method select_path($path, $nodes) { # ->child, parent->child
-        if nqp::islist($nodes) {
-            my $result := nqp::list();
-            for $nodes -> $node {
+    method select_path($path, $a) { # ->child, parent->child
+        if nqp::islist($a) {
+            my @result := nqp::list();
+            for $a -> $node {
                 my $s := $node.path ~ '/' ~ $path;
                 my $new := MO::FilesystemNodeHOW.open(:path($s));
-                $result.push($new);
+                @result.push($new);
             }
-            $result;
+            @result;
         } else {
             MO::FilesystemNodeHOW.open(:path($path));
         }
     }
 
-    method keyed_i($key, $nodes) { # [0]
-        nqp::atpos($nodes, $key);
-    }
-
-    method keyed_s($key, $nodes) { # ['key']
-        if nqp::islist($nodes) {
-            my $result := nqp::list();
-            for $nodes -> $node {
-                $result.push($_) for $node.children($key);
-            }
-            $result;
+    method keyed_i($key, $a) { # [0]
+        if nqp::islist($a) {
+            nqp::atpos($a, $key);
         } else {
-            $nodes.children($key);
+            $a;
         }
     }
 
-    method keyed($key, $nodes) { # [0], ['key']
+    method keyed_s($key, $a) { # ['key']
+        if nqp::islist($a) {
+            my @result;
+            for $a -> $node {
+                if !nqp::isstr($node) && nqp::can($node, 'children') {
+                    my $children := $node.children($key);
+                    if nqp::defined($children) {
+                        @result.push($_) for $children;
+                    }
+                }
+            }
+            @result;
+        } elsif nqp::defined($a) && nqp::can($a, 'children') {
+            $a.children($key);
+        }
+    }
+
+    method keyed($key, $a) { # [0], ['key']
         if nqp::isint($key) {
-            self.keyed_i($key, $nodes);
+            self.keyed_i($key, $a);
         } elsif nqp::isstr($key) {
-            self.keyed_s($key, $nodes);
+            self.keyed_s($key, $a);
         } else {
             nqp::die('keyed: bad key');
         }
     }
 
-    method keyed_list_i($keys, $nodes) { # [1, 2, 3]
-        my $list := nqp::list();
-        $list.push(self.keyed_i($_, $nodes)) for $keys;
-        $list;
+    method keyed_list_i($keys, $a) { # [1, 2, 3]
+        my @result;
+        @result.push(self.keyed_i($_, $a)) for $keys;
+        @result;
     }
 
-    method keyed_list_s($keys, $nodes) { # ['key1', 'key2', 'key3']
-        my $list := nqp::list();
-        $list.push(self.keyed_s($_, $nodes)) for $keys;
-        $list;
+    method keyed_list_s($keys, $a) { # ['key1', 'key2', 'key3']
+        my @result;
+        @result.push(self.keyed_s($_, $a)) for $keys;
+        @result;
     }
 
-    method keyed_list($keys, $nodes) { # ['key1', 'key2', 'key3', 0, 1, 2]
-        my $list := nqp::list();
-        $list.push(self.keyed($_, $nodes)) for $keys;
-        $list;
+    method keyed_list($keys, $a) { # ['key1', 'key2', 'key3', 0, 1, 2]
+        my @result;
+        @result.push(self.keyed($_, $a)) for $keys;
+        @result;
     }
 
-    method filter($selector, $nodes) { # ->child{ ... }
-        my $list := nqp::list();
-        # if nqp::islist($nodes) {
-        #     $list.push($_) if !nqp::isnull($_) && $selector($_) for $nodes;
-        # } else {
-        #     $list.push($nodes) if !nqp::isnull($nodes) && $selector($nodes);
-        # }
-        $list.push($_) if !nqp::isnull($_) && $selector($_) for $nodes;
-        $list;
+    method filter($selector, $a) { # ->child{ ... }
+        my @result;
+        if nqp::islist($a) {
+            @result.push($_) if !nqp::isnull($_) && $selector($_) for $a;
+        } else {
+            @result.push($a) if !nqp::isnull($a) && $selector($a);
+        }
+        @result;
     }
 }

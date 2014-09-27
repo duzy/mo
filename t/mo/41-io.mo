@@ -1,5 +1,5 @@
 say('1..2')
-with ->'t/mo/test'['text.txt'] do
+with -><'t/mo/test'>['text.txt'] do
   {
       if .EXISTS
           say("ok\t\t- found "~..)

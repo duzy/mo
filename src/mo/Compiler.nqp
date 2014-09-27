@@ -25,10 +25,11 @@ class MO::Compiler is HLL::Compiler {
             }
         }
 
-        my $*DATAFILES := @datafiles;
+        # self.command_eval_data(|@datafiles, :encoding('utf8'));
+        # self.command_eval_code(|@codefiles, |%adverbs);
 
-        self.command_eval_data(|@datafiles, :encoding('utf8'));
-        self.command_eval_code(|@codefiles, |%adverbs);
+        my $*DATAFILES := @datafiles;
+        self.command_eval(|@codefiles, |%adverbs)
     }
 
     method command_eval_data(*@a, *%adverbs) {
