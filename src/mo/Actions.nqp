@@ -198,6 +198,14 @@ class MO::Actions is HLL::Actions {
         }
     }
 
+    method selector:sym«:»($/) {
+        my $namespace := QAST::SVal.new( :value(~$<namespace>) );
+        my $meth := 'select_namespace';
+        $meth := $meth ~ '_query' if $<query>;
+        make QAST::Op.new( :node($/), :op<callmethod>, :name($meth),
+            QAST::Var.new( :scope<lexical>, :name<MODEL> ), $namespace );
+    }
+
     method selector:sym«.»($/) {
         my $name := QAST::SVal.new( :value(~$<name>) );
         make QAST::Op.new( :node($/), :op<callmethod>, :name<dot>,

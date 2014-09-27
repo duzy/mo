@@ -3,6 +3,7 @@ class MO::Model {
     my $instance;
     method get() { $instance; }
 
+    has $!namespace;
     has $!root;
     has $!current;
 
@@ -13,6 +14,7 @@ class MO::Model {
     }
 
     method BUILD(:$data){
+        $!namespace := '';
         $!root := $data;
         $!current := $data;
     }
@@ -27,6 +29,7 @@ class MO::Model {
 
     method dot($name, $node) { # .name, node.attribute
         $node := nqp::atpos($node, 0) if nqp::islist($node);
+        $name := "$!namespace:$name" if nqp::chars($!namespace) && nqp::index($name, ':') < 0;
         $node.get($name) if !nqp::isnull($node) && nqp::can($node, 'get');
     }
 
@@ -36,6 +39,26 @@ class MO::Model {
     }
 
     method select_me($a) { $a }
+
+    method select_namespace($ns, $a) {
+        if nqp::chars($ns) {
+            my $v;
+            my $node := $a;
+            while nqp::defined($node) {
+                $v := $node.get("xmlns:$ns");
+                $node := nqp::defined($v) ?? NQPMu !! $node.parent;
+            }
+            unless nqp::defined($v) {
+                nqp::die("namespace $ns is undefined");
+            }
+        }
+        $!namespace := $ns;
+        $a
+    }
+
+    method select_namespace_query($ns, $a) {
+        nqp::chars($ns) ?? $!root.get("xmlns:$ns") !! $!namespace
+    }
 
     method select_name($name, $a) { # ->child, parent->child
         my @result;

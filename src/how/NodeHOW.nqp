@@ -26,6 +26,9 @@ knowhow MO::NodeHOW {
             %methods<set> := -> $node, $name, $value {
                 MO::NodeHOW.node_bindattr($node, $name, $value);
             };
+            %methods<parent> := -> $node {
+                nqp::getattr($node, $type, '^');
+            };
             %methods<count> := -> $node, $name = nqp::null() {
                 +nqp::getattr($node, $type, nqp::isnull($name) ?? '*' !! $name);
             };
@@ -71,6 +74,7 @@ knowhow MO::NodeHOW {
         }
         nqp::push($named, $node);
         nqp::push($all, $node);
+        nqp::bindattr($node, $type, '^', $o);
     }
 
     ## Add attribute

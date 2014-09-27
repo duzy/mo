@@ -19,7 +19,7 @@ function run() {
 
 if true ; then
     run $SRCDIR/00 -v
-    # exit
+    exit
 fi
 
 run $SRCDIR/00-say
@@ -34,6 +34,7 @@ run $SRCDIR/10-arrow-name-many
 run $SRCDIR/10-arrow-many
 run $SRCDIR/11-with
 run $SRCDIR/11-with-var
+run $SRCDIR/12-data-namespace
 run $SRCDIR/20-var-initializer
 run $SRCDIR/20-var
 run $SRCDIR/21-can

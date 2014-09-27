@@ -1,4 +1,4 @@
-say('1..6');
+say('1..4');
 
 var $ns = ->:test?
 if $ns eq 'http://www.example.com/xml'
@@ -21,9 +21,9 @@ end
 
 var $name2 = ->:->.name;
 $ns = ->:?
-if $ns eq ''
-    say("ok\t namespace is empty");
+if $ns eq 'test'
+    say("ok\t namespace is test");
 end
-if $name2 eq 'test-name-value'
+if $name1 eq 'test-name-value'
     say("ok\t name = test-name-value");
 end
