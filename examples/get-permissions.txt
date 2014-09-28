@@ -1,0 +1,6 @@
+uses-permission: android.permission.ACCESS_NETWORK_STATE
+uses-permission: android.permission.ACCESS_WIFI_STATE
+uses-permission: android.permission.INTERNET
+uses-permission: android.permission.WRITE_EXTERNAL_STORAGE
+uses-permission: android.permission.MOUNT_UNMOUNT_FILESYSTEMS
+uses-permission: android.permission.GET_TASKS

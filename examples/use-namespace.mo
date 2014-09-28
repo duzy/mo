@@ -1,11 +1,10 @@
 ->:android
-say('version: '~.versionCode~', '~.versionName);
+say('1. '~.versionCode~', '~.versionName);
 
 ->:
-say('package: '~.package);
+say('2. '~.package);
 
-
-say('version: '~->:android.versionName);
-say('version: '~->:android->.versionName);
-say('package: '~->:.package);
-say('package: '~->:->.package);
+say('3. '~->:android.versionName);
+say('4. '~->:android->.versionName);
+say('5. '~->:.package);
+say('6. '~->:->.package);

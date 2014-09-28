@@ -1,0 +1,3 @@
+1. android.intent.action.MAIN
+2. android.intent.action.MAIN
+3. android.intent.action.MAIN

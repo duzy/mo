@@ -1,0 +1,3 @@
+1. Test, @string/app_name
+2. Test, @string/app_name, @android:style/Theme.NoTitleBar.Fullscreen
+3. Test, @string/app_name, @android:style/Theme.NoTitleBar.Fullscreen
