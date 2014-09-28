@@ -85,6 +85,8 @@ class MO::World is HLL::World {
             if $first eq 'GLOBAL' {
                 # return QAST::Op.new( :op<getcurhllsym>, QAST::SVal.new(:value<GLOBAL>) );
                 return QAST::Var.new( :scope<lexical>, :name<GLOBAL> );
+            } elsif $first eq 'null' {
+                return QAST::Op.new( :op<null> );
             }
 
             return %sym<ast> if nqp::existskey(%sym, 'ast');
@@ -403,7 +405,14 @@ MO::World.add_builtin_code('new', -> $t {
 MO::World.add_builtin_code('print', -> $s { nqp::print($s) });
 MO::World.add_builtin_code('say', -> $s { nqp::say($s) });
 MO::World.add_builtin_code('die', -> $s { nqp::die($s) });
+MO::World.add_builtin_code('exit', -> $n { nqp::exit($n) });
 MO::World.add_builtin_code('open', -> $s, $m { nqp::open($s, $m) });
+MO::World.add_builtin_code('shell', -> $s, $m, $e { nqp::shell($s, $m, $e) });
+MO::World.add_builtin_code('system', -> $s {
+    nqp::shell($s, nqp::cwd, nqp::getenvhash())
+});
+
+MO::World.add_builtin_code('isnull', -> $a { nqp::isnull($a) });
 
 # MO::World.add_builtin_code('say',            &nqp::say);
 # MO::World.add_builtin_code('exit',           &nqp::exit);

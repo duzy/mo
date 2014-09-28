@@ -3,7 +3,7 @@ class MO::Model {
     my $instance;
     method get() { $instance; }
 
-    has $!namespace;
+    has $!namespace; # http://www.w3.org/TR/2006/REC-xml-names11-20060816/
     has $!root;
     has $!current;
 
@@ -14,7 +14,7 @@ class MO::Model {
     }
 
     method BUILD(:$data){
-        $!namespace := '';
+        $!namespace := nqp::null();
         $!root := $data;
         $!current := $data;
     }
@@ -29,7 +29,7 @@ class MO::Model {
 
     method dot($name, $node) { # .name, node.attribute
         $node := nqp::atpos($node, 0) if nqp::islist($node);
-        $name := "$!namespace:$name" if nqp::chars($!namespace) && nqp::index($name, ':') < 0;
+        $name := "$!namespace:$name" if !nqp::isnull($!namespace) && nqp::chars($!namespace) && nqp::index($name, ':') < 0;
         $node.get($name) if !nqp::isnull($node) && nqp::can($node, 'get');
     }
 
@@ -57,7 +57,13 @@ class MO::Model {
     }
 
     method select_namespace_query($ns, $a) {
-        nqp::chars($ns) ?? $!root.get("xmlns:$ns") !! $!namespace
+        #nqp::chars($ns) ?? $!root.get("xmlns:$ns") !! $!namespace
+        if $ns eq '?' {
+            $!namespace
+        } else {
+            $ns := nqp::chars($ns) ?? "xmlns:$ns" !! "xmlns";
+            $!root.get($ns)
+        }
     }
 
     method select_name($name, $a) { # ->child, parent->child

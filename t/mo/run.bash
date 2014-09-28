@@ -44,6 +44,9 @@ run $SRCDIR/40-filesystem
 run $SRCDIR/41-io
 run $SRCDIR/41-io-open
 run $SRCDIR/41-io-pipe
+run $SRCDIR/41-io-print
+run $SRCDIR/41-io-shell
+run $SRCDIR/41-io-system
 run $SRCDIR/50-funs
 run $SRCDIR/50-fun-returns
 run $SRCDIR/50-fun-lexical

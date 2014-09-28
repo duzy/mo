@@ -245,7 +245,10 @@ grammar MO::Grammar is HLL::Grammar {
     proto token selector { <...> }
     token selector:sym<[ ]> {:s '[' ~ ']' <EXPR> <selector>? } #[<EXPR>+ %% ',']
     token selector:sym<{ }> {:s '{' ~ '}' <newscope: 'selector', '$_', 1> <selector>? }
-    token selector:sym«:»  { <sym> <namespace=.ident>? [<selector>|$<query>='?']? }
+    token selector:sym«:»  { <sym>
+        [<?before '??'>$<namespace>='?'|<namespace=.ident>]?
+        [<selector>|$<query>='?']?
+    }
     token selector:sym«..» { <sym> }
     token selector:sym«.»  {:s <sym> $<name>=[[<.ident>':']?<.ident>] }
     token selector:sym«->» {:s <sym> [ <select> | <.panic: 'confused selector'> ] <selector>? }

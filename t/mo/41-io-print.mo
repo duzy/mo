@@ -1,5 +1,5 @@
 say('1..1');
-$h = open('test.log', 'w');
+var $h = open('test.log', 'w');
 $h.print('test');
 $h.close;
 
