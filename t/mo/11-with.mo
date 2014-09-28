@@ -23,7 +23,7 @@ with ->child[1]
 
 with ->child{ .name eq "test-child-2" }
     do {
-        say("ok\t\t- with ->child{ .name eq \"test-child-2\" }")
+        say("ok\t\t- with ->child\{ .name eq \"test-child-2\" \}")
         if .name eq "test-child-2"
           say("ok\t\t- .name eq \"test-child-2\"")
         else

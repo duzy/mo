@@ -3,7 +3,6 @@ with -><'t/mo/test'>['text.txt'] do
   {
       if .EXISTS
           say("ok\t\t- found "~..)
-
           var $h = open(.PATH, 'r')
           var $s = $h.readline
           if $s eq "text\n"

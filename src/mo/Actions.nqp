@@ -1,4 +1,11 @@
 class MO::Actions is HLL::Actions {
+    my sub pop_newscope($/) {
+        my $scope := $*W.pop_scope();
+        $scope.push( $<newscope>.made );
+        $scope.node( $/ );
+        $scope
+    }
+
     method term:sym<value>($/) { make $<value>.made; $/.prune; }
     method term:sym<variable>($/) { make $<variable>.made; $/.prune; }
     method term:sym<name>($/) {
@@ -66,7 +73,18 @@ class MO::Actions is HLL::Actions {
 
     method circumfix:sym<( )>($/) {
         make $<EXPR>.made;
-        $/.prune;        
+        #$/.prune;
+    }
+
+    method circumfix:sym<| |>($/) {
+        make QAST::Op.new( :op<abs>, $<EXPR>.made );
+        #$/.prune;
+    }
+
+    method circumfix:sym«< >»($/) {
+        make QAST::Op.new( :op<callmethod>, :name<open>,
+            QAST::WVal.new( :value(MO::FilesystemNodeHOW) ), $<EXPR>.made );
+        #$/.prune;
     }
 
     method postcircumfix:sym<( )>($/) {
@@ -90,16 +108,15 @@ class MO::Actions is HLL::Actions {
     }
 
     method postfix:sym«.»($/) {
-        my $methodcall;
+        my $ast;
         if $<args> {
-            $methodcall := $<args>.made;
-            $methodcall.op('callmethod');
-            $methodcall.name(~$<name>);
+            $ast := $<args>.made;
+            $ast.op('callmethod');
+            $ast.name(~$<name>);
         } else {
-            $methodcall := QAST::Op.new( :op<callmethod>, :name(~$<name>) );
+            $ast := QAST::Op.new( :op<callmethod>, :name(~$<name>) );
         }
-        #$methodcall.returns('P');
-        make $methodcall;
+        make $ast;
     }
 
     method postfix:sym«?»($/) {
@@ -111,6 +128,12 @@ class MO::Actions is HLL::Actions {
 
     method quote:sym<'>($/) { make $<quote_EXPR>.made; } #'
     method quote:sym<">($/) { make $<quote_EXPR>.made; } #"
+
+    method quote_escape:sym<{ }>($/) {
+        make QAST::Op.new( :op<stringify>, $<block>.made, :node($/) );
+    }
+    method quote_escape:sym<$>($/) { make $<variable>.made; }
+    method quote_escape:sym<esc>($/) { make "\c[27]"; }
 
     method number($/) {
         my $value := $<dec_number> ?? $<dec_number>.made !! $<integer>.made;
@@ -252,8 +275,7 @@ class MO::Actions is HLL::Actions {
     }
 
     method selector:sym<{ }>($/) {
-        my $scope := $*W.pop_scope();
-        $scope.push( $<newscope>.made );
+        my $scope := pop_newscope($/);
         make QAST::Op.new( :node($/), :op<callmethod>, :name<filter>,
             QAST::Var.new( :scope<lexical>, :name<MODEL> ),
             QAST::Op.new( :op<takeclosure>, $scope ) );
@@ -420,15 +442,11 @@ class MO::Actions is HLL::Actions {
     }
 
     method control:sym<for>($/) {
-        my $scope := $*W.pop_scope();
-        $scope.push( $<for_block>.made );
-        make QAST::Op.new( :node($/), :op<for>, $<EXPR>.made, $scope );
+        make QAST::Op.new( :node($/), :op<for>, $<EXPR>.made, $<for_block>.made );
     }
 
     method control:sym<with>($/) {
-        my $scope := $*W.pop_scope();
-        $scope.push( $<with_block>.made );
-        make QAST::Op.new( :node($/), :op<call>, $scope, $<EXPR>.made );
+        make QAST::Op.new( :node($/), :op<call>, $<with_block>.made, $<EXPR>.made );
     }
 
     method else:sym< >($/) { make $<statements>.made; }
@@ -438,14 +456,25 @@ class MO::Actions is HLL::Actions {
         make $ast;
     }
 
-    method loop_block:sym<{ }>($/) { make $<newscope>.made; }
-    method loop_block:sym<end>($/) { make $<newscope>.made; }
+    method block($/) {
+        my $scope := pop_newscope($/);
+        $scope.blocktype('immediate');
+        unless $scope.symtable() {
+            my $stmts := QAST::Stmts.new( :node($/) );
+            $stmts.push($_) for $scope.list;
+            $scope := $stmts;
+        }
+        make $scope;
+    }
 
-    method for_block:sym<{ }>($/) { make $<newscope>.made; }
-    method for_block:sym<end>($/) { make $<newscope>.made; }
+    method loop_block:sym<{ }>($/) { make pop_newscope($/); } #{ make $<newscope>.made; }
+    method loop_block:sym<end>($/) { make pop_newscope($/); } #{ make $<newscope>.made; }
 
-    method with_block:sym<{ }>($/) { make $<newscope>.made; }
-    method with_block:sym<end>($/) { make $<newscope>.made; }
+    method for_block:sym<{ }>($/) { make pop_newscope($/); } #{ make $<newscope>.made; }
+    method for_block:sym<end>($/) { make pop_newscope($/); } #{ make $<newscope>.made; }
+
+    method with_block:sym<{ }>($/) { make pop_newscope($/); } #{ make $<newscope>.made; }
+    method with_block:sym<end>($/) { make pop_newscope($/); } #{ make $<newscope>.made; }
     method with_block:sym<yield>($/) {
         make QAST.Op.new( :node($/), :op<say>,
             QAST.SVal.new( :value('with_block:sym<yield>: '~$/) ) );

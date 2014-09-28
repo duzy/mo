@@ -19,10 +19,11 @@ function run() {
 
 if true ; then
     run $SRCDIR/00 -v
-    exit
+#    exit
 fi
 
 run $SRCDIR/00-say
+run $SRCDIR/00-expression
 run $SRCDIR/01-control-cond
 run $SRCDIR/01-control-cond-expr
 run $SRCDIR/01-control-loop
@@ -41,6 +42,8 @@ run $SRCDIR/21-can
 run $SRCDIR/30-template
 run $SRCDIR/40-filesystem
 run $SRCDIR/41-io
+run $SRCDIR/41-io-open
+run $SRCDIR/41-io-pipe
 run $SRCDIR/50-funs
 run $SRCDIR/50-fun-returns
 run $SRCDIR/50-fun-lexical

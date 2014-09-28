@@ -42,14 +42,14 @@ else
 end
 
 if ->child{ .name eq "test-child-1" } == 1
-  say("ok\t\t- ->child{ .name eq \"test-child-1\" } == 1")
+  say("ok\t\t- ->child\{ .name eq \"test-child-1\" \} == 1")
 else
-  say("fail\t\t- ->child{ .name eq \"test-child-1\" } == 1")
+  say("fail\t\t- ->child\{ .name eq \"test-child-1\" \} == 1")
 end
 if ->child{ .name eq "test-child-2" } == 1
-  say("ok\t\t- ->child{ .name eq \"test-child-2\" } == 1")
+  say("ok\t\t- ->child\{ .name eq \"test-child-2\" \} == 1")
 else
-  say("fail\t\t- ->child{ .name eq \"test-child-2\" } == 1")
+  say("fail\t\t- ->child\{ .name eq \"test-child-2\" \} == 1")
 end
 
 say(->child.okay ~ ' -- ' ~ ->child.name ~ ' -- (first child)')

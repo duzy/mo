@@ -2,8 +2,8 @@ use test::Module;
 
 say($Module::TestVar);
 
-var $s = "ok\t- 3. $s is defined in 00.mo";
-var $S = "ok\t- 4. $S is defined in 00.mo";
+var $s = "ok\t- 3. \$s is defined in 00.mo";
+var $S = "ok\t- 4. \$S is defined in 00.mo";
 
 say($s);
 say($S);

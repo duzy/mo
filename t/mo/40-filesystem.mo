@@ -15,9 +15,9 @@ with -><t/mo/test> do
       end
 
       if $_.name eq 't/mo/test'
-        say("ok\t\t- $_.name eq 't/mo/test'")
+        say("ok\t\t- \$_.name eq 't/mo/test'")
       else
-        say("fail\t\t- $_.name eq 't/mo/test' : "~$_.name)
+        say("fail\t\t- \$_.name eq 't/mo/test' : "~$_.name)
       end
   }
 
@@ -36,20 +36,20 @@ with -><t/mo>['test'] do
       end
 
       if $_.name eq 't/mo/test'
-        say("ok\t\t- $_.name eq 't/mo/test'")
+        say("ok\t\t- \$_.name eq 't/mo/test'")
       else
-        say("fail\t\t- $_.name eq 't/mo/test' : "~$_.name)
+        say("fail\t\t- \$_.name eq 't/mo/test' : "~$_.name)
       end
   }
 
 for -><.>['test/many/1.txt', "test/many/2.txt"] do
   {
       if $_.name eq './test/many/1.txt'
-        say("ok\t\t- $_.name eq './test/many/1.txt'")
+        say("ok\t\t- \$_.name eq './test/many/1.txt'")
       elsif $_.name eq './test/many/2.txt'
-        say("ok\t\t- $_.name eq './test/many/2.txt'")
+        say("ok\t\t- \$_.name eq './test/many/2.txt'")
       else
-        say("fail\t\t- $_.name : "~$_.name)
+        say("fail\t\t- \$_.name : "~$_.name)
       end
 
       if .NAME eq '1.txt'
@@ -64,11 +64,11 @@ for -><.>['test/many/1.txt', "test/many/2.txt"] do
 for -><test/many>['1.txt', "2.txt"] do
   {
       if $_.name eq 'test/many/1.txt'
-        say("ok\t\t- $_.name eq 'test/many/1.txt'")
+        say("ok\t\t- \$_.name eq 'test/many/1.txt'")
       elsif $_.name eq 'test/many/2.txt'
-        say("ok\t\t- $_.name eq 'test/many/2.txt'")
+        say("ok\t\t- \$_.name eq 'test/many/2.txt'")
       else
-        say("fail\t\t- $_.name : "~$_.name)
+        say("fail\t\t- \$_.name : "~$_.name)
       end
 
       if .NAME eq '1.txt'
@@ -88,11 +88,11 @@ var $a = -><.>
   {
   say('~~~~')
       if $_.name eq './test/many/1.txt'
-        say("ok\t\t- $_.name eq './test/many/1.txt'")
+        say("ok\t\t- \$_.name eq './test/many/1.txt'")
       elsif $_.name eq './test/many/2.txt'
-        say("ok\t\t- $_.name eq './test/many/2.txt'")
+        say("ok\t\t- \$_.name eq './test/many/2.txt'")
       else
-        say("fail\t\t- $_.name : "~$_.name)
+        say("fail\t\t- \$_.name : "~$_.name)
       end
 
       if .NAME eq '1.txt'

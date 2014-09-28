@@ -3,7 +3,7 @@ say("1..4")
 var $okay;
 var $v;
 
-$okay = "ok\t\t- $okay = \"...\""
+$okay = "ok\t\t- \$okay = \"...\""
 say($okay)
 
 $v = .okay

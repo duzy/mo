@@ -123,6 +123,8 @@ grammar MO::Grammar is HLL::Grammar {
     token infix:sym<,>    { <sym>  <O('%comma, :op<list>')> }
 
     token circumfix:sym<( )> { '(' ~ ')' <EXPR> <O('%methodop')> }
+    token circumfix:sym<| |> { '\' ~ '\' <EXPR> }
+    token circumfix:sym«< >» { '<' ~ '>' <EXPR=.quote> }
 
     token postcircumfix:sym<( )> { '(' ~ ')' <arglist> <O('%methodop')> }
     token postcircumfix:sym<[ ]> { '[' ~ ']' <EXPR> <O('%methodop')> }
@@ -140,6 +142,10 @@ grammar MO::Grammar is HLL::Grammar {
     token quote:sym<'>  { <?[']> <quote_EXPR: ':q'>  }
     token quote:sym<">  { <?["]> <quote_EXPR: ':qq'> }
 
+    token quote_escape:sym<$>   { <?[$]> <?quotemod_check('s')> <variable> }
+    token quote_escape:sym<{ }> { <?[{]> <?quotemod_check('c')> <block> }
+    token quote_escape:sym<esc> { \\ e <?quotemod_check('b')> }
+
     token number { $<sign>=[<[+\-]>?] [ <dec_number> | <integer> ] }
 
     token name { <!keyword> <.ident> ['::'<.ident>]* }
@@ -153,9 +159,6 @@ grammar MO::Grammar is HLL::Grammar {
         ]
     }
 
-    # | 'if' | 'else' | 'elsif' | 'for' | 'while' | 'until' | 'yield'
-    # | 'def' | 'end'
-    # | 'le' | 'ge' | 'lt' | 'gt' | 'eq' | 'ne' | 'cmp' | 'not' | 'and' | 'or'
     proto token kw      { <...> }
     token kw:sym<if>    { <sym> }
     token kw:sym<else>  { <sym> }
@@ -166,6 +169,16 @@ grammar MO::Grammar is HLL::Grammar {
     token kw:sym<yield> { <sym> }
     token kw:sym<def>   { <sym> }
     token kw:sym<end>   { <sym> }
+    token kw:sym<le>    { <sym> }
+    token kw:sym<ge>    { <sym> }
+    token kw:sym<lt>    { <sym> }
+    token kw:sym<gt>    { <sym> }
+    token kw:sym<eq>    { <sym> }
+    token kw:sym<ne>    { <sym> }
+    token kw:sym<cmp>   { <sym> }
+    token kw:sym<not>   { <sym> }
+    token kw:sym<and>   { <sym> }
+    token kw:sym<or>    { <sym> }
     token kw:sym<use>   { <sym> }
     token kw:sym<var>   { <sym> }
     token kw:sym<return>{ <sym> }
@@ -207,15 +220,6 @@ grammar MO::Grammar is HLL::Grammar {
         $*W.create_data_models();
         $*W.add_builtin_objects();
 
-        # if $file ~~ / .*\.xml$ / {
-        #     self.xml
-        # } elsif $file ~~ / .*\.json$ / {
-        #     self.json;
-        # } elsif $file ~~ / .*\.mo$ / {
-        #     self.prog;
-        # } else {
-        #     self.panic("Unrecognized source: "~$file);
-        # }
         self.prog
     }
 
@@ -306,7 +310,7 @@ grammar MO::Grammar is HLL::Grammar {
     }
 
     token initializer {
-        '=' <.ws> <EXPR>
+        '=' <.ws> <EXPR('f=')>
     }
 
     rule statements { <.ws> <statement>* }
@@ -342,6 +346,8 @@ grammar MO::Grammar is HLL::Grammar {
     proto rule else { <...> }
     rule else:sym<if> { [ 'elsif'\s ] ~ <else>? [ <EXPR> <statements> ] }
     rule else:sym< > { 'else'\s <statements> }
+
+    rule block { '{' ~ '}' <newscope:''> }
 
     proto rule loop_block { <...> }
     rule loop_block:sym<{ }> { 'do'? '{' ~ '}' <newscope: 'loop'> }
