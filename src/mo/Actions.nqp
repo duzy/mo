@@ -56,6 +56,11 @@ class MO::Actions is HLL::Actions {
         $/.prune;
     }
 
+    method term:sym<with>($/) {
+        make $<statement>.made;
+        $/.prune;
+    }
+
     method term:sym<return>($/) {
         my $scope := $*W.current_scope;
         my $ast := QAST::Op.new( :node($/), :op<call>, :name<RETURN> );
@@ -467,17 +472,16 @@ class MO::Actions is HLL::Actions {
         make $scope;
     }
 
-    method loop_block:sym<{ }>($/) { make pop_newscope($/); } #{ make $<newscope>.made; }
-    method loop_block:sym<end>($/) { make pop_newscope($/); } #{ make $<newscope>.made; }
+    method loop_block:sym<{ }>($/) { make pop_newscope($/); }
+    method loop_block:sym<end>($/) { make pop_newscope($/); }
 
-    method for_block:sym<{ }>($/) { make pop_newscope($/); } #{ make $<newscope>.made; }
-    method for_block:sym<end>($/) { make pop_newscope($/); } #{ make $<newscope>.made; }
+    method for_block:sym<{ }>($/) { make pop_newscope($/); }
+    method for_block:sym<end>($/) { make pop_newscope($/); }
 
-    method with_block:sym<{ }>($/) { make pop_newscope($/); } #{ make $<newscope>.made; }
-    method with_block:sym<end>($/) { make pop_newscope($/); } #{ make $<newscope>.made; }
+    method with_block:sym<{ }>($/) { make pop_newscope($/); }
+    method with_block:sym<end>($/) { make pop_newscope($/); }
     method with_block:sym<yield>($/) {
-        make QAST.Op.new( :node($/), :op<say>,
-            QAST.SVal.new( :value('with_block:sym<yield>: '~$/) ) );
+        make QAST::SVal.new( :value(~$/) );
     }
 
     method def_block:sym<{ }>($/) { make $<statements>.made; }
@@ -552,17 +556,29 @@ class MO::Actions is HLL::Actions {
     }
 
     method template_body($/) {
-        my $stmts := QAST::Stmts.new( :node($/) );
-        $stmts.push( $_.made ) for $<template_atom>;
+        my $var := QAST::Var.new( :scope<local>, :name<result> );
+        my $stmts := QAST::Stmts.new( :node($/),
+            QAST::Op.new( :op<bind>,
+                QAST::Var.new( :scope<local>, :name<result>, :decl<var> ),
+                QAST::Op.new( :op<list> )
+            ),
+        );
+        $stmts.push( QAST::Op.new( :op<callmethod>, :name<push>, $var, $_.made ) )
+            for $<template_atom>;
+        $stmts.push( QAST::Op.new( :op<join>, QAST::SVal.new(:value('')), $var ) );
         make $stmts;
     }
 
+    method template_atom:sym<$>($/) {
+        make $<variable>.made;
+    }
+
     method template_atom:sym<()>($/) {
-        make QAST::SVal.new( :node($/), :value(~$/) );
+        make $<EXPR>.made;
     }
 
     method template_atom:sym<{}>($/) {
-        make QAST::SVal.new( :node($/), :value(~$/) );
+        make $<statements>.made;
     }
 
     method template_atom:sym<.>($/) {

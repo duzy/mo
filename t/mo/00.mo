@@ -1,8 +1,16 @@
-say("1..2")
+say("1..1")
 
-var $res = system('echo "ok - system"');
-if $res == 0
-    say("ok - result = $res")
+var $v;
+
+template T0
+--------
+$(.name)
+---
+end
+
+$v = with ->child[0] yield T0
+if $v eq 'test-child-1'
+    say("ok\t - $v");
 else
-    say("fail - result = $res")
+    say("fail\t - $v");
 end

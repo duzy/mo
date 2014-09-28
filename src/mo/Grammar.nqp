@@ -67,6 +67,7 @@ grammar MO::Grammar is HLL::Grammar {
     }
     token term:sym<return> {:s <sym> [['(' ~ ')' <EXPR>] | <EXPR>]? }
     token term:sym<yield>  { <?before <sym>> <statement> }
+    token term:sym<with>   { <?before <sym>> <statement> }
 
     # Operators - mostly stolen from NQP's Rubyish example
     token infix:sym<**> { <sym>  <O('%exponentiation, :op<pow_n>')> }
@@ -363,7 +364,7 @@ grammar MO::Grammar is HLL::Grammar {
     proto rule with_block { <...> }
     rule with_block:sym<{ }> { 'do'? '{' ~ '}' <newscope: 'with', '$_', 1> }
     rule with_block:sym<end> { <![{]> ~ 'end' <newscope: 'with', '$_', 1> }
-    rule with_block:sym<yield> { 'yield' <statement> }
+    rule with_block:sym<yield> { <?before <sym>><statement> }
 
     proto rule def_block { <...> }
     rule def_block:sym<{ }> { '{' ~ '}' <statements> }
@@ -395,6 +396,7 @@ grammar MO::Grammar is HLL::Grammar {
     rule template_body { <template_atom>* }
 
     proto token template_atom   { <...> }
+    token template_atom:sym<$> { <variable> }
     token template_atom:sym<()> { '$(' ~ ')' <EXPR> }
     token template_atom:sym<{}> { '${' ~ '}' <statements> }
     token template_atom:sym<.>  { [<!before <.template_stopper>><![$]>.]+ }
