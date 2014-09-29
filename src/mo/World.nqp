@@ -430,6 +430,7 @@ MO::World.add_builtin_code('system', -> $s {
 });
 
 MO::World.add_builtin_code('isnull', -> $a { nqp::isnull($a) });
+MO::World.add_builtin_code('defined', -> $a { nqp::defined($a) });
 
 # MO::World.add_builtin_code('say',            &nqp::say);
 # MO::World.add_builtin_code('exit',           &nqp::exit);
