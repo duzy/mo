@@ -588,7 +588,19 @@ class MO::Actions is HLL::Actions {
         make $<statements>.made;
     }
 
+    method template_atom:sym<^^>($/) {
+        make $<template_statement>.made;
+    }
+
     method template_atom:sym<.>($/) {
+        make QAST::SVal.new( :node($/), :value(~$/) );
+    }
+
+    method template_statement:sym<for>($/) {
+        make QAST::SVal.new( :node($/), :value(~$/) );
+    }
+
+    method template_statement:sym<if>($/) {
         make QAST::SVal.new( :node($/), :value(~$/) );
     }
 

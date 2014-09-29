@@ -416,7 +416,22 @@ grammar MO::Grammar is HLL::Grammar {
     token template_atom:sym<$> { <variable> }
     token template_atom:sym<()> { '$(' ~ ')' <EXPR> }
     token template_atom:sym<{}> { '${' ~ '}' <statements> }
-    token template_atom:sym<.>  { [<!before <.template_stopper>><![$]>.]+ }
+    token template_atom:sym<^^> { <template_statement> }
+    token template_atom:sym<.>  { [<!before <.template_stopper>|^^'.'><![$]>.]+ }
+
+    proto rule template_statement { <...> }
+    token template_statement:sym< > { <tsp>\n }
+    token template_statement:sym<for> {
+        <tsp> ['for'\s+ <EXPR><eis> ] ~ [^^'.'\s*'end'<eis>]
+        <template_atom>*
+    }
+    token template_statement:sym<if> {
+        <tsp> ['if'\s+ <EXPR><eis> ] ~ [^^'.'\s*'end'<eis>]
+        <template_atom>*
+    }
+
+    token eis { [<![\n]>\s]* } # eat inline space
+    token tsp { ^^'.'<eis> } # template statement prefix
 
     rule params { <param>+ %% ',' }
     token param { <sigil> <name=.ident> }
