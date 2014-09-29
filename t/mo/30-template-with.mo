@@ -1,16 +1,29 @@
-say("1..1")
+say("1..3")
 
-var $v = 'test'
+var $v;
 
 template T0
 --------
-template T0 $v $($v) ${$v}
+$(.name)
 ---
 end
 
-$v = yield T0
+$v = str T0
+if $v eq 'test-name-value'
+    say("ok\t - $v");
+else
+    say("fail\t - $v");
+end
 
-if $v eq 'template T0 test test test'
+$v = str T0 with ->child[0]
+if $v eq 'test-child-1'
+    say("ok\t - $v");
+else
+    say("fail\t - $v");
+end
+
+$v = str T0 with ->child[1]
+if $v eq 'test-child-2'
     say("ok\t - $v");
 else
     say("fail\t - $v");

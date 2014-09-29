@@ -6,7 +6,7 @@ class MO::Actions is HLL::Actions {
         $scope
     }
 
-    method term:sym<value>($/) { make $<value>.made; $/.prune; }
+    method term:sym<value>($/)    { make $<value>.made; $/.prune; }
     method term:sym<variable>($/) { make $<variable>.made; $/.prune; }
     method term:sym<name>($/) {
         my @name := nqp::split('::', ~$<name>);
@@ -51,16 +51,6 @@ class MO::Actions is HLL::Actions {
         $/.prune;
     }
 
-    method term:sym<yield>($/) {
-        make $<statement>.made;
-        $/.prune;
-    }
-
-    method term:sym<with>($/) {
-        make $<statement>.made;
-        $/.prune;
-    }
-
     method term:sym<return>($/) {
         my $scope := $*W.current_scope;
         my $ast := QAST::Op.new( :node($/), :op<call>, :name<RETURN> );
@@ -73,6 +63,22 @@ class MO::Actions is HLL::Actions {
             # $ast[0].push(QAST::WVal.new( :value($*W.find_sym(['NQPMu'])) ));
         }
         make $ast;
+        $/.prune;
+    }
+
+    method term:sym<str>($/) {
+        my $template := $*W.symbol_ast($/, nqp::split('::', ~$<name>), 1);
+        my $call := QAST::Op.new( :node($/), :op<callmethod>, :name<!str>,
+            $template, QAST::Var.new( :scope<lexical>, :name<MODEL> ) );
+
+        if $<EXPR> {
+            $call.push( $<EXPR>.made );
+        } else {
+            my $node := $*W.symbol_ast($/, [ '$_' ], 1);
+            $call.push( $node );
+        }
+
+        make $call;
         $/.prune;
     }
 
@@ -480,9 +486,6 @@ class MO::Actions is HLL::Actions {
 
     method with_block:sym<{ }>($/) { make pop_newscope($/); }
     method with_block:sym<end>($/) { make pop_newscope($/); }
-    method with_block:sym<yield>($/) {
-        make QAST::SVal.new( :value(~$/) );
-    }
 
     method def_block:sym<{ }>($/) { make $<statements>.made; }
     method def_block:sym<end>($/) { make $<statements>.made; }
@@ -548,11 +551,15 @@ class MO::Actions is HLL::Actions {
 
     method definition:sym<template>($/) {
         my $scope := $*W.pop_scope();
-        #$scope.namespace( ['MO', 'Template'] );
-        #$scope.blocktype('declaration_static');
-        $scope.name( ~$<name> );
+        my $template := $scope.ann('package');
         $scope.push( $<template_body>.made );
-        make QAST::Op.new( :node($/), :op<takeclosure>, $scope );
+        $scope.node( $/ );
+
+        my $code := $*W.install_package_routine($template, '!str', $scope);
+        $template.HOW.add_method($template, '!str', $code);
+
+        $*W.pkg_compose($template);
+        make $scope;
     }
 
     method template_body($/) {

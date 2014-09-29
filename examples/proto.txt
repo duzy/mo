@@ -1,0 +1,21 @@
+log
+    version, number, 2
+    level, number, 1
+    event, number, 1
+    node, number, 2
+    peer, number, 2
+    time, number, 8
+    host, string
+    data, longstr
+structures
+    aliases, strings
+    headers, dictionary
+binary
+    flags, octets, 4
+    public key, chunk
+    identifier, uuid
+    address, frame
+    content, msg
+types
+    client, person
+    supplier, person

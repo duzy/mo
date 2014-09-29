@@ -19,3 +19,19 @@ def test($arg) {
 
 test("ok\t- test(...)");
 test("ok\t- test(...)");
+
+$var = Module::TestTemplate;
+if isnull($var)
+    say("fail\t- Module::TestTemplate is null");
+end
+
+$var = str Module::TestTemplate;
+say($var);
+if $var eq 'ok	- 6. $test is defined in test::Module -- "test template"'
+    say("ok\t- Module::TestTemplate");
+else
+    say("fail\t- Module::TestTemplate: $var");
+end
+
+$var = new(Module::TestClass);
+say($var.test);

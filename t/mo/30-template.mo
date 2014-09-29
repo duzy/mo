@@ -8,7 +8,7 @@ template T0 $v $($v) ${$v}
 ---
 end
 
-$v = yield T0
+$v = str T0
 
 if $v eq 'template T0 test test test'
     say("ok\t - $v");

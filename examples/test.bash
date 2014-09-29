@@ -44,3 +44,11 @@ for mo in \
     ( run $SRCDIR/AndroidManifest.xml $SRCDIR/$mo.mo ) > $SRCDIR/$mo.out
     check $SRCDIR/$mo.txt $SRCDIR/$mo.out
 done
+
+for mo in \
+    proto \
+    ; do
+    echo -n "test: $SRCDIR/$mo.mo.."
+    ( run $SRCDIR/$mo.mo ) > $SRCDIR/$mo.out
+    check $SRCDIR/$mo.txt $SRCDIR/$mo.out
+done

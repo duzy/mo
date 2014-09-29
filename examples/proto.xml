@@ -1,0 +1,54 @@
+<class
+    name = "example"
+    signature = "0"
+    title = "example protocol"
+    >
+  <include filename = "license.xml" />
+
+  <define name = "VERSION" value = "1" />
+
+  <grammar>
+    example = log | structures | binary
+  </grammar>
+
+  <header>
+    <field name = "sequence" type = "number" size = "2" />
+  </header>
+
+  <message name = "log" id = "1">
+    <field name = "version" type = "number" size = "2" value = "3">Version</field>
+    <field name = "level" type = "number" size = "1">Log severity level</field>
+    <field name = "event" type = "number" size = "1">Type of event</field>
+    <field name = "node" type = "number" size = "2">Sending node</field>
+    <field name = "peer" type = "number" size = "2">Refers to this peer</field>
+    <field name = "time" type = "number" size = "8">Log date/time</field>
+    <field name = "host" type = "string">Originating hostname</field>
+    <field name = "data" type = "longstr">Actual log message</field>
+  </message>
+
+  <message name = "structures" id = "2">
+    <field name = "aliases" type = "strings">List of strings</field>
+    <field name = "headers" type = "dictionary">Other random properties</field>
+  </message>
+
+  <message name = "binary" id = "3">
+    <field name = "flags" type = "octets" size = "4">A set of flags</field>
+    <field name = "public key" type = "chunk">Our public key</field>
+    <field name = "identifier" type = "uuid">Unique identity</field>
+    <field name = "address" type = "frame">Return address as frame</field>
+    <field name = "content" type = "msg">Message to be delivered</field>
+  </message>
+
+  <message name = "types" id = "4">
+    <field name = "client" type = "person">Client contact</field>
+    <field name = "supplier" type = "person">Supplier contact</field>
+  </message>
+
+  <type name = "person">
+    <field name = "forename" type = "string">Given name</field>
+    <field name = "surname" type = "string">Family name</field>
+    <field name = "mobile" type = "string">Mobile phone number</field>
+    <field name = "email" type = "string">Email address</field>
+  </type>
+
+</class>

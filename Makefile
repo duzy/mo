@@ -11,8 +11,9 @@ COMMON_SOURCES := \
   src/core/Routine.nqp \
   src/how/NodeHOW.nqp \
   src/how/FilesystemNodeHOW.nqp \
-  src/how/ClassHOW.nqp \
   src/how/AttributeHOW.nqp \
+  src/how/ClassHOW.nqp \
+  src/how/TemplateHOW.nqp \
 
 JSON_PBC := gen/json.pbc
 JSON_PIR := gen/json.pir

@@ -66,8 +66,9 @@ grammar MO::Grammar is HLL::Grammar {
         '{' ~ '}' <statements>
     }
     token term:sym<return> {:s <sym> [['(' ~ ')' <EXPR>] | <EXPR>]? }
-    token term:sym<yield>  { <?before <sym>> <statement> }
-    token term:sym<with>   { <?before <sym>> <statement> }
+    token term:sym<str>    {:s
+        <sym>\s $<name>=[<.ident>['::'<.ident>]*] ['with' <EXPR>]?
+    }
 
     # Operators - mostly stolen from NQP's Rubyish example
     token infix:sym<**> { <sym>  <O('%exponentiation, :op<pow_n>')> }
@@ -124,7 +125,7 @@ grammar MO::Grammar is HLL::Grammar {
     token infix:sym<,>    { <sym>  <O('%comma, :op<list>')> }
 
     token circumfix:sym<( )> { '(' ~ ')' <EXPR> <O('%methodop')> }
-    token circumfix:sym<| |> { '\' ~ '\' <EXPR> }
+    token circumfix:sym<| |> { '|' ~ '|' <EXPR> }
     token circumfix:sym«< >» { '<' ~ '>' <EXPR=.quote> }
 
     token postcircumfix:sym<( )> { '(' ~ ')' <arglist> <O('%methodop')> }
@@ -168,6 +169,7 @@ grammar MO::Grammar is HLL::Grammar {
     token kw:sym<while> { <sym> }
     token kw:sym<until> { <sym> }
     token kw:sym<yield> { <sym> }
+    token kw:sym<str>   { <sym> }
     token kw:sym<def>   { <sym> }
     token kw:sym<end>   { <sym> }
     token kw:sym<le>    { <sym> }
@@ -199,10 +201,11 @@ grammar MO::Grammar is HLL::Grammar {
         # compile the setting, but it still wants some kinda package. We just
         # fudge in knowhow for that.
         my %*HOW;
-        %*HOW<knowhow> := nqp::knowhow();
-        %*HOW<package> := nqp::knowhow();
-        %*HOW<class> := MO::ClassHOW;
+        %*HOW<knowhow>   := nqp::knowhow();
+        %*HOW<package>   := nqp::knowhow();
         %*HOW<attribute> := MO::AttributeHOW;
+        %*HOW<class>     := MO::ClassHOW;
+        %*HOW<template>  := MO::TemplateHOW;
 
         my $*GLOBALish;
         my $*PACKAGE;
@@ -364,7 +367,6 @@ grammar MO::Grammar is HLL::Grammar {
     proto rule with_block { <...> }
     rule with_block:sym<{ }> { 'do'? '{' ~ '}' <newscope: 'with', '$_', 1> }
     rule with_block:sym<end> { <![{]> ~ 'end' <newscope: 'with', '$_', 1> }
-    rule with_block:sym<yield> { <?before <sym>><statement> }
 
     proto rule def_block { <...> }
     rule def_block:sym<{ }> { '{' ~ '}' <statements> }
@@ -387,12 +389,27 @@ grammar MO::Grammar is HLL::Grammar {
     proto rule definition { <...> }
 
     rule definition:sym<template> {
+        :my $*OUTERPACKAGE := $*PACKAGE;
         <sym>\s <name=.ident>
         <template_starter> ~ <template_stopper>
-        [ { self.push_scope( 'template', '$_' ) } <template_body> ]
+        [
+            {
+                my $name := ~$<name>;
+                my $how := %*HOW{~$<sym>};
+                my $type := $how.new_type(:name($name));
+
+                $*W.install_package_symbol($*OUTERPACKAGE, $name, $*PACKAGE := $type);
+                $*W.install_package_symbol($*EXPORT, $name, $type) if $*W.is_export_name($name);
+
+                # also need to pass in the MODEL
+                my $scope := self.push_scope( ~$<sym>, [ 'me', 'MODEL', '$_' ] );
+                $scope.annotate('package', $type);
+            }
+            <template_body>
+        ]
     }
     rule template_starter { ^^ '-'**3..*\n }
-    rule template_stopper { \n? <.template_starter> 'end' }
+    rule template_stopper { \n? [<.template_starter> 'end'|$] }
     rule template_body { <template_atom>* }
 
     proto token template_atom   { <...> }
@@ -419,12 +436,12 @@ grammar MO::Grammar is HLL::Grammar {
         <sym>\s <name=.ident> '{' ~ '}'
         [
             {
+                my $name := ~$<name>;
                 my $how := %*HOW{~$<sym>};
-                my $type := $how.new_type(:name(~$<name>));
+                my $type := $how.new_type(:name($name));
 
-                $*PACKAGE := $type;
-
-                $*W.install_package_symbol($*OUTERPACKAGE, ~$<name>, $*PACKAGE);
+                $*W.install_package_symbol($*OUTERPACKAGE, $name, $*PACKAGE := $type);
+                $*W.install_package_symbol($*EXPORT, $name, $type) if $*W.is_export_name($name);
 
                 my $scope := self.push_scope( ~$<sym>, 'me' );
                 $scope.annotate('package', $type);

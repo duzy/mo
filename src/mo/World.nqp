@@ -12,15 +12,32 @@ class MO::World is HLL::World {
 
     method create_data_models() {
         my @files := $*DATAFILES;
+        if +@files == 0 {
+            my $file := nqp::getlexdyn('$?FILES');
+            unless nqp::isnull($file) {
+                my int $dot := nqp::rindex($file, '.');
+                my str $base := nqp::substr($file, 0, $dot);
+                unless $base eq '' {
+                    @files.push("$base.xml") if nqp::stat("$base.xml", 0);
+                    @files.push("$base.json") if nqp::stat("$base.json", 0);
+                }
+            }
+        }
+
         my @models := [];
         for @files {
             my $source := MO::ModuleLoader.load_source($_);
-            my $compiler := nqp::getcomp('xml');
-            my $code := $compiler.compile($source);
-            @models.push($code());
+            if / .*\.xml$  / {
+                my $compiler := nqp::getcomp('xml');
+                my $code := $compiler.compile($source);
+                @models.push($code());
+            } else {
+                nqp::die("unsupported data file $_");
+            }
         }
 
         unless +@models {
+            my $type := MO::NodeHOW.type; # ensure the Node type is initialized
             my $node := MO::NodeHOW.node_new();
             @models.push($node);
         }
@@ -124,7 +141,7 @@ class MO::World is HLL::World {
             @name := nqp::clone(@name);
             my $final_name := @name.pop();
             my $value := self.value_of(@name, $root);
-            if nqp::defined($value) {
+            if nqp::defined($value) && nqp::existskey($value.WHO, $final_name) {
                 my $who := QAST::Op.new( :op<who>, QAST::WVal.new( $value ) );
                 return QAST::Var.new( :node($/), :scope<associative>,
                     $who, QAST::SVal.new( :value($final_name) ) );
@@ -397,7 +414,7 @@ class MO::World is HLL::World {
 
 MO::World.add_builtin_code('new', -> $t {
     my $obj := nqp::create($t);
-    $obj.'~ctor'();
+    $obj.'~ctor'() if nqp::can($obj, '~ctor');
     $obj;
 });
 

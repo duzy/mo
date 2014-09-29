@@ -8,7 +8,9 @@ function run() {
     $RUNNER $@
 }
 
-run $SRCDIR/AndroidManifest.xml $SRCDIR/get-package-name.mo
-run $SRCDIR/AndroidManifest.xml $SRCDIR/get-permissions.mo
-run $SRCDIR/AndroidManifest.xml $SRCDIR/get-activities.mo
-run $SRCDIR/AndroidManifest.xml $SRCDIR/use-namespace.mo
+#run $SRCDIR/AndroidManifest.xml $SRCDIR/get-package-name.mo
+#run $SRCDIR/AndroidManifest.xml $SRCDIR/get-permissions.mo
+#run $SRCDIR/AndroidManifest.xml $SRCDIR/get-activities.mo
+#run $SRCDIR/AndroidManifest.xml $SRCDIR/use-namespace.mo
+
+run $SRCDIR/proto.mo

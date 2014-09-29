@@ -70,10 +70,14 @@ class MO::Model {
         my @result;
         if nqp::islist($a) {
             for $a {
-                @result.push($_) for $_.children($name);
+                my $children := $_.children($name);
+                if nqp::defined($children) {
+                    @result.push($_) for $children;
+                }
             }
         } else {
-            @result := $a.children($name);
+            my $children := $a.children($name);
+            @result := $children if nqp::defined($children);
         }
         @result;
     }
@@ -81,11 +85,15 @@ class MO::Model {
     method select_all($a) { # ->, node->
         my @result;
         if nqp::islist($a) {
-            for $a -> $node {
-                @result.push($_) for $node.children;
+            for $a {
+                my $children := $_.children;
+                if nqp::defined($children) {
+                    @result.push($_) for $children;
+                }
             }
         } else {
-            @result := $a.children;
+            my $children := $a.children;
+            @result := $children if nqp::defined($children);
         }
         @result;
     }
@@ -125,7 +133,7 @@ class MO::Model {
             }
             @result;
         } elsif nqp::defined($a) && nqp::can($a, 'children') {
-            $a.children($key);
+            $a.children($key) // [];
         }
     }
 
