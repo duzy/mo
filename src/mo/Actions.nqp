@@ -172,7 +172,7 @@ class MO::Actions is HLL::Actions {
         } elsif $*IN_DECL eq 'member' {
             # null, nothing made
         } elsif ~$<twigil> eq '.' {
-            my $class := $*PACKAGE;
+            my $class := $*W.get_package;
             my $how := $class.HOW;
             unless nqp::can($how, 'find_attribute') && nqp::can($how, 'add_attribute') {
                 $/.CURSOR.panic($how.name($class)~' cannot have attributes');
@@ -286,10 +286,9 @@ class MO::Actions is HLL::Actions {
     }
 
     method selector:sym<{ }>($/) {
-        my $scope := pop_newscope($/);
         make QAST::Op.new( :node($/), :op<callmethod>, :name<filter>,
             QAST::Var.new( :scope<lexical>, :name<MODEL> ),
-            QAST::Op.new( :op<takeclosure>, $scope ) );
+            QAST::Op.new( :op<takeclosure>, pop_newscope($/) ) );
     }
 
     method select:sym<name>($/) {
@@ -462,7 +461,7 @@ class MO::Actions is HLL::Actions {
 
     method else:sym< >($/) { make $<statements>.made; }
     method else:sym<if>($/) {
-        my $ast := QAST::Op.new( :node($/), :op('if'), $<EXPR>.made, $<statements>.made );
+        my $ast := QAST::Op.new( :node($/), :op<if>, $<EXPR>.made, $<statements>.made );
         $ast.push($<else>.made) if $<else>;
         make $ast;
     }
@@ -597,11 +596,52 @@ class MO::Actions is HLL::Actions {
     }
 
     method template_statement:sym<for>($/) {
-        make QAST::SVal.new( :node($/), :value(~$/) );
+        my $scope := $*W.pop_scope();
+        $scope.node( $/ );
+
+        my $result := QAST::Var.new(:scope<lexical>, :name(QAST::Node.unique('template_for')));
+        my $outer := $scope.ann('outer');
+        $outer[0].push( QAST::Op.new( :op<bind>,
+            QAST::Var.new(:scope<lexical>, :decl<var>, :name($result.name)),
+            QAST::SVal.new(:value('')),
+        ) );
+
+        if +$<template_atom> {
+            my $ast := $result;
+            for $<template_atom> {
+                $ast := QAST::Op.new( :op<concat>, $ast, $_.made );
+            }
+            $scope.push( QAST::Op.new( :op<bindlex>,
+                QAST::SVal.new(:value($result.name)), $ast ) );
+        }
+
+        make QAST::Op.new( :node($/), :op<for>, $<EXPR>.made, $scope );
     }
 
-    method template_statement:sym<if>($/) {
-        make QAST::SVal.new( :node($/), :value(~$/) );
+    method template_statement:sym<if>($/) { make template_if($/); }
+    method template_else:sym<if>($/)      { make template_if($/); }
+
+    my sub template_if($/) {
+        my $result := QAST::SVal.new(:value(''));
+        if +$<template_atom> {
+            for $<template_atom> {
+                $result := QAST::Op.new( :op<concat>, $result, $_.made );
+            }
+        }
+
+        my $ast := QAST::Op.new( :node($/), :op<if>, $<EXPR>.made, $result );
+        $ast.push($<else>.made) if $<else>;
+        make $ast;
+    }
+
+    method template_else:sym< >($/) {
+        my $result := QAST::SVal.new(:value(''));
+        if +$<template_atom> {
+            for $<template_atom> {
+                $result := QAST::Op.new( :op<concat>, $result, $_.made );
+            }
+        }
+        make $result;
     }
 
     method param($/) {
@@ -621,7 +661,8 @@ class MO::Actions is HLL::Actions {
         $scope.name($name);
         $scope[0].push( wrap_return_handler($scope, $<def_block>.made) );
 
-        $*W.install_package_routine($*PACKAGE, $name, $scope);
+        my $package := $*W.get_package($scope.ann('outer'));
+        $*W.install_package_routine($package, $name, $scope);
 
         my $outer := $scope.ann('outer');
         $outer.symbol('&' ~ $name, :scope<lexical>, :proto(1), :declared(1) );

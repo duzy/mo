@@ -208,7 +208,6 @@ grammar MO::Grammar is HLL::Grammar {
         %*HOW<template>  := MO::TemplateHOW;
 
         my $*GLOBALish;
-        my $*PACKAGE;
         my $*EXPORT;
         my $*UNIT; # the top-level block of the current compile unit.
 
@@ -272,9 +271,6 @@ grammar MO::Grammar is HLL::Grammar {
             $*GLOBALish := $*W.pkg_create_mo($/, %*HOW<package>, :name('GLOBAL'));
             $*W.pkg_compose($*GLOBALish);
 
-            # The GLOBAL is also the starting package.
-            $*PACKAGE := $*GLOBALish;
-
             # The package from the user's view.
             $*EXPORT := $*W.pkg_create_mo($/, %*HOW<package>, :name('EXPORT'));
             $*W.pkg_compose($*EXPORT);
@@ -305,7 +301,7 @@ grammar MO::Grammar is HLL::Grammar {
 
             $*UNIT := self.push_scope('unit');
             $*UNIT.symbol('$_', :scope<lexical>, :decl<var>);
-            $*UNIT.annotate('package', $*PACKAGE);
+            $*UNIT.annotate('package', $*GLOBALish);
         }
         ^ ~ $ <statements> || <.panic: 'Confused'>
     }
@@ -389,7 +385,7 @@ grammar MO::Grammar is HLL::Grammar {
     proto rule definition { <...> }
 
     rule definition:sym<template> {
-        :my $*OUTERPACKAGE := $*PACKAGE;
+        :my $outerpackage := $*W.get_package;
         <sym>\s <name=.ident>
         <template_starter> ~ <template_stopper>
         [
@@ -398,7 +394,7 @@ grammar MO::Grammar is HLL::Grammar {
                 my $how := %*HOW{~$<sym>};
                 my $type := $how.new_type(:name($name));
 
-                $*W.install_package_symbol($*OUTERPACKAGE, $name, $*PACKAGE := $type);
+                $*W.install_package_symbol($outerpackage, $name, $type);
                 $*W.install_package_symbol($*EXPORT, $name, $type) if $*W.is_export_name($name);
 
                 # also need to pass in the MODEL
@@ -417,21 +413,33 @@ grammar MO::Grammar is HLL::Grammar {
     token template_atom:sym<()> { '$(' ~ ')' <EXPR> }
     token template_atom:sym<{}> { '${' ~ '}' <statements> }
     token template_atom:sym<^^> { <template_statement> }
-    token template_atom:sym<.>  { [<!before <.template_stopper>|^^'.'><![$]>.]+ }
+    token template_atom:sym<.>  { [<!before <.template_stopper>|<.tsp>><![$]>.]+ }
 
     proto rule template_statement { <...> }
-    token template_statement:sym< > { <tsp>\n }
+    token template_statement:sym< > { <.tsp>\n }
     token template_statement:sym<for> {
-        <tsp> ['for'\s+ <EXPR><eis> ] ~ [^^'.'\s*'end'<eis>]
-        <template_atom>*
+        <.tsp> ['for'\s+<EXPR><.eis>] ~ [<.tsp>'end'<.els>]
+        [
+            { self.push_scope( ~$<sym>, '$_' ) }
+            <template_atom>*
+        ]
     }
     token template_statement:sym<if> {
-        <tsp> ['if'\s+ <EXPR><eis> ] ~ [^^'.'\s*'end'<eis>]
-        <template_atom>*
+        <.tsp> ['if'\s+<EXPR><.eis>] ~ [<.tsp>'end'<.els>]
+        [ <template_atom>* <else=.template_else>? ]
+    }
+
+    proto rule template_else { <...> }
+    token template_else:sym<if> {
+        <.tsp> ['elsif'\s+<EXPR><.eis>] ~ <else=.template_else>? <template_atom>*
+    }
+    token template_else:sym< > {
+        <.tsp> 'else'<.eis> <template_atom>*
     }
 
     token eis { [<![\n]>\s]* } # eat inline space
-    token tsp { ^^'.'<eis> } # template statement prefix
+    token els { <eis>\n }      # eat line space
+    token tsp { ^^'.'<eis> }   # template statement prefix
 
     rule params { <param>+ %% ',' }
     token param { <sigil> <name=.ident> }
@@ -447,7 +455,7 @@ grammar MO::Grammar is HLL::Grammar {
     }
 
     rule definition:sym<class> {
-        :my $*OUTERPACKAGE := $*PACKAGE;
+        :my $outerpackage := $*W.get_package;
         <sym>\s <name=.ident> '{' ~ '}'
         [
             {
@@ -455,7 +463,7 @@ grammar MO::Grammar is HLL::Grammar {
                 my $how := %*HOW{~$<sym>};
                 my $type := $how.new_type(:name($name));
 
-                $*W.install_package_symbol($*OUTERPACKAGE, $name, $*PACKAGE := $type);
+                $*W.install_package_symbol($outerpackage, $name, $type);
                 $*W.install_package_symbol($*EXPORT, $name, $type) if $*W.is_export_name($name);
 
                 my $scope := self.push_scope( ~$<sym>, 'me' );

@@ -41,6 +41,8 @@ run $SRCDIR/20-var
 run $SRCDIR/21-can
 run $SRCDIR/30-template
 run $SRCDIR/30-template-with
+run $SRCDIR/30-template-if
+run $SRCDIR/30-template-for
 run $SRCDIR/40-filesystem
 run $SRCDIR/41-io
 run $SRCDIR/41-io-open

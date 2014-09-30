@@ -62,6 +62,16 @@ class MO::World is HLL::World {
         @!scopes[+@!scopes - 1];
     }
 
+    method get_package($scope?) {
+        $scope := self.current_scope unless nqp::defined($scope);
+        while $scope {
+            my $package := $scope.ann('package');
+            return $package if nqp::defined($package);
+            $scope := $scope.ann('outer');
+        }
+        NQPMu
+    }
+
     # Find the name in the scopes defined so far.
     method symbol_in_scopes($name) {
         my %sym;
