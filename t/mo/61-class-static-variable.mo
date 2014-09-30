@@ -18,5 +18,5 @@ class A
 }
 
 var $a = new(A);
-$a.test1;
+$a.test1();
 $a.test2('test-arg');

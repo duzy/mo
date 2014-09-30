@@ -19,7 +19,7 @@ function run() {
 
 if true ; then
     run $SRCDIR/00 -v
-    exit
+    # exit
 fi
 
 run $SRCDIR/00-say
@@ -28,6 +28,7 @@ run $SRCDIR/01-control-cond
 run $SRCDIR/01-control-cond-expr
 run $SRCDIR/01-control-loop
 run $SRCDIR/01-control-loop-for
+run $SRCDIR/09-bare-select
 run $SRCDIR/10-dot-dot
 run $SRCDIR/10-dot-name
 run $SRCDIR/10-arrow-name

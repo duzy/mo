@@ -1,32 +1,32 @@
 say("1..5")
 
 var $v = ->child
-if $v?push
-  say("ok\t\t- $v?push")
+if $v.push?
+  say("ok\t\t- $v.push?")
 else
-  say("fail\t\t- $v?push")
+  say("fail\t\t- $v.push?")
 end
 
-if $v?pop
-  say("ok\t\t- $v?pop")
+if $v.pop?
+  say("ok\t\t- $v.pop?")
 else
-  say("fail\t\t- $v?pop")
+  say("fail\t\t- $v.pop?")
 end
 
-if $v?shift
-  say("ok\t\t- $v?shift")
+if $v.shift?
+  say("ok\t\t- $v.shift?")
 else
-  say("fail\t\t- $v?shift")
+  say("fail\t\t- $v.shift?")
 end
 
-if $v?unshift
-  say("ok\t\t- $v?unshift")
+if $v.unshift?
+  say("ok\t\t- $v.unshift?")
 else
-  say("fail\t\t- $v?unshift")
+  say("fail\t\t- $v.unshift?")
 end
 
-if $v?sort
-  say("ok\t\t- $v?sort")
+if $v.sort?
+  say("ok\t\t- $v.sort?")
 else
-  say("fail\t\t- $v?sort")
+  say("fail\t\t- $v.sort?")
 end

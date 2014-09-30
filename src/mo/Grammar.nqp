@@ -58,7 +58,11 @@ grammar MO::Grammar is HLL::Grammar {
     token term:sym<value>       { <value> }
     token term:sym<variable>    { <variable> }
     token term:sym<name>        { <name> }
-    token term:sym«.»  { <?before <sym>> <selector> }
+
+    token term:sym«.»  {
+        | <sym> <name=.ident> [$<query>='?'|<args>]
+        | <?before <sym>> <selector>
+    }
     token term:sym«->» { <?before <sym>> <selector> }
 
     token term:sym<def>  {:s
@@ -133,8 +137,13 @@ grammar MO::Grammar is HLL::Grammar {
     token postcircumfix:sym<{ }> { '{' ~ '}' <EXPR> <O('%methodop')> }
     token postcircumfix:sym<ang> { <?[<]> <quote_EXPR: ':q'> <O('%methodop')> }
 
-    token postfix:sym«.» { <sym> <name=.ident> <args>? <O('%methodop')> }
-    token postfix:sym«?» { <sym> <name=.ident> <O('%methodop')> }
+    token postfix:sym«.»  {
+        <sym> <name=.ident> [$<query>='?'|<args>]?
+        <O('%methodop')>
+    }
+    token postfix:sym«->» {
+        <sym> <name=.ident> <O('%methodop')>
+    }
 
     proto token value           { <...> }
     token value:sym<quote>      { <quote> }

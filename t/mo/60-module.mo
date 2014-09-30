@@ -34,4 +34,4 @@ else
 end
 
 $var = new(Module::TestClass);
-say($var.test);
+say($var.test());
