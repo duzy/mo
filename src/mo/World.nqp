@@ -337,7 +337,7 @@ class MO::World is HLL::World {
                     # self.update_root_code_ref($root_code_ref_idx, $coderef);
                 }
                 else {
-                    say('DYNAMICALLY_COMPILED: '~$subid);
+                    # TODO: say('DYNAMICALLY_COMPILED: '~$subid);
                 }
                 $i := $i + 1;
             }

@@ -1,0 +1,25 @@
+log 1
+    version number
+    level number
+    event number
+    node number
+    peer number
+    time number
+    host string
+    data longstr
+
+structures 2
+    aliases strings
+    headers dictionary
+
+binary 3
+    flags octets
+    public key chunk
+    identifier uuid
+    address frame
+    content msg
+
+types 4
+    client person
+    supplier person
+

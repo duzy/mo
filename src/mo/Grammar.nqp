@@ -413,8 +413,8 @@ grammar MO::Grammar is HLL::Grammar {
             <template_body>
         ]
     }
-    rule template_starter { ^^ '-'**3..*\n }
-    rule template_stopper { \n? [<.template_starter> 'end'|$] }
+    rule template_starter { ^^ '-'**3..*\n? }
+    rule template_stopper { \n? [<.template_starter>'end'|$] }
     rule template_body { <template_atom>* }
 
     proto token template_atom   { <...> }
@@ -427,14 +427,14 @@ grammar MO::Grammar is HLL::Grammar {
     proto rule template_statement { <...> }
     token template_statement:sym< > { <.tsp>\n }
     token template_statement:sym<for> {
-        <.tsp> ['for'\s+<EXPR><.eis>] ~ [<.tsp>'end'<.els>]
+        <.tsp> ['for'\s+<EXPR>[';'<.eis>\n]?] ~ [<.tsp>'end'<.els>]
         [
             { self.push_scope( ~$<sym>, '$_' ) }
             <template_atom>*
         ]
     }
     token template_statement:sym<if> {
-        <.tsp> ['if'\s+<EXPR><.eis>] ~ [<.tsp>'end'<.els>]
+        <.tsp> ['if'\s+<EXPR>[';'<.eis>\n]?] ~ [<.tsp>'end'<.els>]
         [ <template_atom>* <else=.template_else>? ]
     }
 

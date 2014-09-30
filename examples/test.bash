@@ -47,6 +47,7 @@ done
 
 for mo in \
     proto \
+    proto-template \
     ; do
     echo -n "test: $SRCDIR/$mo.mo.."
     ( run $SRCDIR/$mo.mo ) > $SRCDIR/$mo.out
