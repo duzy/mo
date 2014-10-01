@@ -1,6 +1,7 @@
 # knowhow MO::ModuleHOW { }
 class MO::ModuleLoader {
     my %modules_loaded;
+    my @modules_loading;
 
     sub pathconcat($base, $leaf) {
         $base ~ '/' ~ $leaf;
@@ -72,7 +73,7 @@ class MO::ModuleLoader {
         $source;
     }
 
-    my method compile_source($file) {
+    my method compile_source_file($file) {
         my $*CTX := nqp::null();
         my $*CTXSAVE := self;
         my $?FILES := $file;
@@ -92,31 +93,43 @@ class MO::ModuleLoader {
             %chosen := self.locate_module($module_name, ['t/mo/', 'examples/']);
         }
 
+        for @modules_loading {
+            if %chosen<key> eq $_ {
+                $file := nqp::getlexdyn('$?FILES') unless nqp::defined($file);
+                $file := '?' unless nqp::defined($file);
+                nqp::die('recursive loading modules: '~$file~', '~%chosen<key>);
+            }
+        }
+
         my @module_ctx;
         if nqp::defined(%modules_loaded{%chosen<key>}) {
             @module_ctx := %modules_loaded{%chosen<key>};
         } else {
+            @modules_loading.push(%chosen<key>);
             if %chosen<load> {
                 my $*CTX := nqp::null();
                 my $*CTXSAVE := self;
                 nqp::loadbytecode(%chosen<load>);
                 @module_ctx.push( $*CTX );
             } elsif %chosen<source> {
-                @module_ctx.push( self.compile_source(%chosen<source>) );
+                @module_ctx.push( self.compile_source_file(%chosen<source>) );
             } elsif %chosen<sources> {
                 for %chosen<sources> {
                     if nqp::defined(%modules_loaded{$_}) {
                         @module_ctx.push( $_ ) for %modules_loaded{$_};
                     } else {
-                        my $ctx := self.compile_source($_);
+                        @modules_loading.push($_);
+                        my $ctx := self.compile_source_file($_);
                         @module_ctx.push( $ctx );
-                        %modules_loaded{%chosen<key>} := nqp::list($ctx);
+                        %modules_loaded{$_} := nqp::list($ctx);
+                        @modules_loading.pop;
                     }
                 }
             } else {
                 nqp::die("missing module $module_name");
             }
             %modules_loaded{%chosen<key>} := @module_ctx;
+            @modules_loading.pop;
         }
 
         my int $mn := +@module_ctx;

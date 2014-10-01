@@ -48,6 +48,8 @@ done
 for mo in \
     proto-simple \
     proto-template \
+    proto-run \
+    many-run \
     ; do
     echo -n "test: $SRCDIR/$mo.mo.."
     ( run $SRCDIR/$mo.mo ) > $SRCDIR/$mo.out
