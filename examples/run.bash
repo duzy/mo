@@ -13,5 +13,7 @@ function run() {
 #run $SRCDIR/AndroidManifest.xml $SRCDIR/get-activities.mo
 #run $SRCDIR/AndroidManifest.xml $SRCDIR/use-namespace.mo
 
-#run $SRCDIR/proto.mo
-run $SRCDIR/proto-template.mo
+#run $SRCDIR/proto-simple.mo
+#run $SRCDIR/proto-template.mo
+
+run $SRCDIR/proto-run.mo

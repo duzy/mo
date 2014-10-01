@@ -563,7 +563,7 @@ class MO::Actions is HLL::Actions {
     }
 
     method declaration:sym<use>($/) {
-        my $module := $*W.load_module($/, ~$<name>, $*GLOBALish);
+        my @lexpads := $*W.load_module($/, ~$<name>, $*GLOBALish);
         make QAST::Stmts.new( :node($/) );
     }
 

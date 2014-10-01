@@ -1,5 +1,21 @@
+# knowhow MO::ModuleHOW { }
 class MO::ModuleLoader {
     my %modules_loaded;
+
+    sub pathconcat($base, $leaf) {
+        $base ~ '/' ~ $leaf;
+    }
+
+    sub read_dir_sources($path) {
+        my @sources;
+        my @names := pir::new__PS('OS').readdir($path);
+        for @names {
+            if $_ ne '.' && $_ ne '..' && $_ ~~ / .*\.mo$ / {
+                @sources.push(pathconcat($path, $_));
+            }
+        }
+        @sources
+    }
 
     method locate_module($module_name, @prefixes) {
         my @names := nqp::split('::', $module_name);
@@ -10,24 +26,30 @@ class MO::ModuleLoader {
         my %res;
 
         for @prefixes -> $prefix {
-            my $have_pir := nqp::stat("$prefix/$pir_path", 0);
-            my $have_pbc := nqp::stat("$prefix/$pbc_path", 0);
-            my $have_mo := nqp::stat("$prefix/$mo_path", 0);
+            $prefix := "$prefix/" unless $prefix ~~ / \/$ /;
+            my $have_pir  := nqp::stat("$prefix$pir_path",  nqp::const::STAT_EXISTS);
+            my $have_pbc  := nqp::stat("$prefix$pbc_path",  nqp::const::STAT_EXISTS);
+            my $have_mo   := nqp::stat("$prefix$mo_path",   nqp::const::STAT_EXISTS);
+            my $have_base := nqp::stat("$prefix$base_path", nqp::const::STAT_EXISTS);
+            my $is_base_dir := $have_base && nqp::stat("$prefix$base_path", nqp::const::STAT_ISDIR);
             if $have_mo {
-                %res<key>    := "$prefix/$mo_path";
-                %res<source> := "$prefix/$mo_path";
-                if $have_pir && nqp::stat("$prefix/$pir_path", 7) >= nqp::stat("$prefix/$mo_path", 7) {
-                    %res<load> := "$prefix/$pir_path";
-                } elsif $have_pbc && nqp::stat("$prefix/$pbc_path", 7) >= nqp::stat("$prefix/$mo_path", 7) {
-                    %res<load> := "$prefix/$pbc_path";
+                %res<key>    := "$prefix$mo_path";
+                %res<source> := "$prefix$mo_path";
+                if $have_pir && nqp::stat("$prefix$pir_path", 7) >= nqp::stat("$prefix$mo_path", 7) {
+                    %res<load> := "$prefix$pir_path";
+                } elsif $have_pbc && nqp::stat("$prefix$pbc_path", 7) >= nqp::stat("$prefix$mo_path", 7) {
+                    %res<load> := "$prefix$pbc_path";
                 }
                 last;
             } elsif $have_pir {
-                %res<key>  := "$prefix/$pir_path";
-                %res<load> := "$prefix/$pir_path";
+                %res<key>  := "$prefix$pir_path";
+                %res<load> := "$prefix$pir_path";
             } elsif $have_pbc {
-                %res<key>  := "$prefix/$pbc_path";
-                %res<load> := "$prefix/$pbc_path";
+                %res<key>  := "$prefix$pbc_path";
+                %res<load> := "$prefix$pbc_path";
+            } elsif $is_base_dir {
+                %res<key>     := "$prefix$base_path";
+                %res<sources> := read_dir_sources("$prefix$base_path");
             }
         }
 
@@ -50,45 +72,63 @@ class MO::ModuleLoader {
         $source;
     }
 
+    my method compile_source($file) {
+        my $*CTX := nqp::null();
+        my $*CTXSAVE := self;
+        my $?FILES := $file;
+        my $source := self.load_source($file);
+        my $eval := nqp::getcomp('mo').compile($source);
+        $eval();
+        $*CTX;
+    }
+
+    method create_module() {
+        # MO::ModuleHOW.new_type(:name<Module>);
+        nqp::knowhow().new_type(:name<Module>);
+    }
+
     method load_module($module_name, *@GLOBALish, :$line, :$file, :%chosen) {
         unless %chosen {
-            %chosen := self.locate_module($module_name, ['t/mo/']);
+            %chosen := self.locate_module($module_name, ['t/mo/', 'examples/']);
         }
 
-        my $module_ctx;
+        my @module_ctx;
         if nqp::defined(%modules_loaded{%chosen<key>}) {
-            $module_ctx := %modules_loaded{%chosen<key>};
+            @module_ctx := %modules_loaded{%chosen<key>};
         } else {
-            my $*CTX := nqp::null();
-            my $*CTXSAVE := self;
             if %chosen<load> {
+                my $*CTX := nqp::null();
+                my $*CTXSAVE := self;
                 nqp::loadbytecode(%chosen<load>);
+                @module_ctx.push( $*CTX );
             } elsif %chosen<source> {
-                my $?FILES := %chosen<source>;
-                my $source := self.load_source(%chosen<source>);
-                my $eval := nqp::getcomp('mo').compile($source);
-                $eval();
+                @module_ctx.push( self.compile_source(%chosen<source>) );
+            } elsif %chosen<sources> {
+                @module_ctx.push( self.compile_source($_) ) for %chosen<sources>;
             } else {
                 nqp::die("missing module $module_name");
             }
-            %modules_loaded{%chosen<key>} := $module_ctx := $*CTX;
+            %modules_loaded{%chosen<key>} := @module_ctx;
         }
 
-        if nqp::defined($module_ctx) {
-            # Merge any globals.
-            my $unit := nqp::ctxlexpad($module_ctx);
-            if +@GLOBALish {
-                # #for $unit<GLOBAL>.WHO {
-                # for $unit<EXPORT>.WHO {
-                #     nqp::say('import: '~$_.key~' from '~$module_name);
-                # }
-                my @name := nqp::split('::', $module_name);
-                my $final := @name[+@name - 1];
-                @GLOBALish[0].WHO{$final} := $unit<EXPORT>;
+        my int $mn := +@module_ctx;
+        if $mn && +@GLOBALish {
+            # Make a symbole for the loaded module.
+            my @name := nqp::split('::', $module_name);
+            my $final := @name[+@name - 1];
+            my $module := self.create_module; # create a new container for symbols
+            my int $i := 0;
+            while $i < $mn {
+                my $unit := nqp::ctxlexpad(@module_ctx[$i]);
+                for $unit<EXPORT>.WHO {
+                    $module.WHO{$_.key} := $_.value;
+                }
+                $i := $i + 1;
             }
+            @GLOBALish[0].WHO{$final} := $module;
         }
 
-        $module_ctx;
+        @module_ctx;
     }
 
     method ctxsave() {

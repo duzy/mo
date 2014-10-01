@@ -156,6 +156,7 @@ class MO::World is HLL::World {
                 return QAST::Var.new( :node($/), :scope<associative>,
                     $who, QAST::SVal.new( :value($final_name) ) );
             }
+            @name.push($final_name); # restore the @name for correct panic.
         }
 
         $/.CURSOR.panic('undefined symbol '~nqp::join('::', @name)) if $panic;
@@ -172,7 +173,7 @@ class MO::World is HLL::World {
     # Loads a module immediately, and also makes sure we load it
     # during the deserialization.
     method load_module($/, $module_name, $GLOBALish) {
-        my $module := nqp::gethllsym('mo', 'ModuleLoader').load_module(
+        my @module := nqp::gethllsym('mo', 'ModuleLoader').load_module(
             $module_name, $GLOBALish);
 
         # Make sure we do the loading during deserialization.
@@ -202,10 +203,17 @@ class MO::World is HLL::World {
             )));
         }
 
-        $/.CURSOR.panic("missing module $module_name")
-            unless nqp::defined($module);
+        $/.CURSOR.panic("missing module $module_name") unless +@module;
 
-        nqp::ctxlexpad($module);
+        my @result;
+        if +@module {
+            ## add the created object to sc
+            my $final := nqp::split('::', $module_name).pop;
+            self.add_object($GLOBALish.WHO{$final}) if nqp::defined($GLOBALish);
+
+            @result.push(nqp::ctxlexpad($_)) for @module;
+        }
+        @result
     }
 
     # Creates a meta-object for a package, adds it to the root objects and

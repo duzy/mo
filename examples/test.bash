@@ -46,7 +46,7 @@ for mo in \
 done
 
 for mo in \
-    proto \
+    proto-simple \
     proto-template \
     ; do
     echo -n "test: $SRCDIR/$mo.mo.."
