@@ -17,3 +17,4 @@ function run() {
 #run $SRCDIR/proto-template.mo
 
 run $SRCDIR/proto-run.mo
+run $SRCDIR/many-run.mo

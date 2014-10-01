@@ -104,7 +104,15 @@ class MO::ModuleLoader {
             } elsif %chosen<source> {
                 @module_ctx.push( self.compile_source(%chosen<source>) );
             } elsif %chosen<sources> {
-                @module_ctx.push( self.compile_source($_) ) for %chosen<sources>;
+                for %chosen<sources> {
+                    if nqp::defined(%modules_loaded{$_}) {
+                        @module_ctx.push( $_ ) for %modules_loaded{$_};
+                    } else {
+                        my $ctx := self.compile_source($_);
+                        @module_ctx.push( $ctx );
+                        %modules_loaded{%chosen<key>} := nqp::list($ctx);
+                    }
+                }
             } else {
                 nqp::die("missing module $module_name");
             }
