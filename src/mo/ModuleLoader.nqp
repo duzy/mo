@@ -3,6 +3,11 @@ class MO::ModuleLoader {
     my %modules_loaded;
     my @modules_loading;
 
+    method get_prefixes() {
+        my @prefixes := nqp::clone($*SEARCHPATHS);
+        @prefixes;
+    }
+
     sub pathconcat($base, $leaf) {
         $base ~ '/' ~ $leaf;
     }
@@ -27,7 +32,7 @@ class MO::ModuleLoader {
         my %res;
 
         for @prefixes -> $prefix {
-            $prefix := "$prefix/" unless $prefix ~~ / \/$ /;
+            $prefix := "$prefix/" unless $prefix[nqp::chars($prefix)-1] eq '/'; #$prefix ~~ / \/$ /;
             my $have_pir  := nqp::stat("$prefix$pir_path",  nqp::const::STAT_EXISTS);
             my $have_pbc  := nqp::stat("$prefix$pbc_path",  nqp::const::STAT_EXISTS);
             my $have_mo   := nqp::stat("$prefix$mo_path",   nqp::const::STAT_EXISTS);
@@ -90,7 +95,7 @@ class MO::ModuleLoader {
 
     method load_module($module_name, *@GLOBALish, :$line, :$file, :%chosen) {
         unless %chosen {
-            %chosen := self.locate_module($module_name, ['t/mo/', 'examples/']);
+            %chosen := self.locate_module($module_name, self.get_prefixes);
         }
 
         for @modules_loading {

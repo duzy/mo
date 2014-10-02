@@ -13,35 +13,42 @@ class MO::Compiler is HLL::Compiler {
 
         self.usage($program-name) if %adverbs<help> || %adverbs<h>;
 
-        my @datafiles := nqp::list();
-        my @codefiles := nqp::list();
+        my $cwd := nqp::cwd;
+        my @search_paths;
+        my @datafiles;
+        my @codefiles;
         for @a {
             if $_ ~~ / .*\.[xml|json]$  / {
                 @datafiles.push($_);
             } elsif $_ ~~ / .*\.[mo]$  / {
+                my int $i := nqp::rindex($_, '/');
+                if $i == 0 {
+                    @search_paths.push('/') if $cwd ne '/';
+                } elsif 0 < $i {
+                    @search_paths.push("$cwd/" ~ nqp::substr($_, 0, $i+1));
+                }
                 @codefiles.push($_);
             } else {
                 self.panic('Unknown source '~$_);
             }
         }
 
+        @search_paths.push("$cwd/");
+
         # self.command_eval_data(|@datafiles, :encoding('utf8'));
         # self.command_eval_code(|@codefiles, |%adverbs);
 
+        my $*SEARCHPATHS := @search_paths;
         my $*DATAFILES := @datafiles;
         self.command_eval(|@codefiles, |%adverbs)
     }
 
     method command_eval_data(*@a, *%adverbs) {
         my $data := self.command_eval(|@a, |%adverbs);
-        # nqp::say('W: '~$*W);
-        # nqp::say('eval: '~$data);
     }
 
     method command_eval_code(*@a, *%adverbs) {
         my $res := self.command_eval(|@a, |%adverbs);
-        # nqp::say('W: '~$*W);
-        # nqp::say('eval: '~$res);
     }
 }
 
