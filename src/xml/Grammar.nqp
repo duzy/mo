@@ -1,17 +1,19 @@
 use NQPHLL;
 
 grammar XML::Grammar is HLL::Grammar {
-    method TOP() {
+    method TOP(:$end?) {
         my $source_id := nqp::sha1(self.target() ~ nqp::time_n());
         my $file := nqp::getlexdyn('$?FILES');
         my $*W := nqp::isnull($file) ??
             XML::World.new(:handle($source_id)) !!
             XML::World.new(:handle($source_id), :description($file));
-        self.go;
+
+        self.go(:$end)
     }
 
-    token go {
-        ^<declaration>?\s* ~ $ <markup_content>* || <.panic: 'Syntax Error!'>
+    token go(:$end?) {
+        <declaration>?\s* ~ $
+        <markup_content>* || <.panic: 'syntax error'>
     }
 
     token declaration {
@@ -41,7 +43,7 @@ grammar XML::Grammar is HLL::Grammar {
     # Names cannot contain spaces
     token tag_name {
         [<ns=.ident>':']? $<ident>=[
-            [<![0..9]>\S]
+            [<!punct><!digit>\S]
             [<![<>?/]>\S]*
         ]
     }

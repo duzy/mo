@@ -194,6 +194,10 @@ grammar MO::Grammar is HLL::Grammar {
     token kw:sym<use>   { <sym> }
     token kw:sym<var>   { <sym> }
     token kw:sym<return>{ <sym> }
+    token kw:sym<as>    { <sym> }
+    token kw:sym<template>{ <sym> }
+    token kw:sym<lang> { <sym> }
+    token kw:sym<class> { <sym> }
     token kw:sym<method>{ <sym> }
 
     token keyword { <kw> <!ww> }
@@ -339,8 +343,11 @@ grammar MO::Grammar is HLL::Grammar {
     proto rule control { <...> }
 
     rule control:sym<cond> {
-        [ $<op>=['if'|'unless']\s <EXPR> ] ~ 'end'
-        [ <statements> <else>? ]
+        $<op>=['if'|'unless']\s <EXPR>
+        [
+        | '{' ~ '}' <statements> <else>?
+        | <?> ~ 'end' [ <statements> <else>? ]
+        ]
     }
 
     rule control:sym<loop> {
@@ -356,8 +363,8 @@ grammar MO::Grammar is HLL::Grammar {
     }
 
     proto rule else { <...> }
-    rule else:sym<if> { [ 'elsif'\s ] ~ <else>? [ <EXPR> <statements> ] }
-    rule else:sym< > { 'else'\s <statements> }
+    rule else:sym<if> { 'elsif'\s <EXPR> ~ <else>? [ '{' ~ '}' <statements> | <statements> ] }
+    rule else:sym< > { 'else'\s [ '{' ~ '}' <statements> | <statements> ] }
 
     rule block { '{' ~ '}' <newscope:''> }
 
@@ -422,7 +429,9 @@ grammar MO::Grammar is HLL::Grammar {
     token template_atom:sym<()> { '$(' ~ ')' <EXPR> }
     token template_atom:sym<{}> { '${' ~ '}' <statements> }
     token template_atom:sym<^^> { <template_statement> }
-    token template_atom:sym<.>  { [<!before <.template_stopper>|<.tsp>><![$]>.]+ }
+    token template_atom:sym<.>  { <template_char_atom>+ }
+
+    token template_char_atom { <!before <.template_stopper>|<.tsp>><![$]>. }
 
     proto rule template_statement { <...> }
     token template_statement:sym< > { <.tsp>\n }
@@ -493,5 +502,13 @@ grammar MO::Grammar is HLL::Grammar {
         :my $*IN_DECL;
         { $*IN_DECL := 'member'; }
         <variable> <initializer>? ';'? { $*IN_DECL := 0; }
+    }
+
+    rule definition:sym<lang> {
+        :my $*IN_DECL; { $*IN_DECL := 'compile'; }
+        <sym>\s <langname=.ident> ['as'\s [<variable>|<name=.ident>]]?
+        #:my $lang; { $lang := ~$<langname> }
+        #<template_starter> <langbody=.LANG($lang,'TOP')> <template_stopper>
+        <template_starter> ~ <template_stopper> $<source>=[<template_char_atom>*]
     }
 }

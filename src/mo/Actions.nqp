@@ -190,6 +190,8 @@ class MO::Actions is HLL::Actions {
             # null, nothing made
         } elsif $*IN_DECL eq 'member' {
             # null, nothing made
+        } elsif $*IN_DECL eq 'compile' {
+            # null, nothing made
         } elsif ~$<twigil> eq '.' {
             my $class := $*W.get_package;
             my $how := $class.HOW;
@@ -508,7 +510,7 @@ class MO::Actions is HLL::Actions {
     method def_block:sym<{ }>($/) { make $<statements>.made; }
     method def_block:sym<end>($/) { make $<statements>.made; }
 
-    method declaration:sym<var>($/) {
+    method declaration:sym<var>($/, :$init?) {
         unless $<variable><name> {
             $/.CURSOR.panic('variable $ already defined');
         }
@@ -675,8 +677,8 @@ class MO::Actions is HLL::Actions {
     }
 
     method definition:sym<def>($/) {
-        my $scope := $*W.pop_scope();
         my $name := ~$<name>;
+        my $scope := $*W.pop_scope();
         $scope.name($name);
         $scope[0].push( wrap_return_handler($scope, $<def_block>.made) );
 
@@ -752,6 +754,41 @@ class MO::Actions is HLL::Actions {
             $ctor[0].push( QAST::Op.new( :node($/), :op<bindkey>,
                 QAST::Op.new( :op<who>, QAST::WVal.new( :value($class) ) ),
                 QAST::SVal.new( :value($name) ), $initializer ) );
+        }
+    }
+
+    method definition:sym<lang>($/) {
+        my $langname := ~$<langname>;
+        my $lang := %*LANG{$langname};
+        my $actions := %*LANG{$langname~'-actions'};
+        my $body := $lang.parse(~$<source>, :$actions).made;
+
+        if $<variable> {
+            self.'declaration:sym<var>'($/, :init($body));
+        } elsif $<name> {
+            my $scope := $*W.current_scope();
+            my $name := ~$<name>;
+
+            my $package := $*W.get_package($scope);
+            $*W.install_package_routine($package, $name, $body);
+
+            $scope.symbol('&' ~ $name, :scope<lexical>, :declared(1) );
+            $scope[0].push( QAST::Op.new( :op<bind>,
+                QAST::Var.new( :name('&' ~ $name), :scope<lexical>, :decl<var> ),
+                $body
+            ) );
+
+            if $*W.is_export_name($name) {
+                $scope[0].push( QAST::Op.new( :node($/), :op<bindkey>,
+                    QAST::Var.new( :name<EXPORT.WHO>, :scope<lexical> ),
+                    QAST::SVal.new( :value($name) ),
+                    QAST::Var.new( :name('&' ~ $name), :scope<lexical> ),
+                ) );
+            }
+
+            make QAST::Var.new( :name('&' ~ $name), :scope<lexical> );
+        } else {
+            make QAST::Op.new( :op<call>, $body );
         }
     }
 }

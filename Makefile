@@ -10,7 +10,9 @@ COMMON_SOURCES := \
   src/core/Variable.nqp \
   src/core/Routine.nqp \
   src/how/NodeHOW.nqp \
+  src/how/Node.nqp \
   src/how/FilesystemNodeHOW.nqp \
+  src/how/FilesystemNode.nqp \
   src/how/AttributeHOW.nqp \
   src/how/ClassHOW.nqp \
   src/how/TemplateHOW.nqp \

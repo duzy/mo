@@ -9,33 +9,35 @@ knowhow MO::NodeHOW {
     # 'name'            a named child
     #
 
+    sub method_name($node) { nqp::getattr($node, $type, '') }
+    sub method_type($node) { nqp::getattr($node, $type, '?') }
+    sub method_text($node) { nqp::join('', nqp::getattr($node, $type, '*')) }
+    sub method_attributes($node) { nqp::getattr($node, $type, '.*') }
+    sub method_get($node, $name) { nqp::getattr($node, $type, '.'~$name) }
+    sub method_set($node, $name, $value) { MO::NodeHOW.node_bindattr($node, $name, $value) }
+    sub method_count($node, $name = nqp::null()) { +$node.children($name) }
+    sub method_parent($node) { nqp::getattr($node, $type, '^') }
+    sub method_children($node, $name = nqp::null()) {
+        nqp::getattr($node, $type, nqp::isnull($name) ?? '*' !! $name)
+    }
+
+    method methods() {
+        my %methods;
+        %methods<name>       := &method_name;
+        %methods<type>       := &method_type;
+        %methods<text>       := &method_text;
+        %methods<attributes> := &method_attributes;
+        %methods<get>        := &method_get;
+        %methods<set>        := &method_set;
+        %methods<count>      := &method_count;
+        %methods<parent>     := &method_parent;
+        %methods<children>   := &method_children;
+        %methods;
+    }
+
     method type() {
         unless nqp::defined($type) {
-            my %methods;
-            %methods<name> := -> $node { nqp::getattr($node, $type, ''); };
-            %methods<type> := -> $node { nqp::getattr($node, $type, '?'); };
-            %methods<text> := -> $node {
-                nqp::join('', nqp::getattr($node, $type, '*'));
-            };
-            %methods<attributes> := -> $node {
-                nqp::getattr($node, $type, '.*');
-            };
-            %methods<get> := -> $node, $name {
-                nqp::getattr($node, $type, '.'~$name);
-            };
-            %methods<set> := -> $node, $name, $value {
-                MO::NodeHOW.node_bindattr($node, $name, $value);
-            };
-            %methods<parent> := -> $node {
-                nqp::getattr($node, $type, '^');
-            };
-            %methods<count> := -> $node, $name = nqp::null() {
-                +nqp::getattr($node, $type, nqp::isnull($name) ?? '*' !! $name);
-            };
-            %methods<children> := -> $node, $name = nqp::null() {
-                nqp::getattr($node, $type, nqp::isnull($name) ?? '*' !! $name);
-            };
-
+            my %methods := self.methods();
             my $repr := 'HashAttrStore'; # P6opaque
             my $metaclass := nqp::create(self);
             $type := nqp::setwho(nqp::newtype($metaclass, $repr), {});

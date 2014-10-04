@@ -24,12 +24,16 @@ class MO::World is HLL::World {
             }
         }
 
-        my @models := [];
+        my $default_compiler := HLL::Compiler.new(); # nqp::getcomp('mo');
+        my @models;
         for @files {
             my $source := MO::ModuleLoader.load_source($_);
             if / .*\.xml$  / {
-                my $compiler := nqp::getcomp('xml');
-                my $code := $compiler.compile($source);
+                my $lang := %*LANG<XML>;
+                my $actions := %*LANG<XML-actions>;
+                nqp::die("languge 'xml' not registered for $_") if nqp::isnull($lang);
+                my $compiler := nqp::getcomp('xml') // $default_compiler;
+                my $code := $compiler.compile($lang.parse($source, :$actions).made, :from<ast>);
                 @models.push($code());
             } else {
                 nqp::die("unsupported data file $_");
