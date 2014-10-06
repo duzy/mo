@@ -6,6 +6,27 @@ class MO::Actions is HLL::Actions {
         $scope
     }
 
+    my sub fixup_block_variables($block, $count) {
+        $block[0].unshift( QAST::Op.new( :op<bind>,
+            QAST::Var.new( :scope<lexical>, :decl<var>, :name<MODEL> ),
+            QAST::WVal.new( :value(MO::Model.get) ),
+        ) );
+    }
+
+    my sub fixup_variables($node) {
+        my int $count := 0;
+        if nqp::istype($node, QAST::Var) {
+            $count := 1 if $node.name eq 'MODEL';
+        } else {
+            $count := $count + fixup_variables($_) for $node.list;
+            if nqp::istype($node, QAST::Block) {
+                fixup_block_variables($node, $count) if 0 < $count;
+                $count := 0; # reset counter to discard in outer 
+            }
+        }
+        $count
+    }
+
     method term:sym<value>($/)    { make $<value>.made; $/.prune; }
     method term:sym<variable>($/) { make $<variable>.made; $/.prune; }
     method term:sym<name>($/) {
@@ -81,8 +102,7 @@ class MO::Actions is HLL::Actions {
 
     method term:sym<str>($/) {
         my $template := $*W.symbol_ast($/, nqp::split('::', ~$<name>), 1);
-        my $call := QAST::Op.new( :node($/), :op<callmethod>, :name<!str>,
-            $template, QAST::Var.new( :scope<lexical>, :name<MODEL> ) );
+        my $call := QAST::Op.new( :node($/), :op<callmethod>, :name<!str>, $template );
 
         if $<EXPR> {
             $call.push( $<EXPR>.made );
@@ -106,7 +126,7 @@ class MO::Actions is HLL::Actions {
     }
 
     method circumfix:sym«< >»($/) {
-        make QAST::Op.new( :op<callmethod>, :name<open>,
+        make QAST::Op.new( :op<callmethod>, :name<get>,
             QAST::WVal.new( :value(MO::FilesystemNodeHOW) ), $<EXPR>.made );
         #$/.prune;
     }
@@ -358,10 +378,8 @@ class MO::Actions is HLL::Actions {
 
     method prog($/) {
         my $init := QAST::Stmts.new(
-            QAST::Op.new( :op<bind>,
-                QAST::Var.new( :scope<lexical>, :decl<var>, :name<MODEL> ),
-                QAST::Op.new( :op<getcurhllsym>, QAST::SVal.new( :value<MODEL> ) ),
-            ),
+            QAST::Var.new( :scope<lexical>, :name<@ARGS>, :decl<param>, :slurpy(1) ),
+
             QAST::Op.new( :op<bind>,
                 QAST::Var.new( :scope<lexical>, :decl<var>, :name<GLOBAL> ),
                 QAST::Op.new( :op<getcurhllsym>, QAST::SVal.new( :value<GLOBAL> ) ),
@@ -392,6 +410,8 @@ class MO::Actions is HLL::Actions {
         $scope.unshift( $init );
         $scope.push( $<statements>.made );
 
+        fixup_variables($scope);
+
         my $compunit := QAST::CompUnit.new(
             :hll('mo'),
 
@@ -413,7 +433,9 @@ class MO::Actions is HLL::Actions {
             # have occurred.
             :load(QAST::Op.new(:op<call>, QAST::BVal.new( :value($scope) ))),
 
-            :main(QAST::Op.new(:op<call>, QAST::BVal.new( :value($scope) ))),
+            :main(QAST::Op.new(:op<call>, QAST::BVal.new( :value($scope) ),
+                QAST::Var.new( :name<ARGS>, :scope<local>, :decl<param>, :slurpy(1), :flat(1) )
+            )),
 
             # Finally, the outer block, which in turn contains all of the
             # other program elements.
@@ -567,6 +589,26 @@ class MO::Actions is HLL::Actions {
     method declaration:sym<use>($/) {
         my @lexpads := $*W.load_module($/, ~$<name>, $*GLOBALish);
         make QAST::Stmts.new( :node($/) );
+    }
+
+    method declaration:sym<rule>($/) {
+        my $stmts := QAST::Stmts.new( :node($/) );
+        my $target := QAST::Var.new(:scope<lexical>, :name(QAST::Node.unique('rule_target')));
+        my $how := QAST::WVal.new( :value(MO::FilesystemNodeHOW) );
+        my $build := $*W.pop_scope;
+        $build.name( QAST::Node.unique('rule') );
+        $build.push( $<statements>.made );
+        $stmts.push( QAST::Var.new(:scope<lexical>, :decl<var>, :name($target.name)) );
+        $stmts.push( $build );
+        for $<targets> {
+            $stmts.push( QAST::Op.new( :op<bind>, $target,
+                QAST::Op.new( :op<callmethod>, :name<get>,  $how, $_.made ) ) );
+            $stmts.push( QAST::Op.new( :op<callmethod>, :name<install_build_code>, $target,
+                QAST::BVal.new( :value( $build ) ) ) );
+            $stmts.push( QAST::Op.new( :op<callmethod>, :name<depend>, $target, $_.made ) )
+                for $<prerequisites> ;
+        }
+        make $stmts;
     }
 
     method definition:sym<template>($/) {

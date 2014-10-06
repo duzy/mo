@@ -292,16 +292,6 @@ grammar MO::Grammar is HLL::Grammar {
             $*W.add_fixup_package($*GLOBALish, 'GLOBAL');
             $*W.add_fixup_package($*EXPORT, 'EXPORT');
             $*W.add_fixup(QAST::Stmts.new(
-                QAST::Op.new( :op<bind>,
-                    QAST::Var.new( :scope<local>, :decl<var>, :name<MODEL> ),
-                    QAST::Op.new( :op<callmethod>, :name<get>,
-                        QAST::WVal.new( :value(MO::Model) ),
-                    )
-                ),
-                QAST::Op.new( :op<bindcurhllsym>,
-                    QAST::SVal.new( :value('MODEL') ),
-                    QAST::Var.new( :scope<local>, :name<MODEL> ),
-                ),
                 QAST::Op.new( :op<bindcurhllsym>,
                     QAST::SVal.new( :value('GLOBAL') ),
                     QAST::Var.new( :scope<local>, :name<GLOBAL> )
@@ -313,6 +303,7 @@ grammar MO::Grammar is HLL::Grammar {
             ));
 
             $*UNIT := self.push_scope('unit');
+            $*UNIT.symbol('@ARGS', :scope<lexical>, :decl<param>);
             $*UNIT.symbol('$_', :scope<lexical>, :decl<var>);
             $*UNIT.annotate('package', $*GLOBALish);
         }
@@ -398,6 +389,15 @@ grammar MO::Grammar is HLL::Grammar {
         <name> ';'? { $*IN_DECL := 0; }
     }
 
+    rule declaration:sym<rule> {
+        <targets=.quote>+ ':' <prerequisites=.quote>*
+        '{' ~ '}'
+        [
+            { self.push_scope( ~$<sym>, [ '$_', '@_' ] ) }
+            <statements>
+        ]
+    }
+
     proto rule definition { <...> }
 
     rule definition:sym<template> {
@@ -413,8 +413,7 @@ grammar MO::Grammar is HLL::Grammar {
                 $*W.install_package_symbol($outerpackage, $name, $type);
                 $*W.install_package_symbol($*EXPORT, $name, $type) if $*W.is_export_name($name);
 
-                # also need to pass in the MODEL
-                my $scope := self.push_scope( ~$<sym>, [ 'me', 'MODEL', '$_' ] );
+                my $scope := self.push_scope( ~$<sym>, [ 'me', '$_' ] );
                 $scope.annotate('package', $type);
             }
             <template_body>

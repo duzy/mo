@@ -1,4 +1,4 @@
-
+say(@ARGS[0]~' '~@ARGS[1]);
 
 template cmd
 ------------

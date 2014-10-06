@@ -19,10 +19,13 @@ function run() {
 
 if true ; then
     run $SRCDIR/00 -v
-    exit
+    if [[ "$TESTALL" != '1' ]]; then
+        exit
+    fi
 fi
 
 run $SRCDIR/00-say
+run $SRCDIR/00-args
 run $SRCDIR/00-expression
 run $SRCDIR/01-control-cond
 run $SRCDIR/01-control-cond-expr
@@ -51,6 +54,9 @@ run $SRCDIR/41-io-pipe
 run $SRCDIR/41-io-print
 run $SRCDIR/41-io-shell
 run $SRCDIR/41-io-system
+run $SRCDIR/44-filesystem-make
+run $SRCDIR/44-filesystem-make-rule
+run $SRCDIR/44-filesystem-make-rule-2
 run $SRCDIR/50-funs
 run $SRCDIR/50-fun-returns
 run $SRCDIR/50-fun-lexical

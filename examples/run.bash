@@ -18,4 +18,6 @@ function run() {
 #run $SRCDIR/proto-run.mo
 #run $SRCDIR/many-run.mo
 
-run $SRCDIR/a.mo
+run $SRCDIR/a.mo test
+
+parrot -Igen -Lgen gen/mo.pbc --target=pir $SRCDIR/a.mo > $SRCDIR/a.pir

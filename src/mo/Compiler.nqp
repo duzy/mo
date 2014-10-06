@@ -17,6 +17,8 @@ class MO::Compiler is HLL::Compiler {
         my @search_paths;
         my @datafiles;
         my @codefiles;
+
+        @args := nqp::list();
         for @a {
             if $_ ~~ / .*\.[xml|json]$  / {
                 @datafiles.push($_);
@@ -29,26 +31,19 @@ class MO::Compiler is HLL::Compiler {
                 }
                 @codefiles.push($_);
             } else {
-                self.panic('Unknown source '~$_);
+                @args.push($_);
             }
         }
 
-        @search_paths.push("$cwd/");
+        @a := nqp::list();
+        @a.push($_) for @codefiles;
+        @a.push($_) for @args;
 
-        # self.command_eval_data(|@datafiles, :encoding('utf8'));
-        # self.command_eval_code(|@codefiles, |%adverbs);
+        @search_paths.push("$cwd/");
 
         my $*SEARCHPATHS := @search_paths;
         my $*DATAFILES := @datafiles;
-        self.command_eval(|@codefiles, |%adverbs)
-    }
-
-    method command_eval_data(*@a, *%adverbs) {
-        my $data := self.command_eval(|@a, |%adverbs);
-    }
-
-    method command_eval_code(*@a, *%adverbs) {
-        my $res := self.command_eval(|@a, |%adverbs);
+        self.command_eval(|@a, |%adverbs)
     }
 }
 

@@ -1,4 +1,5 @@
 knowhow MO::FilesystemNodeHOW {
+    my %cache;
     my $type;
 
     my sub method_set($node, $name, $value) { nqp::die('filesystem nodes are readonly') }
@@ -19,27 +20,52 @@ knowhow MO::FilesystemNodeHOW {
         }
         $child;
     }
-    my sub method_exists($node) { $node.get('EXISTS') }
+    my sub method_exists($node) { nqp::stat($node.get('PATH'), nqp::const::STAT_EXISTS) }
+    my sub method_modifytime($node) { nqp::stat($node.get('PATH'), nqp::const::STAT_MODIFYTIME) }
     my sub method_depends($node) { nqp::getattr($node, $type, '@depends') }
     my sub method_depend($node, $path) {
         my @depends := method_depends($node);
         my $dep;
         if nqp::isstr($path) {
-            $dep := MO::FilesystemNodeHOW.open(:path($path));
+            $dep := MO::FilesystemNodeHOW.get(:path($path));
         } elsif nqp::can($node, 'make') {
             $dep := $path;
         } else {
             nqp::die("unsupported dependency $path");
         }
+        @depends := nqp::list() unless nqp::defined(@depends);
         @depends.push($dep);
         nqp::bindattr($node, $type, '@depends', @depends);
-    }
-    my sub method_updated($node) {
-        
+        $dep
     }
     my sub method_make($node) {
+        my int $updated := 0;
+
         my @depends := method_depends($node);
-        
+        if nqp::defined(@depends) {
+            for @depends {
+                my int $made := method_make($_);
+                $made := 1 if $made == 0 && newer_than($_, $node);
+                $updated := $updated + $made;
+            }
+        }
+
+        my $build := nqp::getattr($node, $type, '&build');
+        if nqp::isinvokable($build) {
+            if !method_exists($node) || 0 < $updated {
+                my $status := $build($node, @depends);
+                if method_exists($node) {
+                    $updated := $updated + 1;
+                }
+            }
+        }
+
+        $updated;
+    }
+    my sub method_install_build_code($node, $code) {
+        my $prevcode := nqp::getattr($node, $type, '&build');
+        nqp::bindattr($node, $type, '&build', $code);
+        $prevcode;
     }
 
     method methods() {
@@ -48,7 +74,9 @@ knowhow MO::FilesystemNodeHOW {
         %methods<children> := &method_children;
         %methods<exists>   := &method_exists;
         %methods<depend>   := &method_depend;
+        %methods<depends>  := &method_depends;
         %methods<make>     := &method_make;
+        %methods<install_build_code> := &method_install_build_code;
         %methods;
     }
 
@@ -63,6 +91,12 @@ knowhow MO::FilesystemNodeHOW {
         $type;
     }
 
+    sub newer_than($node1, $node2) {
+        my int $t1 := method_exists($node1) ?? method_modifytime($node1) !! 0;
+        my int $t2 := method_exists($node2) ?? method_modifytime($node2) !! 0;
+        $t1 > $t2;
+    }
+
     sub pathname($path) {
         my $i := nqp::rindex($path, '/');
         my $name := nqp::substr($path, $i+1);
@@ -74,11 +108,7 @@ knowhow MO::FilesystemNodeHOW {
     }
 
     sub pathabs($path) {
-        if $path[0] eq '/' {
-            $path;
-        } else {
-            pathconcat(nqp::cwd, $path);
-        }
+        $path[0] eq '/' ?? $path !! pathconcat(nqp::cwd, $path)
     }
 
     method open(:$path) {
@@ -111,5 +141,12 @@ knowhow MO::FilesystemNodeHOW {
             nqp::bindattr($node, $type, '.PLATFORM_BLOCKS',     nqp::stat($path, nqp::const::STAT_PLATFORM_BLOCKS));
         }
         $node;
+    }
+
+    method get(:$path) {
+        my $abspath := pathabs($path);
+        my $node := %cache{$abspath};
+        %cache{$abspath} := $node := self.open(:$path) unless nqp::defined($node);
+        $node
     }
 }

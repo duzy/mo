@@ -49,17 +49,19 @@ class MO::World is HLL::World {
         @!models := @models;
 
         MO::Model.init(@models[0]);
+        self.add_object(MO::Model.get());
     }
 
     method push_scope($/) {
         my $scope := QAST::Block.new( QAST::Stmts.new(), :node($/) );
         $scope.annotate('outer', @!scopes[+@!scopes - 1]) if +@!scopes;
         @!scopes[+@!scopes] := $scope;
-        $scope;
+        $scope
     }
 
     method pop_scope() {
-        @!scopes.pop();
+        my $scope := @!scopes.pop();
+        $scope
     }
 
     method current_scope() {
@@ -450,6 +452,7 @@ MO::World.add_builtin_code('shell', -> $s, $m, $e { nqp::shell($s, $m, $e) });
 MO::World.add_builtin_code('system', -> $s {
     nqp::shell($s, nqp::cwd, nqp::getenvhash())
 });
+MO::World.add_builtin_code('cwd', -> { nqp::cwd });
 
 MO::World.add_builtin_code('isnull', -> $a { nqp::isnull($a) });
 MO::World.add_builtin_code('defined', -> $a { nqp::defined($a) });
