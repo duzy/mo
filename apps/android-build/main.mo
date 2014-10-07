@@ -6,9 +6,9 @@ var $manifest = <"$path/AndroidManifest.xml">;
 
 say($manifest.name()~' '~$manifest.PATH);
 
-"$path/bin/a.apk": "$path/AndroidManifest.xml" {
+"$path/bin/a.apk": "$path/AndroidManifest.xml" { 
 lang bash
 -----------
-try something
+echo try something
 --------end
 }

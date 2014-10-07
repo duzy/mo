@@ -210,7 +210,7 @@ class MO::Actions is HLL::Actions {
             # null, nothing made
         } elsif $*IN_DECL eq 'member' {
             # null, nothing made
-        } elsif $*IN_DECL eq 'compile' {
+        } elsif $*IN_DECL eq 'lang' {
             # null, nothing made
         } elsif ~$<twigil> eq '.' {
             my $class := $*W.get_package;
@@ -551,7 +551,7 @@ class MO::Actions is HLL::Actions {
         }
 
         my $initializer := $<initializer> ?? $<initializer>.made
-            !! QAST::Op.new( :op<null> );
+            !! nqp::defined($init) ?? $init !! QAST::Op.new( :op<null> );
 
         if nqp::defined($who) {
             make QAST::Stmts.new(
@@ -782,11 +782,20 @@ class MO::Actions is HLL::Actions {
         }
 
         my $langcode := QAST::Block.new( :node($/),
-            QAST::Op.new( :op<call>,
-                QAST::WVal.new(:value($*W.interpreter($langname))),
-                $<source>.made,
-            )
+            QAST::Op.new( :op<bind>,
+                QAST::Var.new( :name<result>, :scope<local>, :decl<var> ),
+                QAST::Op.new( :op<call>,
+                    QAST::WVal.new(:value($*W.interpreter($langname))),
+                    $<source>.made,
+                )
+            ),
         );
+
+        for $<lang_modifier> {
+            $langcode.push($_.made) if nqp::defined($_.made);
+        }
+
+        $langcode.push(QAST::Var.new( :name<result>, :scope<local> ));
 
         if $<variable> {
             self.'declaration:sym<var>'($/, :init($langcode));
@@ -815,6 +824,16 @@ class MO::Actions is HLL::Actions {
         } else {
             make QAST::Op.new( :op<call>, $langcode );
         }
+    }
+
+    method lang_modifier:sym<:stdout>($/) {
+        self.'declaration:sym<var>'($/);
+        my $stmts := $/.made;
+        my $var := $stmts[+$stmts.list-1];
+        my $scope := $*W.current_scope();
+        $scope.push($stmts);
+say($var);
+        make QAST::Stmts.new( :node($/) );
     }
 
     method lang_source:sym<raw>($/) { make QAST::SVal.new(:value(~$/)); }

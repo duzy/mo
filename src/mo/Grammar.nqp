@@ -502,12 +502,17 @@ grammar MO::Grammar is HLL::Grammar {
     }
 
     rule definition:sym<lang> {
-        :my $*IN_DECL; { $*IN_DECL := 'compile'; }
-        :my $*escape := 0;
-        <sym>\s <langname=.ident> [':escape'{ $*escape := 1 }]?
+        :my $*IN_DECL;
+        :my $*escape;
+        { $*IN_DECL := 'lang'; $*escape := 0; }
+        <sym>\s <langname=.ident> <lang_modifier>*
         ['as'\s [<variable>|<name=.ident>]]?
         <template_starter> ~ <template_stopper> <source=.lang_source>
     }
+
+    proto rule lang_modifier { <...> }
+    token lang_modifier:sym<:escape> { <sym>{ $*escape := 1 } }
+    token lang_modifier:sym<:stdout> { <sym>'(':s ~ ')' <variable> }
 
     proto rule lang_source { <...> }
     token lang_source:sym<raw> { <!{$*escape}> <template_char_atom>* }
