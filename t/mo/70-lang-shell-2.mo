@@ -1,12 +1,12 @@
 say('1..1');
 
 var $cmd = 'echo';
-var $tip = 'ok - shell ran, escape';
+var $tip = 'fail - no escape';
 
-lang shell :escape as run
+lang shell as run
 --------------------------
 cmd=echo
-tip='fail - shell ran, but no escape'
+tip="ok - shell ran, no escape"
 $cmd "$tip"
 -----------------------end
 

@@ -1,5 +1,6 @@
 class MO::World is HLL::World {
     my %builtins;
+    my %interpreters;
 
     has @!models;
     has @!scopes; # QAST::Block stack
@@ -24,7 +25,7 @@ class MO::World is HLL::World {
             }
         }
 
-        my $default_compiler := HLL::Compiler.new(); # nqp::getcomp('mo');
+        my $default_compiler := nqp::getcomp('mo'); #HLL::Compiler.new(); # ;
         my @models;
         for @files {
             my $source := MO::ModuleLoader.load_source($_);
@@ -420,9 +421,24 @@ class MO::World is HLL::World {
         $!fixups.push($fixup);
     }
 
-    method add_builtin_objects() {
+    method install_builtin_objects() {
         self.add_object($_.value<value>) for %builtins;
     }
+
+    method install_interpreters() {
+        my $compiler := nqp::getcomp('mo'); #HLL::Compiler.new();
+        for %*LANG {
+            my $lang := %*LANG{$_.key};
+            my $actions := %*LANG{$_.key~'-actions'};
+            self.add_external_interpreter($_.key, -> $s, *%opts {
+                $compiler.compile($lang.parse(~$s, :$actions).made, :from<ast>)();
+            });
+        }
+        self.add_object($_.value) for %interpreters;
+    }
+
+    method has_interpreter($name) { nqp::existskey(%interpreters, $name) }
+    method interpreter($name) { %interpreters{$name} }
 
     method add_builtin_code($name, $code) {
         my $routine := nqp::create(MO::Routine);
@@ -433,6 +449,14 @@ class MO::World is HLL::World {
         my %sym := nqp::hash();
         %sym<value> := $routine;
         %builtins{$name} := %sym;
+    }
+
+    method add_external_interpreter($name, $code) {
+        my $routine := nqp::create(MO::Routine);
+        nqp::bindattr($routine, MO::Routine, '$!code', $code);
+        nqp::setcodename($code, $name);
+        nqp::setcodeobj($code, $routine);
+        %interpreters{$name} := $routine;
     }
 }
 
@@ -449,8 +473,8 @@ MO::World.add_builtin_code('die', -> $s { nqp::die($s) });
 MO::World.add_builtin_code('exit', -> $n { nqp::exit($n) });
 MO::World.add_builtin_code('open', -> $s, $m { nqp::open($s, $m) });
 MO::World.add_builtin_code('shell', -> $s, $m, $e { nqp::shell($s, $m, $e) });
-MO::World.add_builtin_code('system', -> $s {
-    nqp::shell($s, nqp::cwd, nqp::getenvhash())
+MO::World.add_builtin_code('system', -> $s, *%opts {
+    nqp::shell($s, %opts<wd> // nqp::cwd, %opts<env> // nqp::getenvhash())
 });
 MO::World.add_builtin_code('cwd', -> { nqp::cwd });
 
@@ -469,3 +493,14 @@ MO::World.add_builtin_code('defined', -> $a { nqp::defined($a) });
 # MO::World.add_builtin_code('env',            &nqp::getenvhash);
 # MO::World.add_builtin_code('null',           &nqp::null);
 # MO::World.add_builtin_code('isnull',         &nqp::isnull);
+
+
+
+
+
+MO::World.add_external_interpreter('shell', -> $s, *%opts {
+    nqp::shell($s, nqp::cwd, nqp::getenvhash())
+});
+MO::World.add_external_interpreter('bash', -> $s, *%opts {
+    nqp::shell($s, nqp::cwd, nqp::getenvhash())
+});

@@ -614,7 +614,7 @@ class MO::Actions is HLL::Actions {
     method definition:sym<template>($/) {
         my $scope := $*W.pop_scope();
         my $template := $scope.ann('package');
-        $scope.push( $<template_body>.made );
+        $scope.push( $<template_atoms>.made );
         $scope.node( $/ );
 
         my $code := $*W.install_package_routine($template, '!str', $scope);
@@ -624,18 +624,14 @@ class MO::Actions is HLL::Actions {
         make $scope;
     }
 
-    method template_body($/) {
-        my $var := QAST::Var.new( :scope<local>, :name<result> );
-        my $stmts := QAST::Stmts.new( :node($/),
-            QAST::Op.new( :op<bind>,
-                QAST::Var.new( :scope<local>, :name<result>, :decl<var> ),
-                QAST::Op.new( :op<list> )
-            ),
-        );
-        $stmts.push( QAST::Op.new( :op<callmethod>, :name<push>, $var, $_.made ) )
-            for $<template_atom>;
-        $stmts.push( QAST::Op.new( :op<join>, QAST::SVal.new(:value('')), $var ) );
-        make $stmts;
+    method template_atoms($/) {
+        my $ast := QAST::SVal.new(:value(''));
+        if +$<template_atom> {
+            for $<template_atom> {
+                $ast := QAST::Op.new( :op<concat>, $ast, $_.made );
+            }
+        }
+        make $ast;
     }
 
     method template_atom:sym<$>($/) {
@@ -669,42 +665,22 @@ class MO::Actions is HLL::Actions {
             QAST::SVal.new(:value('')),
         ) );
 
-        if +$<template_atom> {
-            my $ast := $result;
-            for $<template_atom> {
-                $ast := QAST::Op.new( :op<concat>, $ast, $_.made );
-            }
-            $scope.push( QAST::Op.new( :op<bindlex>,
-                QAST::SVal.new(:value($result.name)), $ast ) );
-        }
+        $scope.push( QAST::Op.new( :op<bindlex>,
+            QAST::SVal.new(:value($result.name)),
+            QAST::Op.new( :op<concat>, $result, $<template_atoms>.made ) ) );
 
         make QAST::Op.new( :node($/), :op<for>, $<EXPR>.made, $scope );
     }
 
     method template_statement:sym<if>($/) { make template_if($/); }
     method template_else:sym<if>($/)      { make template_if($/); }
+    method template_else:sym< >($/)       { make $<template_atoms>.made; }
 
     my sub template_if($/) {
-        my $result := QAST::SVal.new(:value(''));
-        if +$<template_atom> {
-            for $<template_atom> {
-                $result := QAST::Op.new( :op<concat>, $result, $_.made );
-            }
-        }
-
-        my $ast := QAST::Op.new( :node($/), :op<if>, $<EXPR>.made, $result );
+        my $ast := QAST::Op.new( :node($/), :op<if>, $<EXPR>.made,
+            $<template_atoms>.made );
         $ast.push($<else>.made) if $<else>;
         make $ast;
-    }
-
-    method template_else:sym< >($/) {
-        my $result := QAST::SVal.new(:value(''));
-        if +$<template_atom> {
-            for $<template_atom> {
-                $result := QAST::Op.new( :op<concat>, $result, $_.made );
-            }
-        }
-        make $result;
     }
 
     method param($/) {
@@ -801,23 +777,30 @@ class MO::Actions is HLL::Actions {
 
     method definition:sym<lang>($/) {
         my $langname := ~$<langname>;
-        my $lang := %*LANG{$langname};
-        my $actions := %*LANG{$langname~'-actions'};
-        my $body := $lang.parse(~$<source>, :$actions).made;
+        unless $*W.has_interpreter($langname) {
+            $<langname>.CURSOR.panic("language $langname is not supported");
+        }
+
+        my $langcode := QAST::Block.new( :node($/),
+            QAST::Op.new( :op<call>,
+                QAST::WVal.new(:value($*W.interpreter($langname))),
+                $<source>.made,
+            )
+        );
 
         if $<variable> {
-            self.'declaration:sym<var>'($/, :init($body));
+            self.'declaration:sym<var>'($/, :init($langcode));
         } elsif $<name> {
             my $scope := $*W.current_scope();
             my $name := ~$<name>;
 
             my $package := $*W.get_package($scope);
-            $*W.install_package_routine($package, $name, $body);
+            $*W.install_package_routine($package, $name, $langcode);
 
             $scope.symbol('&' ~ $name, :scope<lexical>, :declared(1) );
             $scope[0].push( QAST::Op.new( :op<bind>,
                 QAST::Var.new( :name('&' ~ $name), :scope<lexical>, :decl<var> ),
-                $body
+                $langcode
             ) );
 
             if $*W.is_export_name($name) {
@@ -830,7 +813,10 @@ class MO::Actions is HLL::Actions {
 
             make QAST::Var.new( :name('&' ~ $name), :scope<lexical> );
         } else {
-            make QAST::Op.new( :op<call>, $body );
+            make QAST::Op.new( :op<call>, $langcode );
         }
     }
+
+    method lang_source:sym<raw>($/) { make QAST::SVal.new(:value(~$/)); }
+    method lang_source:sym<esc>($/) { make $<template_atoms>.made; }
 }

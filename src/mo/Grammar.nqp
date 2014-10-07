@@ -234,7 +234,8 @@ grammar MO::Grammar is HLL::Grammar {
             MO::World.new(:handle($source_id), :description($file));
 
         $*W.create_data_models();
-        $*W.add_builtin_objects();
+        $*W.install_builtin_objects();
+        $*W.install_interpreters();
 
         self.prog
     }
@@ -416,42 +417,39 @@ grammar MO::Grammar is HLL::Grammar {
                 my $scope := self.push_scope( ~$<sym>, [ 'me', '$_' ] );
                 $scope.annotate('package', $type);
             }
-            <template_body>
+            <template_atoms>
         ]
     }
     rule template_starter { ^^ '-'**3..*\n? }
     rule template_stopper { \n? [<.template_starter>'end'|$] }
-    rule template_body { <template_atom>* }
+    rule template_atoms { <template_atom>* }
 
     proto token template_atom   { <...> }
-    token template_atom:sym<$> { <variable> }
+    token template_atom:sym<$>  { <variable> }
     token template_atom:sym<()> { '$(' ~ ')' <EXPR> }
     token template_atom:sym<{}> { '${' ~ '}' <statements> }
     token template_atom:sym<^^> { <template_statement> }
-    token template_atom:sym<.>  { <template_char_atom>+ }
+    token template_atom:sym<.>  { [<![$]><template_char_atom>]+ }
 
-    token template_char_atom { <!before <.template_stopper>|<.tsp>><![$]>. }
+    token template_char_atom { <!before <.template_stopper>|<.tsp>>. }
 
     proto rule template_statement { <...> }
     token template_statement:sym< > { <.tsp>\n }
     token template_statement:sym<for> {
         <.tsp> ['for'\s+<EXPR>[';'<.eis>\n]?] ~ [<.tsp>'end'<.els>]
-        [
-            { self.push_scope( ~$<sym>, '$_' ) }
-            <template_atom>*
-        ]
+        [ { self.push_scope( ~$<sym>, '$_' ) } <template_atoms> ]
     }
     token template_statement:sym<if> {
         <.tsp> ['if'\s+<EXPR>[';'<.eis>\n]?] ~ [<.tsp>'end'<.els>]
-        [ <template_atom>* <else=.template_else>? ]
+        [ <template_atoms> <else=.template_else>? ]
     }
 
     proto rule template_else { <...> }
     token template_else:sym<if> {
-        <.tsp> ['elsif'\s+<EXPR><.eis>] ~ <else=.template_else>? <template_atom>*
+        <.tsp> ['elsif'\s+<EXPR><.eis>] ~ <else=.template_else>? <template_atoms>
     }
     token template_else:sym< > {
-        <.tsp> 'else'<.eis> <template_atom>*
+        <.tsp> 'else'<.eis> <template_atoms>
     }
 
     token eis { [<![\n]>\s]* } # eat inline space
@@ -505,9 +503,13 @@ grammar MO::Grammar is HLL::Grammar {
 
     rule definition:sym<lang> {
         :my $*IN_DECL; { $*IN_DECL := 'compile'; }
-        <sym>\s <langname=.ident> ['as'\s [<variable>|<name=.ident>]]?
-        #:my $lang; { $lang := ~$<langname> }
-        #<template_starter> <langbody=.LANG($lang,'TOP')> <template_stopper>
-        <template_starter> ~ <template_stopper> $<source>=[<template_char_atom>*]
+        :my $*escape := 0;
+        <sym>\s <langname=.ident> [':escape'{ $*escape := 1 }]?
+        ['as'\s [<variable>|<name=.ident>]]?
+        <template_starter> ~ <template_stopper> <source=.lang_source>
     }
+
+    proto rule lang_source { <...> }
+    token lang_source:sym<raw> { <!{$*escape}> <template_char_atom>* }
+    token lang_source:sym<esc> { <?{$*escape}> <template_atoms> }
 }

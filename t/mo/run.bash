@@ -65,6 +65,11 @@ run $SRCDIR/60-module
 run $SRCDIR/61-class
 run $SRCDIR/61-class-static-variable
 run $SRCDIR/70-lang-xml
+run $SRCDIR/70-lang-xml-escape-1
+run $SRCDIR/70-lang-xml-escape-2
+run $SRCDIR/70-lang-shell
+run $SRCDIR/70-lang-shell-2
+run $SRCDIR/70-lang-shell-escape
 exit
 run $SRCDIR/40-filesystem-filter -v
 run $SRCDIR/40-filesystem-selectors -v
