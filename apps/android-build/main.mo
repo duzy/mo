@@ -1,13 +1,33 @@
-var $sdk = '/home/zhan/tools/android-studio/sdk';
-
 var $path = (+@ARGS < 2) ? cwd : @ARGS[1];
+
+var $sdk = any isdir
+    '/home/zhan/tools/android-studio/sdk',
+    '/open/android/android-studio/sdk';
+
 var $variant = 0 ? 'release' : 'debug';
-var $platform = 'android-19';
+var $api_level = '19';
+
+var $platform = "android-$api_level";
 var $platform_jar = "$sdk/platforms/$platform/android.jar";
 var $platform_aidl = "$sdk/platforms/$platform/framework.aidl";
 
-var $cmd_zipalign = "$sdk/tools/zipalign";
-var $cmd_aapt = "$sdk/build-tools/android-4.4.2/aapt";
+def build_tool($name) {
+  any isreg
+    "$sdk/build-tools/android-4.4W/$name",
+    "$sdk/build-tools/android-4.4.2/$name",
+    "$sdk/build-tools/19.1.0/$name",
+    "$sdk/build-tools/19.0.3/$name",
+    "$sdk/build-tools/19.0.2/$name",
+    "$sdk/build-tools/19.0.1/$name",
+    "$sdk/build-tools/19.0.0/$name",
+    "$sdk/build-tools/18.1.1/$name",
+    "$sdk/build-tools/18.1.0/$name",
+    "$sdk/build-tools/18.0.1/$name",
+    "$sdk/build-tools/17.0.0/$name"
+}
+
+var $cmd_zipalign = any isreg "$sdk/tools/zipalign";
+var $cmd_aapt = build_tool('aapt');
 var $cmd_jarsigner = "jarsigner";
 
 var $sign_storepass;
@@ -22,11 +42,6 @@ if isreg("$path/.android/storepass") { $sign_storepass = "$path/.android/storepa
 if isreg("$path/.android/keystore") { $sign_keystore = "$path/.android/keystore" }
 if isreg("$path/.android/keypass") { $sign_keypass = "$path/.android/keypass" }
 
-any isreg "$path/.android/storepass", "$path/.android/keystore", "$path/.android/keypass"
-{
-    say($_);
-}
-
 unless isnull($sign_storepass) { $sign_storepass_opt = "-storepass " ~ slurp($sign_storepass) }
 unless isnull($sign_keystore)  { $sign_keystore_opt = "-keystore " ~ slurp($sign_keystore) }
 unless isnull($sign_keypass)   { $sign_keypass_opt = "-keypass " ~ slurp($sign_keypass) }
@@ -38,9 +53,6 @@ unless isnull($sign_keypass)   { $sign_keypass_opt = "-keypass " ~ slurp($sign_k
     var $signed = @_[0].PATH;
     lang shell :escape
 ----------------------
-#    echo $dir
-#    echo $apk
-#    echo $signed
     mkdir -p $dir
     $cmd_zipalign -f 4 $signed $apk
 -------------------end

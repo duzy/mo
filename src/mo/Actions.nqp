@@ -116,6 +116,7 @@ class MO::Actions is HLL::Actions {
     }
 
     method term:sym<any>($/) { make $<any>.made; }
+    method term:sym<many>($/) { make $<many>.made; }
 
     method circumfix:sym<( )>($/) {
         make $<EXPR>.made;
@@ -501,7 +502,7 @@ class MO::Actions is HLL::Actions {
     }
 
     method control:sym<any>($/) {
-        my $result := QAST::Var.new( :scope<lexical>, :decl<var>, :name(QAST::Node.unique('any_ret')) );
+        my $result := QAST::Var.new( :scope<lexical>, :decl<var>, :name(QAST::Node.unique('map_ret')) );
         my $stmts := QAST::Stmts.new(
             QAST::Op.new(:op<bindlex>,
                 QAST::SVal.new( :value($result.name) ),
@@ -514,15 +515,37 @@ class MO::Actions is HLL::Actions {
 
         $stmts.push(QAST::Op.new( :op<control>, :name<last> ));
 
-        my $block := QAST::Block.new(
-            QAST::Var.new(:name<a>, :scope<local>, :decl<param>),
-            QAST::Op.new( :op<if>,
-                QAST::Op.new(:op<call>, $<pred>.made,
-                    QAST::Var.new(:name<a>, :scope<local>)),
-                $stmts),
-        );
         make QAST::Stmts.new( :node($/), $result,
-            QAST::Op.new( :op<for>, $<list>.made, $block ),
+            QAST::Op.new( :op<for>, $<list>.made, QAST::Block.new(
+                QAST::Var.new(:name<a>, :scope<local>, :decl<param>),
+                QAST::Op.new( :op<if>,
+                    QAST::Op.new(:op<call>, $<pred>.made, QAST::Var.new(:name<a>, :scope<local>)),
+                    $stmts),
+            )),
+            QAST::Var.new( :scope<lexical>, :name($result.name) ),
+        );
+    }
+
+    method control:sym<many>($/) {
+        my $result := QAST::Var.new( :scope<lexical>, :decl<var>, :name(QAST::Node.unique('map_ret')) );
+        my $stmts := QAST::Stmts.new(
+            QAST::Op.new( :op<callmethod>, :name<push>,
+                QAST::Var.new( :scope<lexical>, :name($result.name) ),
+                QAST::Var.new(:name<a>, :scope<local>),
+            ),
+        );
+
+        $stmts.push(QAST::Op.new(:op<call>, $<block>.made,
+            QAST::Var.new(:name<a>, :scope<local>))) if $<block>;
+
+        make QAST::Stmts.new( :node($/),
+            QAST::Op.new( :op<bind>, $result, QAST::Op.new( :op<list> ) ),
+            QAST::Op.new( :op<for>, $<list>.made, QAST::Block.new(
+                QAST::Var.new(:name<a>, :scope<local>, :decl<param>),
+                QAST::Op.new( :op<if>,
+                    QAST::Op.new(:op<call>, $<pred>.made, QAST::Var.new(:name<a>, :scope<local>)),
+                    $stmts),
+            )),
             QAST::Var.new( :scope<lexical>, :name($result.name) ),
         );
     }
@@ -561,11 +584,11 @@ class MO::Actions is HLL::Actions {
     method def_block:sym<{ }>($/) { make $<statements>.made; }
     method def_block:sym<end>($/) { make $<statements>.made; }
 
-    method any_block:sym<{ }>($/) { make pop_newscope($/); }
-    method any_block:sym<end>($/) { make pop_newscope($/); }
+    method map_block:sym<{ }>($/) { make pop_newscope($/); }
+    method map_block:sym<end>($/) { make pop_newscope($/); }
 
-    method any_pred:sym<name>($/) { self.'term:sym<name>'($/) }
-    method any_pred:sym<{ }>($/) {
+    method map_pred:sym<name>($/) { self.'term:sym<name>'($/) }
+    method map_pred:sym<{ }>($/) {
         my $pred := QAST::Block.new( :node($/),
             QAST::Stmts.new(
                 QAST::Var.new(:name<$_>, :scope<lexical>, :decl<param>),

@@ -74,6 +74,7 @@ grammar MO::Grammar is HLL::Grammar {
         <sym>\s $<name>=[<.ident>['::'<.ident>]*] ['with' <EXPR>]?
     }
     token term:sym<any>    { <?before <sym>><any=.control> }
+    token term:sym<many>   { <?before <sym>><many=.control> }
 
     # Operators - mostly stolen from NQP's Rubyish example
     token infix:sym<**> { <sym>  <O('%exponentiation, :op<pow_n>')> }
@@ -353,16 +354,20 @@ grammar MO::Grammar is HLL::Grammar {
     }
 
     rule control:sym<any> {
-        <sym>\s <pred=.any_pred> <list=.EXPR> <block=.any_block>?
+        <sym>\s <pred=.map_pred> <list=.EXPR> <block=.map_block>?
+    }
+
+    rule control:sym<many> {
+        <sym>\s <pred=.map_pred> <list=.EXPR> <block=.map_block>?
     }
 
     rule control:sym<with> {
         <sym>\s <EXPR> [ <with_block> | <.panic: "expect 'with' block"> ]
     }
 
-    proto rule any_pred { <...> }
-    token any_pred:sym<name> { <name> }
-    token any_pred:sym<{ }> { '{' ~ '}' <statements> }
+    proto rule map_pred { <...> }
+    token map_pred:sym<name> { <name> }
+    token map_pred:sym<{ }> { '{' ~ '}' <statements> }
 
     proto rule else { <...> }
     rule else:sym<if> { 'elsif'\s <EXPR> ~ <else>? [ '{' ~ '}' <statements> | <statements> ] }
@@ -378,9 +383,9 @@ grammar MO::Grammar is HLL::Grammar {
     rule for_block:sym<{ }> { 'do'? '{' ~ '}' <newscope: 'for', '$_'> }
     rule for_block:sym<end> { <![{]> ~ 'end' <newscope: 'for', '$_'> }
 
-    proto rule any_block { <...> }
-    rule any_block:sym<{ }> { '{' ~ '}' <newscope: 'any', '$_'> }
-    rule any_block:sym<end> { <![{]> ~ 'end' <newscope: 'any', '$_'> }
+    proto rule map_block { <...> }
+    rule map_block:sym<{ }> { '{' ~ '}' <newscope: 'any', '$_'> }
+    #rule map_block:sym<end> { <![{]> ~ 'end' <newscope: 'any', '$_'> }
 
     proto rule with_block { <...> }
     rule with_block:sym<{ }> { 'do'? '{' ~ '}' <newscope: 'with', '$_', 1> }
