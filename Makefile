@@ -129,11 +129,12 @@ test-json: ; @echo "JSON..."
 
 test-mo: t/mo/run.bash $(MO_PBC)
 	@$(BASH) $<
-	@echo "Running example tests..."
-	@$(BASH) examples/test.bash
 
 test-examples: examples/test.bash $(MO_PBC)
 	@$(BASH) $<
 
 run-examples: examples/run.bash $(MO_PBC)
 	@$(BASH) $<
+
+run-apps:
+	@$(BASH) apps/android-build/run.bash

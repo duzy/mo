@@ -472,11 +472,31 @@ MO::World.add_builtin_code('say', -> $s { nqp::say($s) });
 MO::World.add_builtin_code('die', -> $s { nqp::die($s) });
 MO::World.add_builtin_code('exit', -> $n { nqp::exit($n) });
 MO::World.add_builtin_code('open', -> $s, $m { nqp::open($s, $m) });
-MO::World.add_builtin_code('shell', -> $s, $m, $e { nqp::shell($s, $m, $e) });
+MO::World.add_builtin_code('slurp', -> $s, *$opts {
+    my $h := nqp::open($s, 'r');
+    $s := $h.readall();
+    $h.close();
+    $s
+});
+MO::World.add_builtin_code('shell', -> $s, $m?, $e? {
+    nqp::shell($s, $m // nqp::cwd, $e // nqp::getenvhash())
+});
 MO::World.add_builtin_code('system', -> $s, *%opts {
     nqp::shell($s, %opts<wd> // nqp::cwd, %opts<env> // nqp::getenvhash())
 });
 MO::World.add_builtin_code('cwd', -> { nqp::cwd });
+MO::World.add_builtin_code('isdir', -> $s {
+    nqp::stat($s, nqp::const::STAT_EXISTS) && nqp::stat($s, nqp::const::STAT_ISDIR)
+});
+MO::World.add_builtin_code('isreg', -> $s {
+    nqp::stat($s, nqp::const::STAT_EXISTS) && nqp::stat($s, nqp::const::STAT_ISREG)
+});
+MO::World.add_builtin_code('isdev', -> $s {
+    nqp::stat($s, nqp::const::STAT_EXISTS) && nqp::stat($s, nqp::const::STAT_ISDEV)
+});
+MO::World.add_builtin_code('islink', -> $s {
+    nqp::stat($s, nqp::const::STAT_EXISTS) && nqp::stat($s, nqp::const::STAT_ISLNK)
+});
 
 MO::World.add_builtin_code('isnull', -> $a { nqp::isnull($a) });
 MO::World.add_builtin_code('defined', -> $a { nqp::defined($a) });
@@ -498,8 +518,14 @@ MO::World.add_builtin_code('defined', -> $a { nqp::defined($a) });
 
 
 
-MO::World.add_external_interpreter('shell', -> $s, *%opts {
-    nqp::shell($s, nqp::cwd, nqp::getenvhash())
+MO::World.add_external_interpreter('shell', -> $s, %opts {
+    if nqp::existskey(%opts, 'stdout') {
+        my $h := nqp::open($s, 'rp');
+        %opts<stdout> := $h.readall;
+        $h.close;
+    } else {
+        nqp::shell($s, nqp::cwd, nqp::getenvhash())
+    }
 });
 MO::World.add_external_interpreter('bash', -> $s, *%opts {
     nqp::shell($s, nqp::cwd, nqp::getenvhash())

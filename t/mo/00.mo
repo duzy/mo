@@ -1,14 +1,9 @@
 say('1..1');
 
-var $cmd = 'echo';
-var $tip = 'ok - shell ran, escape';
+any isreg "test.xml", "t/mo/test.xml", "t/mo/test/text.txt", "t/mo"
+{
+    say($_);
+}
 
-lang shell :escape:stdout($out) as run
----------------------------------------
-cmd=echo
-tip='fail - shell ran, but no escape'
-$cmd "$tip"
-------------------------------------end
-
-run()
-say('output: '~(isnull($out) ? '<null>' : $out))
+var $s = any isreg "test.xml", "t/mo/test.xml", "t/mo/test/text.txt", "t/mo"
+say($s);

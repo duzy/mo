@@ -115,6 +115,8 @@ class MO::Actions is HLL::Actions {
         $/.prune;
     }
 
+    method term:sym<any>($/) { make $<any>.made; }
+
     method circumfix:sym<( )>($/) {
         make $<EXPR>.made;
         #$/.prune;
@@ -498,6 +500,33 @@ class MO::Actions is HLL::Actions {
         make QAST::Op.new( :node($/), :op<for>, $<EXPR>.made, $<for_block>.made );
     }
 
+    method control:sym<any>($/) {
+        my $result := QAST::Var.new( :scope<lexical>, :decl<var>, :name(QAST::Node.unique('any_ret')) );
+        my $stmts := QAST::Stmts.new(
+            QAST::Op.new(:op<bindlex>,
+                QAST::SVal.new( :value($result.name) ),
+                QAST::Var.new(:name<a>, :scope<local>),
+            ),
+        );
+
+        $stmts.push(QAST::Op.new(:op<call>, $<block>.made,
+            QAST::Var.new(:name<a>, :scope<local>))) if $<block>;
+
+        $stmts.push(QAST::Op.new( :op<control>, :name<last> ));
+
+        my $block := QAST::Block.new(
+            QAST::Var.new(:name<a>, :scope<local>, :decl<param>),
+            QAST::Op.new( :op<if>,
+                QAST::Op.new(:op<call>, $<pred>.made,
+                    QAST::Var.new(:name<a>, :scope<local>)),
+                $stmts),
+        );
+        make QAST::Stmts.new( :node($/), $result,
+            QAST::Op.new( :op<for>, $<list>.made, $block ),
+            QAST::Var.new( :scope<lexical>, :name($result.name) ),
+        );
+    }
+
     method control:sym<with>($/) {
         make QAST::Op.new( :node($/), :op<call>, $<with_block>.made, $<EXPR>.made );
     }
@@ -531,6 +560,19 @@ class MO::Actions is HLL::Actions {
 
     method def_block:sym<{ }>($/) { make $<statements>.made; }
     method def_block:sym<end>($/) { make $<statements>.made; }
+
+    method any_block:sym<{ }>($/) { make pop_newscope($/); }
+    method any_block:sym<end>($/) { make pop_newscope($/); }
+
+    method any_pred:sym<name>($/) { self.'term:sym<name>'($/) }
+    method any_pred:sym<{ }>($/) {
+        my $pred := QAST::Block.new( :node($/),
+            QAST::Stmts.new(
+                QAST::Var.new(:name<$_>, :scope<lexical>, :decl<param>),
+            ),
+            $<statements>.made );
+        make $pred;
+    }
 
     method declaration:sym<var>($/, :$init?) {
         unless $<variable><name> {
@@ -781,12 +823,31 @@ class MO::Actions is HLL::Actions {
             $<langname>.CURSOR.panic("language $langname is not supported");
         }
 
+        my $options := QAST::Op.new( :op<hash> );
+        for %*option {
+            if nqp::istype($_.value, QAST::Node) {
+                $options.push(QAST::SVal.new(:value($_.key)));
+                $options.push($_.value);
+            } elsif nqp::isint($_.value) {
+                $options.push(QAST::SVal.new(:value($_.key)));
+                $options.push(QAST::IVal.new(:value($_.value)));
+            } elsif nqp::isstr($_.value) {
+                $options.push(QAST::SVal.new(:value($_.key)));
+                $options.push(QAST::SVal.new(:value($_.value)));
+            }
+        }
+
         my $langcode := QAST::Block.new( :node($/),
+            QAST::Op.new( :op<bind>,
+                QAST::Var.new( :name<options>, :scope<local>, :decl<var> ),
+                $options,
+            ),
             QAST::Op.new( :op<bind>,
                 QAST::Var.new( :name<result>, :scope<local>, :decl<var> ),
                 QAST::Op.new( :op<call>,
                     QAST::WVal.new(:value($*W.interpreter($langname))),
                     $<source>.made,
+                    QAST::Var.new( :name<options>, :scope<local> ),
                 )
             ),
         );
@@ -832,8 +893,14 @@ class MO::Actions is HLL::Actions {
         my $var := $stmts[+$stmts.list-1];
         my $scope := $*W.current_scope();
         $scope.push($stmts);
-say($var);
-        make QAST::Stmts.new( :node($/) );
+        make QAST::Stmts.new( :node($/),
+            QAST::Op.new( :op<bind>, $var,
+                QAST::Var.new( :scope<associative>,
+                    QAST::Var.new( :name<options>, :scope<local> ),
+                    QAST::SVal.new( :value<stdout> ),
+                ),
+            ),
+        );
     }
 
     method lang_source:sym<raw>($/) { make QAST::SVal.new(:value(~$/)); }

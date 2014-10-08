@@ -73,6 +73,7 @@ grammar MO::Grammar is HLL::Grammar {
     token term:sym<str>    {:s
         <sym>\s $<name>=[<.ident>['::'<.ident>]*] ['with' <EXPR>]?
     }
+    token term:sym<any>    { <?before <sym>><any=.control> }
 
     # Operators - mostly stolen from NQP's Rubyish example
     token infix:sym<**> { <sym>  <O('%exponentiation, :op<pow_n>')> }
@@ -175,6 +176,7 @@ grammar MO::Grammar is HLL::Grammar {
     token kw:sym<else>  { <sym> }
     token kw:sym<elsif> { <sym> }
     token kw:sym<for>   { <sym> }
+    token kw:sym<any>   { <sym> }
     token kw:sym<while> { <sym> }
     token kw:sym<until> { <sym> }
     token kw:sym<yield> { <sym> }
@@ -350,9 +352,17 @@ grammar MO::Grammar is HLL::Grammar {
         <sym>\s <EXPR> [ <for_block> | <.panic: "expect 'for' block"> ]
     }
 
+    rule control:sym<any> {
+        <sym>\s <pred=.any_pred> <list=.EXPR> <block=.any_block>?
+    }
+
     rule control:sym<with> {
         <sym>\s <EXPR> [ <with_block> | <.panic: "expect 'with' block"> ]
     }
+
+    proto rule any_pred { <...> }
+    token any_pred:sym<name> { <name> }
+    token any_pred:sym<{ }> { '{' ~ '}' <statements> }
 
     proto rule else { <...> }
     rule else:sym<if> { 'elsif'\s <EXPR> ~ <else>? [ '{' ~ '}' <statements> | <statements> ] }
@@ -367,6 +377,10 @@ grammar MO::Grammar is HLL::Grammar {
     proto rule for_block { <...> }
     rule for_block:sym<{ }> { 'do'? '{' ~ '}' <newscope: 'for', '$_'> }
     rule for_block:sym<end> { <![{]> ~ 'end' <newscope: 'for', '$_'> }
+
+    proto rule any_block { <...> }
+    rule any_block:sym<{ }> { '{' ~ '}' <newscope: 'any', '$_'> }
+    rule any_block:sym<end> { <![{]> ~ 'end' <newscope: 'any', '$_'> }
 
     proto rule with_block { <...> }
     rule with_block:sym<{ }> { 'do'? '{' ~ '}' <newscope: 'with', '$_', 1> }
@@ -503,18 +517,19 @@ grammar MO::Grammar is HLL::Grammar {
 
     rule definition:sym<lang> {
         :my $*IN_DECL;
-        :my $*escape;
-        { $*IN_DECL := 'lang'; $*escape := 0; }
+        :my %*option;
+        { $*IN_DECL := 'lang'; %*option<escape> := 0; }
         <sym>\s <langname=.ident> <lang_modifier>*
         ['as'\s [<variable>|<name=.ident>]]?
-        <template_starter> ~ <template_stopper> <source=.lang_source>
+        <template_starter> ~ <template_stopper>
+        [ { $*IN_DECL := 'lang-source' }<source=.lang_source> ]
     }
 
     proto rule lang_modifier { <...> }
-    token lang_modifier:sym<:escape> { <sym>{ $*escape := 1 } }
-    token lang_modifier:sym<:stdout> { <sym>'(':s ~ ')' <variable> }
+    token lang_modifier:sym<:escape> { <sym>{ %*option<escape> := 1 } }
+    token lang_modifier:sym<:stdout> { <sym>'(':s ~ ')' [<variable>{ %*option<stdout> := ~$<variable> }] }
 
     proto rule lang_source { <...> }
-    token lang_source:sym<raw> { <!{$*escape}> <template_char_atom>* }
-    token lang_source:sym<esc> { <?{$*escape}> <template_atoms> }
+    token lang_source:sym<raw> { <!{%*option<escape>}> <template_char_atom>* }
+    token lang_source:sym<esc> { <?{%*option<escape>}> <template_atoms> }
 }
