@@ -1,6 +1,23 @@
 var $path = (+@ARGS < 2) ? cwd : @ARGS[1];
 
-var $sdk = any isdir
+use config 'test1', 'test2', 123 :init($path);
+
+def load_properties($filename) {
+    var $hash = hash();
+    var $source = slurp($filename);
+    for split("\n", $source) {
+        var $i = index($_, '=');
+        if 0 < $i {
+            $hash{substr($_, 0, $i)} = substr($_, $i+1);
+        }
+    }
+    $hash
+}
+
+var $local_properties = load_properties("$path/local.properties");
+var $project_properties = load_properties("$path/project.properties");
+
+var $sdk = any isdir $local_properties{'sdk.dir'},
     '/home/zhan/tools/android-studio/sdk',
     '/open/android/android-studio/sdk';
 
@@ -10,9 +27,12 @@ var $api_level = '19';
 var $platform = "android-$api_level";
 var $platform_jar = "$sdk/platforms/$platform/android.jar";
 var $platform_aidl = "$sdk/platforms/$platform/framework.aidl";
+var $platform_properties = load_properties("$sdk/platforms/$platform/source.properties");
 
 def build_tool($name) {
+  var $version = $platform_properties{'Platform.Version'};
   any isreg
+    "$sdk/build-tools/android-$version/$name",
     "$sdk/build-tools/android-4.4W/$name",
     "$sdk/build-tools/android-4.4.2/$name",
     "$sdk/build-tools/19.1.0/$name",

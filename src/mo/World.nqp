@@ -179,9 +179,9 @@ class MO::World is HLL::World {
 
     # Loads a module immediately, and also makes sure we load it
     # during the deserialization.
-    method load_module($/, $module_name, $GLOBALish) {
+    method load_module($/, $module_name, @params, $GLOBALish) {
         my @module := nqp::gethllsym('mo', 'ModuleLoader').load_module(
-            $module_name, $GLOBALish);
+            $module_name, @params, $GLOBALish);
 
         # Make sure we do the loading during deserialization.
         if self.is_precompilation_mode() {
@@ -205,7 +205,7 @@ class MO::World is HLL::World {
                 # Uses mo::ModuleLoader to load the MO module.
                 QAST::Op.new( :op<callmethod>, :name<load_module>,
                    QAST::Op.new( :op<getcurhllsym>, QAST::SVal.new( :value<ModuleLoader> ) ),
-                   QAST::SVal.new( :value($module_name) ),
+                   QAST::SVal.new( :value($module_name) ), QAST::Op.new( :op<list> ),
                 ),
             )));
         }
@@ -440,12 +440,16 @@ class MO::World is HLL::World {
     method has_interpreter($name) { nqp::existskey(%interpreters, $name) }
     method interpreter($name) { %interpreters{$name} }
 
-    method add_builtin_code($name, $code) {
+    method new_routine($name, $code) {
         my $routine := nqp::create(MO::Routine);
         nqp::bindattr($routine, MO::Routine, '$!code', $code);
         nqp::setcodename($code, $name);
         nqp::setcodeobj($code, $routine);
+        $routine
+    }
 
+    method add_builtin_code($name, $code) {
+        my $routine := self.new_routine($name, $code);
         my %sym := nqp::hash();
         %sym<value> := $routine;
         %builtins{$name} := %sym;
@@ -500,6 +504,20 @@ MO::World.add_builtin_code('islink', -> $s {
 
 MO::World.add_builtin_code('isnull', -> $a { nqp::isnull($a) });
 MO::World.add_builtin_code('defined', -> $a { nqp::defined($a) });
+
+MO::World.add_builtin_code('list', -> { nqp::list() });
+MO::World.add_builtin_code('hash', -> { nqp::hash() });
+
+# String manipulation..
+MO::World.add_builtin_code('split', -> $l, $s { nqp::split($l, $s) });
+MO::World.add_builtin_code('join', -> $s, $a { nqp::join($s, $a) });
+MO::World.add_builtin_code('concat', -> $a, $b { nqp::concat($a, $b) });
+MO::World.add_builtin_code('chars', -> $s { nqp::chars($s) });
+MO::World.add_builtin_code('index', -> $a, $b { nqp::index($a, $b) });
+MO::World.add_builtin_code('rindex', -> $a, $b { nqp::rindex($a, $b) });
+MO::World.add_builtin_code('substr', -> $s, $a, $b? {
+    nqp::defined($b) ?? nqp::substr($s, $a, $b) !! nqp::substr($s, $a)
+});
 
 # MO::World.add_builtin_code('say',            &nqp::say);
 # MO::World.add_builtin_code('exit',           &nqp::exit);

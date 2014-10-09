@@ -1,6 +1,10 @@
 class MO::Routine {
     has $!code;
 
+    method !set_code($code) {
+        $!code := $code;
+    }
+
     method name() {
         nqp::getcodename($!code)
     }

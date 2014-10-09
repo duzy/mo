@@ -4,7 +4,19 @@ class MO::ModuleLoader {
     my @modules_loading;
 
     method get_prefixes() {
+        my $file := nqp::getlexdyn('$?FILES');
         my @prefixes := nqp::clone($*SEARCHPATHS);
+        my int $i := nqp::isstr($file) ?? nqp::rindex($file, '/') !! -1;
+        if 0 <= $i {
+            my $s := nqp::substr($file, 0, $i+1);
+            $s := nqp::cwd ~ '/' ~ $s if $s[0] ne '/';
+            for @prefixes {
+                if $s eq $_ || $s eq "$_/" {
+                    $s := ''; last;
+                }
+            }
+            @prefixes.unshift($s) if $s ne '';
+        }
         @prefixes;
     }
 
@@ -78,13 +90,15 @@ class MO::ModuleLoader {
         $source;
     }
 
-    my method compile_source_file($file) {
+    my method eval_source_file($file, @params) {
         my $*CTX := nqp::null();
         my $*CTXSAVE := self;
+        my $*MODULE_PARAMS := @params;
         my $?FILES := $file;
         my $source := self.load_source($file);
         my $eval := nqp::getcomp('mo').compile($source);
-        $eval();
+        $eval(|@params);
+        $*MODULE_PARAMS := nqp::null();
         $*CTX;
     }
 
@@ -93,7 +107,7 @@ class MO::ModuleLoader {
         nqp::knowhow().new_type(:name<Module>);
     }
 
-    method load_module($module_name, *@GLOBALish, :$line, :$file, :%chosen) {
+    method load_module($module_name, @params, *@GLOBALish, :$line, :$file, :%chosen) {
         unless %chosen {
             %chosen := self.locate_module($module_name, self.get_prefixes);
         }
@@ -114,17 +128,19 @@ class MO::ModuleLoader {
             if %chosen<load> {
                 my $*CTX := nqp::null();
                 my $*CTXSAVE := self;
+                my $*MODULE_PARAMS := @params;
                 nqp::loadbytecode(%chosen<load>);
+                $*MODULE_PARAMS := nqp::null();
                 @module_ctx.push( $*CTX );
             } elsif %chosen<source> {
-                @module_ctx.push( self.compile_source_file(%chosen<source>) );
+                @module_ctx.push( self.eval_source_file(%chosen<source>, @params) );
             } elsif %chosen<sources> {
                 for %chosen<sources> {
                     if nqp::defined(%modules_loaded{$_}) {
                         @module_ctx.push( $_ ) for %modules_loaded{$_};
                     } else {
                         @modules_loading.push($_);
-                        my $ctx := self.compile_source_file($_);
+                        my $ctx := self.eval_source_file($_, @params);
                         @module_ctx.push( $ctx );
                         %modules_loaded{$_} := nqp::list($ctx);
                         @modules_loading.pop;

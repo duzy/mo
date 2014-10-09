@@ -226,6 +226,7 @@ grammar MO::Grammar is HLL::Grammar {
         my $*GLOBALish;
         my $*EXPORT;
         my $*UNIT; # the top-level block of the current compile unit.
+        my $*INIT; # the unit's init block to be invoked on 'use'.
 
         # Symbol table and serialization context builder - keeps track of
         # objects that cross the compile-time/run-time boundary that are
@@ -306,9 +307,14 @@ grammar MO::Grammar is HLL::Grammar {
                 ),
             ));
 
+            $*INIT := QAST::Block.new( :name<init>, QAST::Stmts.new() );
+            $*INIT.symbol('@_', :scope<lexical>, :decl<param>, :slurpy(1));
+            $*INIT[0].push(QAST::Var.new(:name<@_>, :scope<lexical>, :decl<param>, :slurpy(1)));
+
             $*UNIT := self.push_scope('unit');
             $*UNIT.symbol('@ARGS', :scope<lexical>, :decl<param>);
             $*UNIT.symbol('$_', :scope<lexical>, :decl<var>);
+            $*UNIT.symbol('init', :scope<lexical>);
             $*UNIT.annotate('package', $*GLOBALish);
         }
         ^ ~ $ <statements> || <.panic: 'Confused'>
@@ -406,7 +412,9 @@ grammar MO::Grammar is HLL::Grammar {
     rule declaration:sym<use> {
         :my $*IN_DECL;
         <sym>\s { $*IN_DECL := ~$<sym>; }
-        <name> ';'? { $*IN_DECL := 0; }
+        <name> <params=.EXPR>?
+        [ ':init' '(' ~ ')' <initargs=.arglist>? ]?
+        ';'? { $*IN_DECL := 0; }
     }
 
     rule declaration:sym<rule> {
@@ -486,6 +494,18 @@ grammar MO::Grammar is HLL::Grammar {
         ]
         '(' ~ ')' [ { self.push_scope( ~$<sym> ) } <params>? ]
         [ <def_block> | <.panic: 'expect function body'> ]
+    }
+
+    rule definition:sym<init> {
+        <sym>\s '{' ~ '}'
+        [
+            {
+                my $scope := self.push_scope( ~$<sym> );
+                $scope.symbol('@_', :scope<lexical>, :decl<param>, :slurpy(1));
+                $scope[0].push(QAST::Var.new(:name<@_>, :scope<lexical>, :decl<param>, :slurpy(1)));
+            }
+            <statements>
+        ]
     }
 
     rule definition:sym<class> {

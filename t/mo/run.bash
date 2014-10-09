@@ -64,6 +64,8 @@ run $SRCDIR/50-fun-returns
 run $SRCDIR/50-fun-lexical
 run $SRCDIR/50-fun-lexical-nested
 run $SRCDIR/60-module
+run $SRCDIR/60-module-params
+run $SRCDIR/60-module-init
 run $SRCDIR/61-class
 run $SRCDIR/61-class-static-variable
 run $SRCDIR/70-lang-xml
