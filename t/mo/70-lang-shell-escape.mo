@@ -6,7 +6,7 @@ var $tip = 'ok - shell ran, escape';
 lang shell :escape as run
 --------------------------
 cmd=echo
-tip='fail - shell ran, but no escape'
+tip='xx - shell ran, but no escape'
 $cmd "$tip"
 -----------------------end
 

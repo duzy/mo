@@ -10,39 +10,39 @@ end
 if $s eq "child test-child-1\nchild test-child-2"
     say("ok - \$s")
 else
-    say("fail - \$s = $s")
+    say("xx - \$s = $s")
 end
 
 if child.name eq 'test-child-1'
     say("ok - child.name")
 else
-    say("fail - child.name = "~child.name)
+    say("xx - child.name = "~child.name)
 end
 
 if child[0].name() eq 'child'
     say("ok - child[0].name()")
 else
-    say("fail - child[0].name() = "~child[0].name())
+    say("xx - child[0].name() = "~child[0].name())
 end
 if child[0].name eq 'test-child-1'
     say("ok - child[0].name")
 else
-    say("fail - child[0].name = "~child[0].name)
+    say("xx - child[0].name = "~child[0].name)
 end
 
 if child[1].name() eq 'child'
     say("ok - child[1].name()")
 else
-    say("fail - child[1].name() = "~child[1].name())
+    say("xx - child[1].name() = "~child[1].name())
 end
 if child[1].name eq 'test-child-2'
     say("ok - child[1].name")
 else
-    say("fail - child[1].name = "~child[1].name)
+    say("xx - child[1].name = "~child[1].name)
 end
 
 if +child->child == 0
     say('ok - child->child is empty')
 else
-    say('fail - child->child '~+child->child)
+    say('xx - child->child '~+child->child)
 end

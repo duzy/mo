@@ -5,19 +5,19 @@ with -><t/mo/test> do
       if .EXISTS
         say("ok\t\t- test exists")
       else
-        say("fail\t\t- test not exists: " ~ .EXISTS)
+        say("xx\t\t- test not exists: " ~ .EXISTS)
       end
 
       if .NAME eq 'test'
         say("ok\t\t- .NAME eq 'test'")
       else
-        say("fail\t\t- .NAME eq 'test' : " ~ .NAME)
+        say("xx\t\t- .NAME eq 'test' : " ~ .NAME)
       end
 
       if $_.name() eq 't/mo/test'
         say("ok\t\t- \$_.name() eq 't/mo/test'")
       else
-        say("fail\t\t- \$_.name() eq 't/mo/test' : "~$_.name())
+        say("xx\t\t- \$_.name() eq 't/mo/test' : "~$_.name())
       end
   }
 
@@ -26,19 +26,19 @@ with -><t/mo>['test'] do
       if .EXISTS
         say("ok\t\t- test exists")
       else
-        say("fail\t\t- test not exists: " ~ .EXISTS)
+        say("xx\t\t- test not exists: " ~ .EXISTS)
       end
 
       if .NAME eq 'test'
         say("ok\t\t- .NAME eq 'test'")
       else
-        say("fail\t\t- .NAME eq 'test' : " ~ .NAME)
+        say("xx\t\t- .NAME eq 'test' : " ~ .NAME)
       end
 
       if $_.name() eq 't/mo/test'
         say("ok\t\t- \$_.name() eq 't/mo/test'")
       else
-        say("fail\t\t- \$_.name() eq 't/mo/test' : "~$_.name())
+        say("xx\t\t- \$_.name() eq 't/mo/test' : "~$_.name())
       end
   }
 
@@ -49,7 +49,7 @@ for -><.>['test/many/1.txt', "test/many/2.txt"] do
       elsif $_.name() eq './test/many/2.txt'
         say("ok\t\t- \$_.name() eq './test/many/2.txt'")
       else
-        say("fail\t\t- \$_.name() : "~$_.name())
+        say("xx\t\t- \$_.name() : "~$_.name())
       end
 
       if .NAME eq '1.txt'
@@ -57,7 +57,7 @@ for -><.>['test/many/1.txt', "test/many/2.txt"] do
       elsif .NAME eq '2.txt'
         say("ok\t\t- .NAME eq 2.txt")
       else
-        say("fail\t\t- unexpected: " ~ .NAME)
+        say("xx\t\t- unexpected: " ~ .NAME)
       end
   }
 
@@ -68,7 +68,7 @@ for -><test/many>['1.txt', "2.txt"] do
       elsif $_.name() eq 'test/many/2.txt'
         say("ok\t\t- \$_.name() eq 'test/many/2.txt'")
       else
-        say("fail\t\t- \$_.name() : "~$_.name())
+        say("xx\t\t- \$_.name() : "~$_.name())
       end
 
       if .NAME eq '1.txt'
@@ -76,7 +76,7 @@ for -><test/many>['1.txt', "2.txt"] do
       elsif .NAME eq '2.txt'
         say("ok\t\t- .NAME eq 2.txt")
       else
-        say("fail\t\t- unexpected: " ~ .NAME)
+        say("xx\t\t- unexpected: " ~ .NAME)
       end
   }
 
@@ -92,7 +92,7 @@ var $a = -><.>
       elsif $_.name() eq './test/many/2.txt'
         say("ok\t\t- \$_.name() eq './test/many/2.txt'")
       else
-        say("fail\t\t- \$_.name() : "~$_.name())
+        say("xx\t\t- \$_.name() : "~$_.name())
       end
 
       if .NAME eq '1.txt'
@@ -100,7 +100,7 @@ var $a = -><.>
       elsif .NAME eq '2.txt'
         say("ok\t\t- .NAME eq 2.txt")
       else
-        say("fail\t\t- unexpected .NAME: " ~ .NAME)
+        say("xx\t\t- unexpected .NAME: " ~ .NAME)
       end
 
       1
@@ -109,7 +109,7 @@ var $a = -><.>
 if +$a == 2
     say('ok - +$a == 2')
 else
-    say('fail - +$a == 2')
+    say('xx - +$a == 2')
 end
 
 $a = -><"test/many">
@@ -123,7 +123,7 @@ $a = -><"test/many">
       elsif .NAME eq '2.txt'
         say("ok\t\t- .NAME eq 2.txt")
       else
-        say("fail\t\t- unexpected .NAME: " ~ .NAME)
+        say("xx\t\t- unexpected .NAME: " ~ .NAME)
       end
 
       1
@@ -132,5 +132,5 @@ $a = -><"test/many">
 if +$a == 2
     say('ok - +$a == 2')
 else
-    say('fail - +$a == 2')
+    say('xx - +$a == 2')
 end

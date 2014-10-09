@@ -1,7 +1,7 @@
 class MO::Routine {
     has $!code;
 
-    method !set_code($code) {
+    method !code($code) {
         $!code := $code;
     }
 

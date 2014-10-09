@@ -4,5 +4,5 @@ var $res = system('echo "ok - system"');
 if $res == 0
     say("ok - result = $res")
 else
-    say("fail - result = $res")
+    say("xx - result = $res")
 end

@@ -3,5 +3,5 @@ var $res = shell('echo "ok - shell"', '.', null);
 if $res == 0
     say('ok - shell: '~$res);
 else
-    say('fail - shell: '~$res);
+    say('xx - shell: '~$res);
 end

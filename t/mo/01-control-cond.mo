@@ -5,25 +5,25 @@ if 1
 end
 
 if 0
-  say("fail")
+  say("xx")
 end
 
 if 1
   if 0
-    say("fail")
+    say("xx")
   end
 end
 
 if 1
   say("ok")
   if 0
-    say("fail")
+    say("xx")
   end
   if 1
     say("ok")
   end
 else
-  say("fail")
+  say("xx")
 end
 
 unless 0
@@ -33,24 +33,24 @@ end
 unless 0
   say("ok")
 else
-  say("fail")
+  say("xx")
 end
 
 unless 0
   say("ok")
 elsif 1
-  say("fail")
+  say("xx")
 else
-  say("fail")
+  say("xx")
 end
 
 unless 1
-  say("fail")
+  say("xx")
 elsif 1
   say("ok")
 else
-  say("fail")
+  say("xx")
 end
 
 if 1 say("ok"); end
-if 0 say("fail"); end
+if 0 say("xx"); end

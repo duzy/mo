@@ -11,7 +11,7 @@ say("1..2")
       elsif .NAME eq '2.txt'
         say("ok\t\t- .NAME eq 2.txt")
       else
-        say("fail\t\t- unexpected .NAME: " ~ .NAME)
+        say("xx\t\t- unexpected .NAME: " ~ .NAME)
       end
 
       0

@@ -7,6 +7,6 @@ for -><t/mo>[ "test/many/*.txt" ] do
       elsif .NAME eq '3.txt'
         say("ok\t\t- 3.txt")
       else
-        say("fail\t\t- unexpected .NAME: " ~ .NAME)
+        say("xx\t\t- unexpected .NAME: " ~ .NAME)
       end
   }

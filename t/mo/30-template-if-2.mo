@@ -14,7 +14,7 @@ var $v1 = str T1
 if $v1 eq "child-0 test-child-1 in test\n"
     say("ok - template if");
 else
-    say("fail - $v1");
+    say("xx - $v1");
 end
 
 template T2
@@ -31,5 +31,5 @@ var $v2 = str T2
 if $v2 eq "child-0 test-child-2 in test\n"
     say("ok - template if");
 else
-    say("fail - $v2");
+    say("xx - $v2");
 end

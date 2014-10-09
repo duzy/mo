@@ -11,13 +11,13 @@ return
     if $arg eq 'test-arg'
         say("ok\t\t- $arg eq 'test-arg'")
     else
-        say("fail\t\t- $arg eq 'test-arg'")
+        say("xx\t\t- $arg eq 'test-arg'")
     end
 
     if $global eq 'test-global'
         say("ok\t\t- $global eq 'test-global'")
     else
-        say("fail\t\t- $global eq 'test-global'")
+        say("xx\t\t- $global eq 'test-global'")
     end
 end
 

@@ -405,7 +405,7 @@ class MO::Actions is HLL::Actions {
                 QAST::Var.new( :name<~init>, :scope<lexical>, :decl<var> ),
                 QAST::WVal.new( :value($initroutine) ),
             ),
-            QAST::Op.new( :op<callmethod>, :name<!set_code>,
+            QAST::Op.new( :op<callmethod>, :name<!code>,
                 QAST::Var.new( :name<~init>, :scope<lexical> ), $*INIT,
             ),
             QAST::Op.new( :op<setcodeobj>,

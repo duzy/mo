@@ -6,7 +6,7 @@ with ->child[0] do {
     if .name eq "test-child-1"
       say("ok\t\t- .name eq \"test-child-1\"")
     else
-      say("fail\t\t- .name eq \"test-child-1\"")
+      say("xx\t\t- .name eq \"test-child-1\"")
     end
 }
 
@@ -17,7 +17,7 @@ with ->child[1]
       if .name eq "test-child-2"
         say("ok\t\t- .name eq \"test-child-2\"")
       else
-        say("fail\t\t- .name eq \"test-child-2\"")
+        say("xx\t\t- .name eq \"test-child-2\"")
       end
   }
 
@@ -27,6 +27,6 @@ with ->child{ .name eq "test-child-2" }
         if .name eq "test-child-2"
           say("ok\t\t- .name eq \"test-child-2\"")
         else
-          say("fail\t\t- .name eq \"test-child-2\"")
+          say("xx\t\t- .name eq \"test-child-2\"")
         end
     }

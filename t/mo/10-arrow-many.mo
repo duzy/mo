@@ -6,6 +6,6 @@ for ->*[1, 3] do {
     elsif .name eq 'test-child-2'
       say(.okay)
     else
-      say("fail\t- [0, 1]; " ~ .name)
+      say("xx\t- [0, 1]; " ~ .name)
     end
 }

@@ -8,10 +8,10 @@ with -><'t/mo/test'>['text.txt'] do
           if $s eq "text\n"
               say("ok\t\t- text")
           else
-              say("fail\t\t- wrong line: "~$s)
+              say("xx\t\t- wrong line: "~$s)
           end
           $h.close()
       else
-          say("fail\t\t- missing text.txt")
+          say("xx\t\t- missing text.txt")
       end
   }

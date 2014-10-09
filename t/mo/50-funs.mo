@@ -4,7 +4,7 @@ def test1($arg)
     if $arg eq 'test-arg'
         say("ok\t\t- $arg eq 'test-arg'")
     else
-        say("fail\t\t- $arg eq 'test-arg'")
+        say("xx\t\t- $arg eq 'test-arg'")
     end
 end
 
@@ -12,7 +12,7 @@ def test2($arg) {
     if $arg eq 'test-arg'
         say("ok\t\t- $arg eq 'test-arg'")
     else
-        say("fail\t\t- $arg eq 'test-arg'")
+        say("xx\t\t- $arg eq 'test-arg'")
     end
 }
 
@@ -23,7 +23,7 @@ var $test = def ($arg) {
     if $arg eq 'test-arg'
         say("ok\t\t- $arg eq 'test-arg'")
     else
-        say("fail\t\t- $arg eq 'test-arg'")
+        say("xx\t\t- $arg eq 'test-arg'")
     end
 }
 
@@ -33,6 +33,6 @@ def ($arg) {
     if $arg eq 'test-arg'
         say("ok\t\t- $arg eq 'test-arg'")
     else
-        say("fail\t\t- $arg eq 'test-arg'")
+        say("xx\t\t- $arg eq 'test-arg'")
     end
 }('test-arg')

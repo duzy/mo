@@ -7,7 +7,7 @@ $h = open('test.log', 'r');
 if $h.readline() eq 'test'
     say('ok - test');
 else
-    say('fail - test');
+    say('xx - test');
 end
 $h.close();
 

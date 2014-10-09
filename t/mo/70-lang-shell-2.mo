@@ -1,7 +1,7 @@
 say('1..1');
 
 var $cmd = 'echo';
-var $tip = 'fail - no escape';
+var $tip = 'xx - no escape';
 
 lang shell as run
 --------------------------

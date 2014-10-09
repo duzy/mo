@@ -13,5 +13,5 @@ $v = str T0
 if $v eq 'template T0 test test test'
     say("ok\t - $v");
 else
-    say("fail\t - $v");
+    say("xx\t - $v");
 end

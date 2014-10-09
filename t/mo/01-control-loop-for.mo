@@ -7,14 +7,14 @@ for ->child do
     elsif .name eq 'test-child-2'
       say(.okay)
     else
-      say("fail\t- "~.name)
+      say("xx\t- "~.name)
     end
 
     var $s = $_.get('okay')
     if .okay eq $s
       say($_.get('okay'))
     else
-      say("fail\t- .okay eq $_.okay")
+      say("xx\t- .okay eq $_.okay")
     end
   }
 
@@ -25,14 +25,14 @@ for ->child{1} do
     elsif .name eq 'test-child-2'
       say(.okay)
     else
-      say("fail\t- "~.name)
+      say("xx\t- "~.name)
     end
 
     var $s = $_.get('okay')
     if .okay eq $s
       say($_.get('okay'))
     else
-      say("fail\t- .okay eq $_.okay")
+      say("xx\t- .okay eq $_.okay")
     end
   }
 
@@ -43,13 +43,13 @@ for $list
   elsif .name eq 'test-child-2'
     say(.okay)
   else
-    say("fail\t- "~.name)
+    say("xx\t- "~.name)
   end
 
   var $s = $_.get('okay')
   if .okay eq $s
     say($_.get('okay'))
   else
-    say("fail\t- .okay eq $_.okay")
+    say("xx\t- .okay eq $_.okay")
   end
 end

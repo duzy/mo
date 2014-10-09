@@ -15,4 +15,5 @@ init {
     end
   end
   $Test = 'test';
+  say($Test);
 }

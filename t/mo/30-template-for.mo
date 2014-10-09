@@ -12,5 +12,5 @@ var $v = str T0
 if $v eq "test-child-1\ntest-child-2\n"
     say("ok - template for");
 else
-    say("fail - $v");
+    say("xx - $v");
 end
