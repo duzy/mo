@@ -430,7 +430,7 @@ class MO::World is HLL::World {
         for %*LANG {
             my $lang := %*LANG{$_.key};
             my $actions := %*LANG{$_.key~'-actions'};
-            self.add_external_interpreter($_.key, -> $s, *%opts {
+            self.add_interpreter($_.key, -> $s, %opts {
                 $compiler.compile($lang.parse(~$s, :$actions).made, :from<ast>)();
             });
         }
@@ -455,7 +455,7 @@ class MO::World is HLL::World {
         %builtins{$name} := %sym;
     }
 
-    method add_external_interpreter($name, $code) {
+    method add_interpreter($name, $code) {
         my $routine := nqp::create(MO::Routine);
         nqp::bindattr($routine, MO::Routine, '$!code', $code);
         nqp::setcodename($code, $name);
@@ -536,7 +536,7 @@ MO::World.add_builtin_code('substr', -> $s, $a, $b? {
 
 
 
-MO::World.add_external_interpreter('shell', -> $s, %opts {
+MO::World.add_interpreter('shell', -> $s, %opts {
     if nqp::existskey(%opts, 'stdout') {
         my $h := nqp::open($s, 'rp');
         %opts<stdout> := $h.readall;
@@ -545,6 +545,6 @@ MO::World.add_external_interpreter('shell', -> $s, %opts {
         nqp::shell($s, nqp::cwd, nqp::getenvhash())
     }
 });
-MO::World.add_external_interpreter('bash', -> $s, *%opts {
+MO::World.add_interpreter('bash', -> $s, %opts {
     nqp::shell($s, nqp::cwd, nqp::getenvhash())
 });
