@@ -1,33 +1,16 @@
 var $path = (+@ARGS < 2) ? cwd : @ARGS[1];
 
-use config 'test1', 'test2', 123 :init($path);
+use config 19 :init($path);
+say('isnull($config::SDK): '~isnull($config::SDK))
 
-def load_properties($filename) {
-    var $hash = hash();
-    var $source = slurp($filename);
-    for split("\n", $source) {
-        var $i = index($_, '=');
-        if 0 < $i {
-            $hash{substr($_, 0, $i)} = substr($_, $i+1);
-        }
-    }
-    $hash
-}
-
-var $local_properties = load_properties("$path/local.properties");
-var $project_properties = load_properties("$path/project.properties");
-
-var $sdk = any isdir $local_properties{'sdk.dir'},
-    '/home/zhan/tools/android-studio/sdk',
-    '/open/android/android-studio/sdk';
-
-var $variant = 0 ? 'release' : 'debug';
-var $api_level = '19';
+var $sdk = $config::SDK;
+var $variant = $config::Variant;
+var $api_level = $config::APILevel;
 
 var $platform = "android-$api_level";
 var $platform_jar = "$sdk/platforms/$platform/android.jar";
 var $platform_aidl = "$sdk/platforms/$platform/framework.aidl";
-var $platform_properties = load_properties("$sdk/platforms/$platform/source.properties");
+var $platform_properties = config::LoadProperties("$sdk/platforms/$platform/source.properties");
 
 def build_tool($name) {
   var $version = $platform_properties{'Platform.Version'};
