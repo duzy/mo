@@ -359,14 +359,18 @@ class MO::Actions is HLL::Actions {
     }
 
     method prog($/) {
-        my $argsinit := QAST::Stmts.new();
+        my $moduleinit := QAST::Stmts.new();
         if nqp::defined($*MODULE_PARAMS) && nqp::islist($*MODULE_PARAMS) {
-            my $params := nqp::clone($*MODULE_PARAMS);
+            my $params := $*MODULE_PARAMS;
             my $routine := $*W.new_routine('$*MODULE_PARAMS', -> { $params });
             $*W.add_object($routine);
-            $argsinit.push(QAST::Op.new(:op<bind>,
+            $moduleinit.push(QAST::Op.new(:op<bind>,
                 QAST::Var.new( :scope<lexical>, :name<@ARGS> ),
                 QAST::Op.new( :op<call>, QAST::WVal.new( :value($routine) ) ),
+            ));
+        } else {
+            $moduleinit.push(QAST::Op.new( :op<call>, QAST::BVal.new( :value($*INIT) ),
+                QAST::Var.new( :name<@ARGS>, :scope<lexical>, :flat(1) ),
             ));
         }
 
@@ -375,19 +379,21 @@ class MO::Actions is HLL::Actions {
 
         my $init := QAST::Stmts.new(
             QAST::Var.new( :scope<lexical>, :name<@ARGS>, :decl<param>, :slurpy(1) ),
-            $argsinit,
 
             QAST::Op.new( :op<bind>,
                 QAST::Var.new( :name<~init>, :scope<lexical>, :decl<var> ),
                 QAST::WVal.new( :value($initroutine) ),
             ),
             QAST::Op.new( :op<callmethod>, :name<!code>,
-                QAST::Var.new( :name<~init>, :scope<lexical> ), $*INIT,
+                QAST::Var.new( :name<~init>, :scope<lexical> ),
+                QAST::BVal.new( :value($*INIT) ),
             ),
             QAST::Op.new( :op<setcodeobj>,
                 QAST::BVal.new( :value($*INIT) ),
                 QAST::Var.new( :name<~init>, :scope<lexical> ),
             ),
+
+            $*INIT, $moduleinit,
 
             QAST::Op.new( :op<bind>,
                 QAST::Var.new( :scope<lexical>, :decl<var>, :name<GLOBAL> ),
@@ -440,10 +446,18 @@ class MO::Actions is HLL::Actions {
             # If this unit is loaded as a module, we want it to automatically
             # execute the mainline code above after all other initializations
             # have occurred.
-            :load(QAST::Op.new(:op<call>, QAST::BVal.new( :value($scope) ))),
+            :load(QAST::Stmts.new(
+                 QAST::Op.new( :op<call>, QAST::BVal.new( :value($scope) ) ),
+            )),
 
-            :main(QAST::Op.new(:op<call>, QAST::BVal.new( :value($scope) ),
-                QAST::Var.new( :name<ARGS>, :scope<local>, :decl<param>, :slurpy(1), :flat(1) )
+            :main(QAST::Stmts.new(
+                 QAST::Var.new( :name<ARGS>, :scope<local>, :decl<param>, :slurpy(1) ),
+                 QAST::Op.new( :op<call>, QAST::BVal.new( :value($*INIT) ),
+                     QAST::Var.new( :name<ARGS>, :scope<local>, :flat(1) ),
+                 ),
+                 QAST::Op.new( :op<call>, QAST::BVal.new( :value($scope) ),
+                     QAST::Var.new( :name<ARGS>, :scope<local>, :flat(1) ),
+                 ),
             )),
 
             # Finally, the outer block, which in turn contains all of the
@@ -603,10 +617,20 @@ class MO::Actions is HLL::Actions {
         make $pred;
     }
 
+    sub default_initializer($sigil) {
+        if $sigil eq '@' {
+            QAST::Op.new( :op<list> )
+        } elsif $sigil eq '%' {
+            QAST::Op.new( :op<hash> )
+        } else {
+            QAST::Op.new( :op<null> )
+        }
+    }
+
     method declaration:sym<var>($/, :$init?) {
         my @name := nqp::split('::', ~$<variable><name>);
         my $final_name := @name.pop;
-        my $name := ~$<variable><sigil> ~ $final_name;
+        my $name := ~$<variable><sigil> ~ $<variable><twigil> ~ $final_name;
 
         my $scope := $*W.current_scope;
 
@@ -618,33 +642,38 @@ class MO::Actions is HLL::Actions {
         }
 
         my $initializer := $<initializer> ?? $<initializer>.made
-            !! nqp::defined($init) ?? $init !! QAST::Op.new( :op<null> );
+            !! nqp::defined($init) ?? $init !! NQPMu;
 
         if nqp::defined($who) {
-            make QAST::Stmts.new(
-                QAST::Op.new( :op<bindkey>, $who,
-                    QAST::SVal.new( :value($name) ), $initializer ),
+            my $initialize := nqp::defined($initializer)
+                ?? QAST::Op.new( :op<bindkey>, $who, QAST::SVal.new( :value($name) ), $initializer )
+                !! QAST::Stmts.new();
+            make QAST::Stmts.new( $initialize,
                 QAST::Var.new( :node($/), :scope<associative>,
                     $who, QAST::SVal.new( :value($name) ) ),
             );
         } elsif +@name == 0 {
             my $package := $scope.ann('package');
             if nqp::defined($package) {
-                $scope.symbol($name, :scope<package>, :$package );
-                make QAST::Stmts.new(
-                    QAST::Op.new( :node($/), :op<bindkey>,
-                        QAST::Op.new( :op<who>, QAST::WVal.new( :value($package) ) ),
-                        QAST::SVal.new( :value($name) ), $initializer ),
+                $scope.symbol( $name, :scope<package>, :$package );
+                my $initialize := nqp::defined($initializer)
+                    ?? QAST::Op.new( :node($/), :op<bindkey>,
+                           QAST::Op.new( :op<who>, QAST::WVal.new( :value($package) ) ),
+                           QAST::SVal.new( :value($name) ), $initializer )
+                    !! QAST::Stmts.new();
+                make QAST::Stmts.new( $initialize,
                     QAST::Var.new( :node($/), :scope<associative>,
                         QAST::Op.new( :op<who>, QAST::WVal.new( :value($package) ) ),
                         QAST::SVal.new( :value($name) ) ),
                 );
             } else {
                 $scope.symbol( $name, :scope<lexical> );
-                make QAST::Stmts.new(
-                    QAST::Op.new( :node($/), :op<bind>,
-                        QAST::Var.new( :name($name), :scope<lexical>, :decl<var> ),
-                        $initializer ),
+                my $initialize := nqp::defined($initializer)
+                    ?? QAST::Op.new( :node($/), :op<bind>,
+                           QAST::Var.new( :name($name), :scope<lexical>, :decl<var> ),
+                           $initializer )
+                    !! QAST::Stmts.new();
+                make QAST::Stmts.new( $initialize,
                     QAST::Var.new( :node($/), :name($name), :scope<lexical> ),
                 );
             }

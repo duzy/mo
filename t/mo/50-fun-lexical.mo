@@ -1,4 +1,4 @@
-say('1..4')
+say('1..7')
 
 var $var = 'test-var'
 
@@ -32,3 +32,27 @@ var $test = def ($arg) {
 
 $test('test-arg')
 test('test-arg')
+
+def modify($v) {
+    $var = $v;
+}
+
+if $var eq 'test-var'
+    say("ok\t\t- $var eq 'test-var'")
+else
+    say("xx\t\t- $var eq 'test-var'")
+end
+
+modify('abc');
+if $var eq 'abc'
+    say("ok\t\t- $var eq 'abc'")
+else
+    say("xx\t\t- $var eq 'abc'")
+end
+
+modify('123456');
+if $var eq '123456'
+    say("ok\t\t- $var eq '123456'")
+else
+    say("xx\t\t- $var eq '123456'")
+end

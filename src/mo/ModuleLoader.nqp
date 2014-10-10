@@ -91,6 +91,8 @@ class MO::ModuleLoader {
     }
 
     my method eval_source_file($file, @params) {
+        @params := nqp::clone(@params);
+        @params.unshift($file);
         my $*CTX := nqp::null();
         my $*CTXSAVE := self;
         my $*MODULE_PARAMS := @params;
@@ -128,7 +130,8 @@ class MO::ModuleLoader {
             if %chosen<load> {
                 my $*CTX := nqp::null();
                 my $*CTXSAVE := self;
-                my $*MODULE_PARAMS := @params;
+                my $*MODULE_PARAMS := nqp::clone(@params);
+                $*MODULE_PARAMS.unshift(%chosen<load>);
                 nqp::loadbytecode(%chosen<load>);
                 $*MODULE_PARAMS := nqp::null();
                 @module_ctx.push( $*CTX );
