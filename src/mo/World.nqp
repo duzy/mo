@@ -182,6 +182,7 @@ class MO::World is HLL::World {
             @name := nqp::clone(@name);
             my $final_name := @name.pop();
             my $value := self.value_of(@name, $root);
+say("World: " ~ nqp::join('::', @name) ~ ' ' ~ nqp::defined($value) ~ ", $final_name " ~ nqp::existskey($value.WHO, $final_name) ~ ' = ' ~ ($value.WHO){$final_name});
             if nqp::defined($value) && nqp::existskey($value.WHO, $final_name) {
                 my $who := QAST::Op.new( :op<who>, QAST::WVal.new( $value ) );
                 return QAST::Var.new( :node($/), :scope<associative>,

@@ -1,3 +1,18 @@
+var $Variant = 0 < +@ARGS ? @ARGS[1] : 'debug';
+var $APILevel
+
+var $LocalProperties
+var $ProjectProperties
+
+var $SDK
+
+var $Platform = "android-$APILevel"
+var $PlatformProperties
+var $Platform_jar
+var $Platform_aidl
+
+var $Path
+
 def LoadProperties($filename) {
     var $hash = hash();
     var $source = slurp($filename);
@@ -10,23 +25,33 @@ def LoadProperties($filename) {
     $hash
 }
 
-var $Variant = 0 ? 'release' : 'debug';
-var $APILevel = 0 < +@ARGS ? @ARGS[0] : 19;
+def Tool($name) {
+    var $sdk = $SDK;
+    any isreg "$sdk/tools/$name"
+}
 
-var $LocalProperties
-var $ProjectProperties
+def BuildTool($name) {
+    var $sdk = $SDK;
+    var $version = $PlatformProperties{'Platform.Version'};
+    any isreg
+    "$sdk/build-tools/android-$version/$name",
+    "$sdk/build-tools/android-4.4W/$name",
+    "$sdk/build-tools/android-4.4.2/$name",
+    "$sdk/build-tools/19.1.0/$name",
+    "$sdk/build-tools/19.0.3/$name",
+    "$sdk/build-tools/19.0.2/$name",
+    "$sdk/build-tools/19.0.1/$name",
+    "$sdk/build-tools/19.0.0/$name",
+    "$sdk/build-tools/18.1.1/$name",
+    "$sdk/build-tools/18.1.0/$name",
+    "$sdk/build-tools/18.0.1/$name",
+    "$sdk/build-tools/17.0.0/$name"
+}
 
-var $SDK
+load {
+    $APILevel = $_{'api'};
+    $Path = $_{'path'};
 
-var $Platform = "android-$APILevel";
-var $PlatformProperties
-var $Platform_jar
-var $Platform_aidl
-
-var $Path
-
-init {
-    $Path = +@_ < 1 ? cwd : @_[0];
     $LocalProperties = LoadProperties("$Path/local.properties")
     $ProjectProperties = LoadProperties("$Path/project.properties")
 
@@ -34,9 +59,13 @@ init {
         '/home/zhan/tools/android-studio/sdk',
         '/open/android/android-studio/sdk';
 
+    $Platform = "android-$APILevel"
     $PlatformProperties = LoadProperties("$SDK/platforms/$Platform/source.properties")
     $Platform_jar = "$SDK/platforms/$Platform/android.jar"
     $Platform_aidl = "$SDK/platforms/$Platform/framework.aidl"
 
-say($SDK)
+    say("config.mo: init: Platform = $Platform");
+    say("config.mo: init: SDK = $SDK");
 }
+
+say("config.mo: Platform = $Platform")

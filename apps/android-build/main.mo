@@ -1,36 +1,25 @@
 var $path = (+@ARGS < 2) ? cwd : @ARGS[1];
 
-use config 19 :init($path);
-say('isnull($config::SDK): '~isnull($config::SDK))
+use config 'release' :api(19), :path($path);
+use config 'debug' :api(19), :path($path);
+
+init {
+  say("main.mo: init");
+}
+
+say('main.mo: isnull($config::SDK): '~isnull($config::SDK))
 
 var $sdk = $config::SDK;
 var $variant = $config::Variant;
 var $api_level = $config::APILevel;
 
-var $platform = "android-$api_level";
-var $platform_jar = "$sdk/platforms/$platform/android.jar";
-var $platform_aidl = "$sdk/platforms/$platform/framework.aidl";
-var $platform_properties = config::LoadProperties("$sdk/platforms/$platform/source.properties");
+var $platform = $config::Platform;
+var $platform_jar = $config::Platform_jar;
+var $platform_aidl = $config::Platform_aidl;
+var $platform_properties = $config::PlatformProperties;
 
-def build_tool($name) {
-  var $version = $platform_properties{'Platform.Version'};
-  any isreg
-    "$sdk/build-tools/android-$version/$name",
-    "$sdk/build-tools/android-4.4W/$name",
-    "$sdk/build-tools/android-4.4.2/$name",
-    "$sdk/build-tools/19.1.0/$name",
-    "$sdk/build-tools/19.0.3/$name",
-    "$sdk/build-tools/19.0.2/$name",
-    "$sdk/build-tools/19.0.1/$name",
-    "$sdk/build-tools/19.0.0/$name",
-    "$sdk/build-tools/18.1.1/$name",
-    "$sdk/build-tools/18.1.0/$name",
-    "$sdk/build-tools/18.0.1/$name",
-    "$sdk/build-tools/17.0.0/$name"
-}
-
-var $cmd_zipalign = any isreg "$sdk/tools/zipalign";
-var $cmd_aapt = build_tool('aapt');
+var $cmd_zipalign = config::Tool("zipalign");
+var $cmd_aapt = config::BuildTool('aapt');
 var $cmd_jarsigner = "jarsigner";
 
 var $sign_storepass;

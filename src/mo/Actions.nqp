@@ -369,7 +369,8 @@ class MO::Actions is HLL::Actions {
                 QAST::Op.new( :op<call>, QAST::WVal.new( :value($routine) ) ),
             ));
         } else {
-            $moduleinit.push(QAST::Op.new( :op<call>, QAST::BVal.new( :value($*INIT) ),
+            $moduleinit.push(QAST::Op.new( :op<call>,
+                QAST::BVal.new( :value($*INIT) ),
                 QAST::Var.new( :name<@ARGS>, :scope<lexical>, :flat(1) ),
             ));
         }
@@ -377,7 +378,7 @@ class MO::Actions is HLL::Actions {
         my $initroutine := nqp::create(MO::Routine);
         $*W.add_object($initroutine);
 
-        my $init := QAST::Stmts.new(
+        my $unitinit := QAST::Stmts.new(
             QAST::Var.new( :scope<lexical>, :name<@ARGS>, :decl<param>, :slurpy(1) ),
 
             QAST::Op.new( :op<bind>,
@@ -417,12 +418,12 @@ class MO::Actions is HLL::Actions {
             ),
         );
 
-        $init.push(self.CTXSAVE());
+        $unitinit.push(self.CTXSAVE());
 
         $*W.install_fixups();
 
         my $scope := $*W.pop_scope();
-        $scope.unshift( $init );
+        $scope.unshift( $unitinit );
         $scope.push( $<statements>.made );
 
         fixup_variables($scope);
@@ -638,7 +639,8 @@ class MO::Actions is HLL::Actions {
         if +@name {
             $who := $*W.symbol_ast($/, @name, 1);
             if nqp::istype($who, QAST::WVal) {
-                ($who.value.WHO){$name} := nqp::null(); # bind the key immediately to avoid undefined symbol
+                # bind the key immediately to avoid undefined symbol
+                ($who.value.WHO){$name} := nqp::null();
             }
         } elsif $*W.is_export_name($final_name) {
             ($*EXPORT.WHO){$name} := nqp::null(); # bind the key immediately to avoid undefined symbol
