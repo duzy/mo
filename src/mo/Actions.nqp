@@ -637,7 +637,11 @@ class MO::Actions is HLL::Actions {
         my $who;
         if +@name {
             $who := $*W.symbol_ast($/, @name, 1);
+            if nqp::istype($who, QAST::WVal) {
+                ($who.value.WHO){$name} := nqp::null(); # bind the key immediately to avoid undefined symbol
+            }
         } elsif $*W.is_export_name($final_name) {
+            ($*EXPORT.WHO){$name} := nqp::null(); # bind the key immediately to avoid undefined symbol
             $who := QAST::Var.new( :name<EXPORT.WHO>, :scope<lexical> );
         }
 
@@ -655,6 +659,7 @@ class MO::Actions is HLL::Actions {
         } elsif +@name == 0 {
             my $package := $scope.ann('package');
             if nqp::defined($package) {
+                ($package.WHO){$name} := nqp::null(); # bind the key immediately to avoid undefined symbol
                 $scope.symbol( $name, :scope<package>, :$package );
                 my $initialize := nqp::defined($initializer)
                     ?? QAST::Op.new( :node($/), :op<bindkey>,
