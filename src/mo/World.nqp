@@ -144,10 +144,6 @@ class MO::World is HLL::World {
                 return %sym<ast> if nqp::existskey(%sym, 'ast');
                 return QAST::WVal.new( :node($/), :value(%sym<value>) )
                     if nqp::existskey(%sym, 'value');
-            } elsif self.is_export_name($first) {
-                return QAST::Var.new( :node($/), :scope<associative>,
-                    QAST::Var.new( :name<EXPORT.WHO>, :scope<lexical> ),
-                    QAST::SVal.new( :value($first) ) );
             } elsif is_sigil($first[0]) && $first[1] eq '.' {
                 my $class := self.get_package;
                 my $how := $class.HOW;
@@ -164,6 +160,10 @@ class MO::World is HLL::World {
                 return QAST::Var.new( :node($/), :name($first), :scope<attribute>,
                     QAST::Var.new( :name<me>, :scope<lexical> ),
                     QAST::WVal.new( :value($class) ) );
+            } elsif self.is_export_name($first) {
+                return QAST::Var.new( :node($/), :scope<associative>,
+                    QAST::Var.new( :name<EXPORT.WHO>, :scope<lexical> ),
+                    QAST::SVal.new( :value($first) ) );
             } else {
                 # Finally try to lookup the GLOBAL
                 my $value := self.value_of(@name, $*GLOBALish);
