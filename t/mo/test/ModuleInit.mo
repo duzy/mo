@@ -1,4 +1,4 @@
-say('1..4');
+say('1..5');
 
 var $Test;
 
@@ -15,5 +15,5 @@ init {
     end
   end
   $Test = 'test';
-  say($Test);
+  say('ok - 4. init, '~$Test);
 }

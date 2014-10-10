@@ -130,6 +130,10 @@ class MO::World is HLL::World {
             if +%sym {
                 if %sym<scope> eq 'package' {
                     my $package := %sym<package>;
+                    unless nqp::defined($package) {
+                        $/.CURSOR.panic('no associated package by '~nqp::join('::', @name))  if $panic;
+                        return NQPMu;
+                    }
                     return QAST::Var.new( :scope<associative>,
                         QAST::Op.new( :op<who>, QAST::WVal.new( :value($package) ) ),
                         QAST::SVal.new( :value($first) ) );
@@ -140,6 +144,26 @@ class MO::World is HLL::World {
                 return %sym<ast> if nqp::existskey(%sym, 'ast');
                 return QAST::WVal.new( :node($/), :value(%sym<value>) )
                     if nqp::existskey(%sym, 'value');
+            } elsif self.is_export_name($first) {
+                return QAST::Var.new( :node($/), :scope<associative>,
+                    QAST::Var.new( :name<EXPORT.WHO>, :scope<lexical> ),
+                    QAST::SVal.new( :value($first) ) );
+            } elsif is_sigil($first[0]) && $first[1] eq '.' {
+                my $class := self.get_package;
+                my $how := $class.HOW;
+                unless nqp::can($how, 'find_attribute') && nqp::can($how, 'add_attribute') {
+                    $/.CURSOR.panic($how.name($class)~' has no attributes') if $panic;
+                    return NQPMu;
+                }
+
+                my $attr := $how.find_attribute($class, $first);
+                unless nqp::defined($attr) {
+                    $/.CURSOR.panic($how.name($class)~' has no attribute '~$first) if $panic;
+                    return NQPMu;
+                }
+                return QAST::Var.new( :node($/), :name($first), :scope<attribute>,
+                    QAST::Var.new( :name<me>, :scope<lexical> ),
+                    QAST::WVal.new( :value($class) ) );
             } else {
                 # Finally try to lookup the GLOBAL
                 my $value := self.value_of(@name, $*GLOBALish);
@@ -166,15 +190,26 @@ class MO::World is HLL::World {
             @name.push($final_name); # restore the @name for correct panic.
         }
 
-        $/.CURSOR.panic('undefined symbol '~nqp::join('::', @name)) if $panic;
+        if $panic {
+            if is_sigil(@name[+@name-1][0]) {
+                $/.CURSOR.panic('undefined variable '~nqp::join('::', @name));
+            } else {
+                $/.CURSOR.panic('undefined symbol '~nqp::join('::', @name));
+            }
+        }
 
         NQPMu;
     }
 
+    sub is_sigil($c) { 0 <= nqp::index('$@%&', $c) }
+
     method is_export_name($name) {
-        my $s := nqp::substr($name, 0, 1);
-        # $s := nqp::substr($name, 1, 1) if $s eq '$' || $s eq '&';
-        $s eq nqp::uc($s);
+        my int $pos := 0;
+        if is_sigil($name[0]) { # <sigil>
+            # $pos := 0 <= nqp::index('.', $name[1]) ?? 2 !! 1; # <twigil>
+            $pos := 1; # just skip <sigil> but <twigil>
+        }
+        nqp::iscclass(nqp::const::CCLASS_UPPERCASE, $name, $pos)
     }
 
     # Loads a module immediately, and also makes sure we load it
@@ -513,8 +548,8 @@ MO::World.add_builtin_code('split', -> $l, $s { nqp::split($l, $s) });
 MO::World.add_builtin_code('join', -> $s, $a { nqp::join($s, $a) });
 MO::World.add_builtin_code('concat', -> $a, $b { nqp::concat($a, $b) });
 MO::World.add_builtin_code('chars', -> $s { nqp::chars($s) });
-MO::World.add_builtin_code('index', -> $a, $b { nqp::index($a, $b) });
-MO::World.add_builtin_code('rindex', -> $a, $b { nqp::rindex($a, $b) });
+MO::World.add_builtin_code('index', -> $s, $c { nqp::index($s, $c) });
+MO::World.add_builtin_code('rindex', -> $s, $c { nqp::rindex($s, $c) });
 MO::World.add_builtin_code('substr', -> $s, $a, $b? {
     nqp::defined($b) ?? nqp::substr($s, $a, $b) !! nqp::substr($s, $a)
 });

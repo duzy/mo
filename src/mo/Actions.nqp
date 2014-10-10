@@ -198,42 +198,18 @@ class MO::Actions is HLL::Actions {
     }
 
     method variable($/) {
+        my int $panic := 1
+            && $*IN_DECL ne 'var'
+            && $*IN_DECL ne 'member'
+            && $*IN_DECL ne 'lang'
+            ;
+
         my @name := nqp::split('::', ~$<name>);
         my $final_name := @name.pop;
         my $name := ~$<sigil> ~$<twigil> ~ $final_name;
         @name.push($name);
 
-        my $ast := $*W.symbol_ast($/, @name, 0);
-        if $ast {
-            make $ast;
-        } elsif +@name == 1 && $*W.is_export_name($final_name) {
-            make QAST::Var.new( :node($/), :scope<associative>,
-                QAST::Var.new( :name<EXPORT.WHO>, :scope<lexical> ),
-                QAST::SVal.new( :value($name) ) );
-        } elsif $*IN_DECL eq 'var' {
-            # null, nothing made
-        } elsif $*IN_DECL eq 'member' {
-            # null, nothing made
-        } elsif $*IN_DECL eq 'lang' {
-            # null, nothing made
-        } elsif ~$<twigil> eq '.' {
-            my $class := $*W.get_package;
-            my $how := $class.HOW;
-            unless nqp::can($how, 'find_attribute') && nqp::can($how, 'add_attribute') {
-                $/.CURSOR.panic($how.name($class)~' cannot have attributes');
-            }
-
-            my $attr := $how.find_attribute($class, $name);
-            unless nqp::defined($attr) {
-                $/.CURSOR.panic($how.name($class)~' has no attribute '~$name);
-            }
-            make QAST::Var.new( :node($/), :name($name), :scope<attribute>,
-                QAST::Var.new( :name<me>, :scope<lexical> ),
-                QAST::WVal.new( :value($class) ),
-            );
-        } else {
-            $/.CURSOR.panic("undeclared variable "~$/);
-        }
+        make $*W.symbol_ast($/, @name, $panic);
     }
 
     method initializer($/) {
@@ -628,10 +604,6 @@ class MO::Actions is HLL::Actions {
     }
 
     method declaration:sym<var>($/, :$init?) {
-        unless $<variable><name> {
-            $/.CURSOR.panic('variable $ already defined');
-        }
-
         my @name := nqp::split('::', ~$<variable><name>);
         my $final_name := @name.pop;
         my $name := ~$<variable><sigil> ~ $final_name;

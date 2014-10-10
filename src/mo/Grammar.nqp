@@ -323,12 +323,10 @@ grammar MO::Grammar is HLL::Grammar {
     token sigil  { <[$@%&]> }
     token twigil { <[.]> } #{ <[*!?]> }
     token variable {
-        <sigil> <twigil>? [$<name>=[<.ident> ['::'<.ident>]*]]
+        <sigil> <twigil>? [$<name>=[<.ident> ['::'<.ident>]*] || <.panic: 'expects variable name'>]
     }
 
-    token initializer {
-        '=' <.ws> <EXPR('f=')>
-    }
+    token initializer { '=' <.ws> <EXPR('f=')> }
 
     rule statements { <.ws> <statement>* }
 
@@ -535,8 +533,7 @@ grammar MO::Grammar is HLL::Grammar {
     }
 
     rule class_member:sym<$> {
-        :my $*IN_DECL;
-        { $*IN_DECL := 'member'; }
+        :my $*IN_DECL; { $*IN_DECL := 'member'; }
         <variable> <initializer>? ';'? { $*IN_DECL := 0; }
     }
 
@@ -548,6 +545,7 @@ grammar MO::Grammar is HLL::Grammar {
         ['as'\s [<variable>|<name=.ident>]]?
         <template_starter> ~ <template_stopper>
         [ { $*IN_DECL := 'lang-source' }<source=.lang_source> ]
+        { $*IN_DECL := 0; }
     }
 
     proto rule lang_modifier { <...> }
