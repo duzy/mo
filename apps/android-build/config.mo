@@ -5,13 +5,24 @@ var $LocalProperties
 var $ProjectProperties
 
 var $SDK
+var $Path
 
-var $Platform = "android-$APILevel"
+var $Platform
 var $PlatformProperties
 var $Platform_jar
 var $Platform_aidl
 
-var $Path
+var $Cmd_aapt
+var $Cmd_zipalign
+var $Cmd_jarsigner
+
+var $Sign_storepass_filename;
+var $Sign_storepass;
+var $Sign_keystore_filename;
+var $Sign_keystore;
+var $Sign_keypass_filename;
+var $Sign_keypass;
+var $Sign_cert = 'cert';
 
 def LoadProperties($filename) {
     var $hash = hash();
@@ -49,8 +60,8 @@ def BuildTool($name) {
 }
 
 load {
-    $APILevel = $_{'api'};
-    $Path = $_{'path'};
+    $APILevel = %_{'api'};
+    $Path = %_{'path'};
 
     $LocalProperties = LoadProperties("$Path/local.properties")
     $ProjectProperties = LoadProperties("$Path/project.properties")
@@ -64,8 +75,22 @@ load {
     $Platform_jar = "$SDK/platforms/$Platform/android.jar"
     $Platform_aidl = "$SDK/platforms/$Platform/framework.aidl"
 
-    say("config.mo: init: Platform = $Platform");
-    say("config.mo: init: SDK = $SDK");
+    $Cmd_aapt = BuildTool('aapt')
+    $Cmd_zipalign = Tool("zipalign")
+    $Cmd_jarsigner = "jarsigner"
+
+    $Sign_storepass_filename = any isreg "$Path/.android/storepass"
+    $Sign_keystore_filename = any isreg "$Path/.android/keystore"
+    $Sign_keypass_filename = any isreg "$Path/.android/keypass"
+
+    unless isnull($Sign_storepass_filename) { $Sign_storepass = slurp($Sign_storepass_filename) }
+    unless isnull($Sign_keystore_filename)  { $Sign_keystore = slurp($Sign_keystore_filename) }
+    unless isnull($Sign_keypass_filename)   { $Sign_keypass = slurp($Sign_keypass_filename) }
+    
+    $Sign_cert = 'cert';
+
+    say("config.mo: Platform = $Platform");
+    say("config.mo: SDK = $SDK");
 }
 
-say("config.mo: Platform = $Platform")
+say("config.mo: Variant = $Variant")

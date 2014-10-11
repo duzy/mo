@@ -358,6 +358,25 @@ class MO::Actions is HLL::Actions {
         make QAST::Op.new(:op('null'));
     }
 
+    sub new_lexical_routine_declarator($name, $block) {
+        my $routine := nqp::create(MO::Routine);
+        $*W.add_object($routine);
+        QAST::Stmts.new(
+            QAST::Op.new( :op<bind>,
+                QAST::Var.new( :$name, :scope<lexical>, :decl<var> ),
+                QAST::WVal.new( :value($routine) ),
+            ),
+            QAST::Op.new( :op<callmethod>, :name<!code>,
+                QAST::Var.new( :$name, :scope<lexical> ),
+                QAST::BVal.new( :value($block) ),
+            ),
+            QAST::Op.new( :op<setcodeobj>,
+                QAST::BVal.new( :value($block) ),
+                QAST::Var.new( :$name, :scope<lexical> ),
+            ),
+        )
+    }
+
     method prog($/) {
         my $moduleinit := QAST::Stmts.new();
         if nqp::defined($*MODULE_PARAMS) && nqp::islist($*MODULE_PARAMS) {
@@ -368,33 +387,15 @@ class MO::Actions is HLL::Actions {
                 QAST::Var.new( :scope<lexical>, :name<@ARGS> ),
                 QAST::Op.new( :op<call>, QAST::WVal.new( :value($routine) ) ),
             ));
-        } else {
-            $moduleinit.push(QAST::Op.new( :op<call>,
-                QAST::BVal.new( :value($*INIT) ),
-                QAST::Var.new( :name<@ARGS>, :scope<lexical>, :flat(1) ),
-            ));
         }
-
-        my $initroutine := nqp::create(MO::Routine);
-        $*W.add_object($initroutine);
 
         my $unitinit := QAST::Stmts.new(
             QAST::Var.new( :scope<lexical>, :name<@ARGS>, :decl<param>, :slurpy(1) ),
 
-            QAST::Op.new( :op<bind>,
-                QAST::Var.new( :name<~init>, :scope<lexical>, :decl<var> ),
-                QAST::WVal.new( :value($initroutine) ),
-            ),
-            QAST::Op.new( :op<callmethod>, :name<!code>,
-                QAST::Var.new( :name<~init>, :scope<lexical> ),
-                QAST::BVal.new( :value($*INIT) ),
-            ),
-            QAST::Op.new( :op<setcodeobj>,
-                QAST::BVal.new( :value($*INIT) ),
-                QAST::Var.new( :name<~init>, :scope<lexical> ),
-            ),
+            new_lexical_routine_declarator('~init', $*INIT),
+            new_lexical_routine_declarator('~load', $*LOAD),
 
-            $*INIT, $moduleinit,
+            $*INIT, $*LOAD, $moduleinit,
 
             QAST::Op.new( :op<bind>,
                 QAST::Var.new( :scope<lexical>, :decl<var>, :name<GLOBAL> ),
@@ -415,6 +416,11 @@ class MO::Actions is HLL::Actions {
             QAST::Op.new( :op<bind>,
                 QAST::Var.new( :name<$_>, :scope<lexical>, :decl<var> ),
                 QAST::Op.new( :op<callmethod>, :name<root>, QAST::Var.new( :scope<lexical>, :name<MODEL> ) ),
+            ),
+
+            QAST::Op.new( :op<call>,
+                QAST::BVal.new( :value($*INIT) ),
+                QAST::Var.new( :name<@ARGS>, :scope<lexical>, :flat(1) ),
             ),
         );
 
@@ -696,17 +702,18 @@ class MO::Actions is HLL::Actions {
     }
 
     method declaration:sym<use>($/) {
+        my $params_ast;
         my @params;
         if $<params> {
-            my $ast := $<params>.made;
-            for $ast.list {
+            $params_ast := $<params>.made;
+            for $params_ast.list {
                 unless isconst($_) {
                     $<params>.CURSOR.panic("expect constant value");
                 }
             }
 
             my $compiler := nqp::getcomp('mo');
-            my $eval := $compiler.compile($ast, :from<ast>, :lineposcache($*LINEPOSCACHE));
+            my $eval := $compiler.compile($params_ast, :from<ast>, :lineposcache($*LINEPOSCACHE));
             my $v := $eval();
             if nqp::islist($v) {
                 @params := $v;
@@ -714,19 +721,29 @@ class MO::Actions is HLL::Actions {
                 @params := [$v];
             }
         }
+#say('W_EXPORT: '~nqp::where($*W)~', '~nqp::where($*EXPORT));
         my @lexpads := $*W.load_module($/, ~$<name>, @params, $*GLOBALish);
+#say('W_EXPORT: '~nqp::where($*W)~', '~nqp::where($*EXPORT));
         my $stmts := QAST::Stmts.new( :node($/) );
         for @lexpads {
-            if nqp::isinvokable($_<~init>) {
-                my $init := QAST::WVal.new(:value($_<~init>));
-                my $callinit;
-                if $<initargs> {
-                    $callinit := nqp::clone($<initargs>.made);
-                    $callinit.unshift($init);
-                } else {
-                    $callinit := QAST::Op.new(:op<call>, $init);
+            if nqp::isinvokable($_<~load>) {
+                my $load := QAST::WVal.new(:value($_<~load>));
+                my $callload := QAST::Op.new(:op<call>, $load);
+                if nqp::defined($params_ast) {
+                    if nqp::istype($params_ast, QAST::Op) && $params_ast.op eq 'list' {
+                        $params_ast.flat(1);
+                    }
+                    $callload.push( $params_ast );
                 }
-                $stmts.push($callinit);
+                if +$<namedarg> {
+                    my $args := QAST::Op.new(:op<hash>, :flat(1));
+                    $callload.push( $args );
+                    for $<namedarg> {
+                        $args.push( QAST::SVal.new( :value(~$_<name>) ) );
+                        $args.push( $_<value>.made );
+                    }
+                }
+                $stmts.push($callload);
             }
         }
         make $stmts;
@@ -868,6 +885,18 @@ class MO::Actions is HLL::Actions {
         $scope.push($<statements>.made);
         $*INIT.push(QAST::Op.new(:op<call>, QAST::BVal.new(:value($scope)),
             QAST::Var.new(:name<@_>, :scope<lexical>, :flat(1)),
+            QAST::Var.new(:name<%_>, :scope<lexical>, :flat(1)),
+        ));
+        make $scope;
+    }
+
+    method definition:sym<load>($/) {
+        my $scope := $*W.pop_scope;
+        $scope.node($/);
+        $scope.push($<statements>.made);
+        $*LOAD.push(QAST::Op.new(:op<call>, QAST::BVal.new(:value($scope)),
+            QAST::Var.new(:name<@_>, :scope<lexical>, :flat(1)),
+            QAST::Var.new(:name<%_>, :scope<lexical>, :flat(1)),
         ));
         make $scope;
     }

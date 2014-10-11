@@ -226,7 +226,8 @@ grammar MO::Grammar is HLL::Grammar {
         my $*GLOBALish;
         my $*EXPORT;
         my $*UNIT; # the top-level block of the current compile unit.
-        my $*INIT; # the unit's init block to be invoked on 'use'.
+        my $*INIT; # the unit's init block to be invoked before any statements.
+        my $*LOAD; # the unit's load block to be invoked on 'use'.
 
         # Symbol table and serialization context builder - keeps track of
         # objects that cross the compile-time/run-time boundary that are
@@ -309,12 +310,21 @@ grammar MO::Grammar is HLL::Grammar {
 
             $*INIT := QAST::Block.new( :name<init>, QAST::Stmts.new() );
             $*INIT.symbol('@_', :scope<lexical>, :decl<param>, :slurpy(1));
+            $*INIT.symbol('%_', :scope<lexical>, :decl<param>, :slurpy(1), :named(1));
             $*INIT[0].push(QAST::Var.new(:name<@_>, :scope<lexical>, :decl<param>, :slurpy(1)));
+            $*INIT[0].push(QAST::Var.new(:name<%_>, :scope<lexical>, :decl<param>, :slurpy(1), :named(1)));
+
+            $*LOAD := QAST::Block.new( :name<load>, QAST::Stmts.new() );
+            $*LOAD.symbol('@_', :scope<lexical>, :decl<param>, :slurpy(1));
+            $*LOAD.symbol('%_', :scope<lexical>, :decl<param>, :slurpy(1), :named(1));
+            $*LOAD[0].push(QAST::Var.new(:name<@_>, :scope<lexical>, :decl<param>, :slurpy(1)));
+            $*LOAD[0].push(QAST::Var.new(:name<%_>, :scope<lexical>, :decl<param>, :slurpy(1), :named(1)));
 
             $*UNIT := self.push_scope('unit');
             $*UNIT.symbol('@ARGS', :scope<lexical>, :decl<param>);
             $*UNIT.symbol('$_', :scope<lexical>, :decl<var>);
-            $*UNIT.symbol('init', :scope<lexical>);
+            $*UNIT.symbol('~init', :scope<lexical>);
+            $*UNIT.symbol('~load', :scope<lexical>);
             $*UNIT.annotate('package', $*GLOBALish);
         }
         ^ ~ $ <statements> || <.panic: 'Confused'>
@@ -407,11 +417,12 @@ grammar MO::Grammar is HLL::Grammar {
         <variable> <initializer>? ';'? { $*IN_DECL := 0; }
     }
 
+    rule namedarg { ':'<name=.ident> '(' ~ ')' <value=.EXPR>  }
+
     rule declaration:sym<use> {
         :my $*IN_DECL;
         <sym>\s { $*IN_DECL := ~$<sym>; }
-        <name> <params=.EXPR>?
-        [ ':init' '(' ~ ')' <initargs=.arglist>? ]?
+        <name> <params=.EXPR>? <namedarg>* %% ','
         ';'? { $*IN_DECL := 0; }
     }
 
@@ -500,7 +511,23 @@ grammar MO::Grammar is HLL::Grammar {
             {
                 my $scope := self.push_scope( ~$<sym> );
                 $scope.symbol('@_', :scope<lexical>, :decl<param>, :slurpy(1));
+                $scope.symbol('%_', :scope<lexical>, :decl<param>, :slurpy(1), :named(1));
                 $scope[0].push(QAST::Var.new(:name<@_>, :scope<lexical>, :decl<param>, :slurpy(1)));
+                $scope[0].push(QAST::Var.new(:name<%_>, :scope<lexical>, :decl<param>, :slurpy(1), :named(1)));
+            }
+            <statements>
+        ]
+    }
+
+    rule definition:sym<load> {
+        <sym>\s '{' ~ '}'
+        [
+            {
+                my $scope := self.push_scope( ~$<sym> );
+                $scope.symbol('@_', :scope<lexical>, :decl<param>, :slurpy(1));
+                $scope.symbol('%_', :scope<lexical>, :decl<param>, :slurpy(1), :named(1));
+                $scope[0].push(QAST::Var.new(:name<@_>, :scope<lexical>, :decl<param>, :slurpy(1)));
+                $scope[0].push(QAST::Var.new(:name<%_>, :scope<lexical>, :decl<param>, :slurpy(1), :named(1)));
             }
             <statements>
         ]

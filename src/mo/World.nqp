@@ -161,6 +161,7 @@ class MO::World is HLL::World {
                     QAST::Var.new( :name<me>, :scope<lexical> ),
                     QAST::WVal.new( :value($class) ) );
             } elsif self.is_export_name($first) {
+#say("World: $first " ~ ' = ' ~ ($*EXPORT.WHO){$first} ~'; '~nqp::where($*W)~', '~nqp::where($*EXPORT));
                 return QAST::Var.new( :node($/), :scope<associative>,
                     QAST::Var.new( :name<EXPORT.WHO>, :scope<lexical> ),
                     QAST::SVal.new( :value($first) ) );
@@ -182,12 +183,18 @@ class MO::World is HLL::World {
             @name := nqp::clone(@name);
             my $final_name := @name.pop();
             my $value := self.value_of(@name, $root);
-say("World: " ~ nqp::join('::', @name) ~ ' ' ~ nqp::defined($value) ~ ", $final_name " ~ nqp::existskey($value.WHO, $final_name) ~ ' = ' ~ ($value.WHO){$final_name});
-            if nqp::defined($value) && nqp::existskey($value.WHO, $final_name) {
+            unless nqp::defined($value) {
+                $/.CURSOR.panic('undefined package '~nqp::join('::', @name)~" for $final_name") if $panic;
+                return NQPMu;
+            }
+
+#say("World: " ~ nqp::join('::', @name) ~ ' ' ~ nqp::defined($value) ~ ", $final_name " ~ nqp::existskey($value.WHO, $final_name) ~ ' = ' ~ ($value.WHO){$final_name} ~ '; '~nqp::where($*W)~', '~nqp::where($*EXPORT) ~ '; '~nqp::where($value));
+            if nqp::existskey($value.WHO, $final_name) {
                 my $who := QAST::Op.new( :op<who>, QAST::WVal.new( $value ) );
                 return QAST::Var.new( :node($/), :scope<associative>,
                     $who, QAST::SVal.new( :value($final_name) ) );
             }
+
             @name.push($final_name); # restore the @name for correct panic.
         }
 

@@ -161,16 +161,23 @@ class MO::ModuleLoader {
             # Make a symbole for the loaded module.
             my @name := nqp::split('::', $module_name);
             my $final := @name[+@name - 1];
-            my $module := self.create_module; # create a new container for symbols
-            my int $i := 0;
-            while $i < $mn {
-                my $unit := nqp::ctxlexpad(@module_ctx[$i]);
-                for $unit<EXPORT>.WHO {
-                    $module.WHO{$_.key} := $_.value;
+            if 1 == $mn {
+                my $unit := nqp::ctxlexpad(@module_ctx[0]);
+                @GLOBALish[0].WHO{$final} := $unit<EXPORT>;
+            } else {
+                ## FIXME: this is not correct: the values are COPYed, so they diverged in between
+                ## $module and $unit<EXPORT> when modified
+                my $module := self.create_module; # create a new container for symbols
+                my int $i := 0;
+                while $i < $mn {
+                    my $unit := nqp::ctxlexpad(@module_ctx[$i]);
+                    for $unit<EXPORT>.WHO {
+                        $module.WHO{$_.key} := $_.value;
+                    }
+                    $i := $i + 1;
                 }
-                $i := $i + 1;
+                @GLOBALish[0].WHO{$final} := $module;
             }
-            @GLOBALish[0].WHO{$final} := $module;
         }
 
         @module_ctx;
