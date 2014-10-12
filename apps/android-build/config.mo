@@ -146,10 +146,10 @@ load {
     check_notnull($Cmd_zipalign,        '$SDK/build-tools/.../zipalign missing');
     check_notnull($Cmd_jarsigner,       'jarsigner missing');
 
+    $Sign_cert = 'cert';
     $Sign_storepass_filename = any isreg "$Path/.android/storepass", "$sysdir/key/storepass"
     $Sign_keypass_filename = any isreg "$Path/.android/keypass", "$sysdir/key/keypass"
     $Sign_keystore = any isreg "$Path/.android/keystore", "$sysdir/key/keystore"
-    $Sign_cert = 'cert';
 
     unless isnull($Sign_storepass_filename) { $Sign_storepass = strip(slurp($Sign_storepass_filename)) }
     unless isnull($Sign_keypass_filename)   { $Sign_keypass = strip(slurp($Sign_keypass_filename)) }

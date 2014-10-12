@@ -593,6 +593,17 @@ MO::World.add_builtin_code('strip', -> $s {
     while $i < $e-1 && nqp::iscclass(nqp::const::CCLASS_WHITESPACE, $s, $e-1) { $e := $e - 1 }
     nqp::substr($s, $i, $e)
 });
+MO::World.add_builtin_code('addprefix', -> $prefix, $s {
+    nqp::isnull($s) ?? $s !! nqp::isnull($prefix) ?? $s !! "$prefix$s"
+});
+MO::World.add_builtin_code('addsuffix', -> $s, $suffix {
+    nqp::isnull($s) ?? $s !! nqp::isnull($suffix) ?? $s !! "$s$suffix"
+});
+MO::World.add_builtin_code('addinfix', -> $prefix, $s, $suffix {
+    $s := nqp::isnull($s) ?? $s !! nqp::isnull($prefix) ?? $s !! "$prefix$s";
+    $s := nqp::isnull($s) ?? $s !! nqp::isnull($suffix) ?? $s !! "$s$suffix";
+    $s
+});
 
 # MO::World.add_builtin_code('say',            &nqp::say);
 # MO::World.add_builtin_code('exit',           &nqp::exit);

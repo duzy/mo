@@ -11,10 +11,11 @@ var $variant = $config::Variant;
     var $signed = @_[0].path();
     var $cmd = $config::Cmd_zipalign;
     lang shell :escape
-------------------------
+-------------------------------
+    echo "Generating APK.."
     mkdir -p $dir || exit -1
     $cmd -f 4 $signed $apk
----------------------end
+----------------------------end
 }
 
 "$path/bin/$variant/_.signed": "$path/bin/$variant/_.pack"
@@ -26,13 +27,14 @@ var $variant = $config::Variant;
     var $cert = $config::Sign_cert;
     var $signed = $_.path();
     var $pack = @_[0].path();
+    var $tsa = 1 ? "-tsacert $cert" : '-tsa'
     lang shell :escape
-------------------------
+-------------------------------
     echo "Signing package.."
     cp -f $pack $signed || exit -1
-    $cmd -sigalg MD5withRSA -digestalg SHA1 $keystore $keypass $storepass \
+    $cmd -strict -sigalg MD5withRSA -digestalg SHA1 $keystore $keypass $storepass \
         $signed $cert
----------------------end
+----------------------------end
 }
 
 "$path/bin/$variant/_.pack": "$path/AndroidManifest.xml"
@@ -47,12 +49,12 @@ var $variant = $config::Variant;
     var $cmd = $config::Cmd_aapt;
     unless isdir($assets) { $assets = '' }
     lang shell :escape
-------------------------
+-------------------------------
     echo "Packing resources.."
     mkdir -p $dir || exit -1
     $cmd package -f -F $pack -M $am $libs $reses $assets \
         $debug --auto-add-overlay
----------------------end
+----------------------------end
 }
 
 <"$path/bin/a-$variant.apk">.make();
