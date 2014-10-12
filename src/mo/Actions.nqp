@@ -80,7 +80,7 @@ class MO::Actions is HLL::Actions {
 
     method term:sym<def>($/) {
         my $scope := $*W.pop_scope();
-        $scope[0].push( wrap_return_handler($scope, $<statements>.made) );
+        $scope.push( wrap_return_handler($scope, $<statements>.made) );
         make QAST::Op.new( :node($/), :op<takeclosure>, $scope );
         $/.prune;
     }
@@ -528,6 +528,14 @@ class MO::Actions is HLL::Actions {
         make QAST::Op.new( :node($/), :op<for>, $<EXPR>.made, $<for_block>.made );
     }
 
+    sub expr_list_ast($ast) {
+        if nqp::istype($ast, QAST::Op) && $ast.op eq 'list' {
+            $ast
+        } else {
+            QAST::Op.new( :op<list>, $ast )
+        }
+    }
+
     method control:sym<any>($/) {
         my $result := QAST::Var.new( :scope<lexical>, :decl<var>, :name(QAST::Node.unique('map_ret')) );
         my $stmts := QAST::Stmts.new(
@@ -543,7 +551,7 @@ class MO::Actions is HLL::Actions {
         $stmts.push(QAST::Op.new( :op<control>, :name<last> ));
 
         make QAST::Stmts.new( :node($/), $result,
-            QAST::Op.new( :op<for>, $<list>.made, QAST::Block.new(
+            QAST::Op.new( :op<for>, expr_list_ast($<list>.made), QAST::Block.new(
                 QAST::Var.new(:name<a>, :scope<local>, :decl<param>),
                 QAST::Op.new( :op<if>,
                     QAST::Op.new(:op<call>, $<pred>.made, QAST::Var.new(:name<a>, :scope<local>)),
@@ -567,7 +575,7 @@ class MO::Actions is HLL::Actions {
 
         make QAST::Stmts.new( :node($/),
             QAST::Op.new( :op<bind>, $result, QAST::Op.new( :op<list> ) ),
-            QAST::Op.new( :op<for>, $<list>.made, QAST::Block.new(
+            QAST::Op.new( :op<for>, expr_list_ast($<list>.made), QAST::Block.new(
                 QAST::Var.new(:name<a>, :scope<local>, :decl<param>),
                 QAST::Op.new( :op<if>,
                     QAST::Op.new(:op<call>, $<pred>.made, QAST::Var.new(:name<a>, :scope<local>)),
@@ -856,7 +864,7 @@ class MO::Actions is HLL::Actions {
         my $name := ~$<name>;
         my $scope := $*W.pop_scope();
         $scope.name($name);
-        $scope[0].push( wrap_return_handler($scope, $<def_block>.made) );
+        $scope.push( wrap_return_handler($scope, $<def_block>.made) );
 
         my $package := $*W.get_package($scope.ann('outer'));
         $*W.install_package_routine($package, $name, $scope);
@@ -882,7 +890,7 @@ class MO::Actions is HLL::Actions {
     method definition:sym<init>($/) {
         my $scope := $*W.pop_scope;
         $scope.node($/);
-        $scope.push($<statements>.made);
+        $scope.push( wrap_return_handler($scope, $<statements>.made) );
         $*INIT.push(QAST::Op.new(:op<call>, QAST::BVal.new(:value($scope)),
             QAST::Var.new(:name<@_>, :scope<lexical>, :flat(1)),
             QAST::Var.new(:name<%_>, :scope<lexical>, :flat(1)),
@@ -893,7 +901,7 @@ class MO::Actions is HLL::Actions {
     method definition:sym<load>($/) {
         my $scope := $*W.pop_scope;
         $scope.node($/);
-        $scope.push($<statements>.made);
+        $scope.push( wrap_return_handler($scope, $<statements>.made) );
         $*LOAD.push(QAST::Op.new(:op<call>, QAST::BVal.new(:value($scope)),
             QAST::Var.new(:name<@_>, :scope<lexical>, :flat(1)),
             QAST::Var.new(:name<%_>, :scope<lexical>, :flat(1)),

@@ -28,6 +28,7 @@ run $SRCDIR/00-say
 run $SRCDIR/00-args
 run $SRCDIR/00-expression
 run $SRCDIR/01-control-any
+run $SRCDIR/01-control-any-2
 run $SRCDIR/01-control-many
 run $SRCDIR/01-control-cond
 run $SRCDIR/01-control-cond-expr

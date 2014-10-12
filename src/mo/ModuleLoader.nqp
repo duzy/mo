@@ -1,4 +1,16 @@
 # knowhow MO::ModuleHOW { }
+class MO::PTP { # point-to-package
+    has $!pkg;
+
+    method new($pkg) {
+        my $o := nqp::create(self);
+        nqp::bindattr($o, MO::PTP, '$!pkg', $pkg);
+        $o;
+    }
+
+    method pkg() { $!pkg }
+}
+
 class MO::ModuleLoader {
     my %modules_loaded;
     my @modules_loading;
@@ -104,6 +116,12 @@ class MO::ModuleLoader {
         $*CTX;
     }
 
+    sub compute_module_name($filename) {
+        my int $dot := nqp::rindex($filename, '.');
+        my int $beg := nqp::rindex($filename, '/') + 1;
+        nqp::substr($filename, $beg, $dot)
+    }
+
     method create_module() {
         # MO::ModuleHOW.new_type(:name<Module>);
         nqp::knowhow().new_type(:name<Module>);
@@ -134,18 +152,24 @@ class MO::ModuleLoader {
                 $*MODULE_PARAMS.unshift(%chosen<load>);
                 nqp::loadbytecode(%chosen<load>);
                 $*MODULE_PARAMS := nqp::null();
-                @module_ctx.push( $*CTX );
+
+                my $module_name := compute_module_name(%chosen<load>);
+                @module_ctx.push( [$module_name, $*CTX] );
             } elsif %chosen<source> {
-                @module_ctx.push( self.eval_source_file(%chosen<source>, @params) );
+                my $module_name := compute_module_name(%chosen<source>);
+                my $module_ctx := self.eval_source_file(%chosen<source>, @params);
+                @module_ctx.push( [$module_name, $module_ctx] );
             } elsif %chosen<sources> {
                 for %chosen<sources> {
                     if nqp::defined(%modules_loaded{$_}) {
-                        @module_ctx.push( $_ ) for %modules_loaded{$_};
+                        #@module_ctx.push( $_ ) for %modules_loaded{$_};
+                        @module_ctx := nqp::clone(%modules_loaded{$_});
                     } else {
                         @modules_loading.push($_);
-                        my $ctx := self.eval_source_file($_, @params);
-                        @module_ctx.push( $ctx );
-                        %modules_loaded{$_} := nqp::list($ctx);
+                        my $module_name := compute_module_name($_);
+                        my $module_ctx := self.eval_source_file($_, @params);
+                        @module_ctx.push( [$module_name, $module_ctx] );
+                        %modules_loaded{$_} := nqp::list([$module_name, $module_ctx]);
                         @modules_loading.pop;
                     }
                 }
@@ -162,7 +186,7 @@ class MO::ModuleLoader {
             my @name := nqp::split('::', $module_name);
             my $final := @name[+@name - 1];
             if 1 == $mn {
-                my $unit := nqp::ctxlexpad(@module_ctx[0]);
+                my $unit := nqp::ctxlexpad(@module_ctx[0][1]);
                 @GLOBALish[0].WHO{$final} := $unit<EXPORT>;
             } else {
                 ## FIXME: this is not correct: the values are COPYed, so they diverged in between
@@ -170,9 +194,17 @@ class MO::ModuleLoader {
                 my $module := self.create_module; # create a new container for symbols
                 my int $i := 0;
                 while $i < $mn {
-                    my $unit := nqp::ctxlexpad(@module_ctx[$i]);
+                    my @m := @module_ctx[$i];
+                    my $unit := nqp::ctxlexpad(@m[1]);
                     for $unit<EXPORT>.WHO {
-                        $module.WHO{$_.key} := $_.value;
+                        if nqp::existskey($module.WHO, $_.key) {
+                            my $s := $module.WHO{$_.key};
+                            # TODO: report line number where it's defined
+                            nqp::die($_.key ~ " already defined in "~nqp::substr($s, 1));
+                        }
+
+                        # alias -- point-to-package(PTP)
+                        $module.WHO{$_.key} := MO::PTP.new($unit<EXPORT>);
                     }
                     $i := $i + 1;
                 }

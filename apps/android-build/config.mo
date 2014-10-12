@@ -1,3 +1,4 @@
+var $sysdir = dirname(@ARGS[0]);
 var $Variant = 0 < +@ARGS ? @ARGS[1] : 'debug';
 var $APILevel
 
@@ -12,16 +13,33 @@ var $PlatformProperties
 var $Platform_jar
 var $Platform_aidl
 
+var $Cmd_android
+var $Cmd_draw9patch
+var $Cmd_lint
+var $Cmd_jobb
+var $Cmd_traceview
+var $Cmd_screenshot2
+var $Cmd_monkeyrunner
+var $Cmd_hierarchyviewer
+var $Cmd_uiautomatorviewer
+var $Cmd_adb;
+var $Cmd_dmtracedump
+var $Cmd_etc1tool
+var $Cmd_fastboot
+var $Cmd_hprof_conv
+var $Cmd_sqlite3
 var $Cmd_aapt
+var $Cmd_aidl
+var $Cmd_dx
+var $Cmd_rscc
 var $Cmd_zipalign
 var $Cmd_jarsigner
 
 var $Sign_storepass_filename;
 var $Sign_storepass;
-var $Sign_keystore_filename;
-var $Sign_keystore;
 var $Sign_keypass_filename;
 var $Sign_keypass;
+var $Sign_keystore;
 var $Sign_cert = 'cert';
 
 def LoadProperties($filename) {
@@ -39,6 +57,11 @@ def LoadProperties($filename) {
 def Tool($name) {
     var $sdk = $SDK;
     any isreg "$sdk/tools/$name"
+}
+
+def PlatformTool($name) {
+    var $sdk = $SDK;
+    any isreg "$sdk/platform-tools/$name"
 }
 
 def BuildTool($name) {
@@ -59,36 +82,78 @@ def BuildTool($name) {
     "$sdk/build-tools/17.0.0/$name"
 }
 
+def check_notnull($v, $err) {
+    if isnull($v) { die($err) }
+}
+
 load {
+    if !isnull($SDK) { return }
+
     $APILevel = %_{'api'};
     $Path = %_{'path'};
 
     $LocalProperties = LoadProperties("$Path/local.properties")
     $ProjectProperties = LoadProperties("$Path/project.properties")
 
+    check_notnull($LocalProperties,     "$Path/local.properties missing");
+    check_notnull($ProjectProperties,   "$Path/project.properties missing");
+
     $SDK = any isdir $LocalProperties{'sdk.dir'},
         '/home/zhan/tools/android-studio/sdk',
         '/open/android/android-studio/sdk';
 
+    check_notnull($SDK,  '$SDK missing');
+
     $Platform = "android-$APILevel"
     $PlatformProperties = LoadProperties("$SDK/platforms/$Platform/source.properties")
-    $Platform_jar = "$SDK/platforms/$Platform/android.jar"
-    $Platform_aidl = "$SDK/platforms/$Platform/framework.aidl"
+    $Platform_jar  = any isreg "$SDK/platforms/$Platform/android.jar"
+    $Platform_aidl = any isreg "$SDK/platforms/$Platform/framework.aidl"
 
-    $Cmd_aapt = BuildTool('aapt')
-    $Cmd_zipalign = Tool("zipalign")
-    $Cmd_jarsigner = "jarsigner"
+    check_notnull($PlatformProperties,  '$SDK/platforms/$Platform/source.properties missing');
+    check_notnull($Platform_jar,        '$SDK/platforms/$Platform/android.jar missing');
+    check_notnull($Platform_aidl,       '$SDK/platforms/$Platform/framework.aidl missing');
 
-    $Sign_storepass_filename = any isreg "$Path/.android/storepass"
-    $Sign_keystore_filename = any isreg "$Path/.android/keystore"
-    $Sign_keypass_filename = any isreg "$Path/.android/keypass"
+    $Cmd_android           = Tool('android')
+    $Cmd_draw9patch        = Tool('draw9patch')
+    $Cmd_lint              = Tool('lint')
+    $Cmd_jobb              = Tool('jobb')
+    $Cmd_traceview         = Tool('traceview')
+    $Cmd_screenshot2       = Tool('screenshot2')
+    $Cmd_monkeyrunner      = Tool('monkeyrunner')
+    $Cmd_hierarchyviewer   = Tool('hierarchyviewer')
+    $Cmd_uiautomatorviewer = Tool('uiautomatorviewer')
+    $Cmd_adb               = PlatformTool('adb')
+    $Cmd_dmtracedump       = PlatformTool('dmtracedump')
+    $Cmd_etc1tool          = PlatformTool('etc1tool')
+    $Cmd_fastboot          = PlatformTool('fastboot')
+    $Cmd_hprof_conv        = PlatformTool('hprof-conv')
+    $Cmd_sqlite3           = PlatformTool('sqlite3')
+    $Cmd_aapt              = BuildTool('aapt')
+    $Cmd_aidl              = BuildTool('aidl')
+    $Cmd_dx                = BuildTool('dx')
+    $Cmd_rscc              = BuildTool('llvm-rs-cc')
+    $Cmd_zipalign          = BuildTool("zipalign")
+    $Cmd_jarsigner         = "jarsigner"
 
-    unless isnull($Sign_storepass_filename) { $Sign_storepass = slurp($Sign_storepass_filename) }
-    unless isnull($Sign_keystore_filename)  { $Sign_keystore = slurp($Sign_keystore_filename) }
-    unless isnull($Sign_keypass_filename)   { $Sign_keypass = slurp($Sign_keypass_filename) }
-    
+    check_notnull($Cmd_android,         '$SDK/tools/android missing');
+    check_notnull($Cmd_lint,            '$SDK/tools/lint missing');
+    check_notnull($Cmd_adb,             '$SDK/platform-tools/adb missing');
+    check_notnull($Cmd_sqlite3,         '$SDK/platform-tools/sqlite3 missing');
+    check_notnull($Cmd_aapt,            '$SDK/build-tools/.../aapt missing');
+    check_notnull($Cmd_aidl,            '$SDK/build-tools/.../aidl missing');
+    check_notnull($Cmd_dx,              '$SDK/build-tools/.../dx missing');
+    check_notnull($Cmd_rscc,            '$SDK/build-tools/.../llvm-rs-cc missing');
+    check_notnull($Cmd_zipalign,        '$SDK/build-tools/.../zipalign missing');
+    check_notnull($Cmd_jarsigner,       'jarsigner missing');
+
+    $Sign_storepass_filename = any isreg "$Path/.android/storepass", "$sysdir/key/storepass"
+    $Sign_keypass_filename = any isreg "$Path/.android/keypass", "$sysdir/key/keypass"
+    $Sign_keystore = any isreg "$Path/.android/keystore", "$sysdir/key/keystore"
     $Sign_cert = 'cert';
 
+    unless isnull($Sign_storepass_filename) { $Sign_storepass = strip(slurp($Sign_storepass_filename)) }
+    unless isnull($Sign_keypass_filename)   { $Sign_keypass = strip(slurp($Sign_keypass_filename)) }
+    
     say("config.mo: Platform = $Platform");
     say("config.mo: SDK = $SDK");
 }

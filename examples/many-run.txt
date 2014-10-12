@@ -1,4 +1,31 @@
+ok - many::a init: isnull($A) = 1
+ok - many::a a.mo
+ok - many::b init: isnull($B) = 1
+ok - many::b init: $a::A = many::a
+ok - a.load from b.mo
+ok - many::b b.mo
+ok - many::c init: isnull($C) = 1
+ok - many::c init: $a::A = many::a
+ok - many::c init: $b::B = many::b
+ok - a.load from c.mo
+ok - b.load from c.mo
+ok - many::c c.mo
+ok - a.load from run.mo
+ok - b.load from run.mo
+ok - c.load from run.mo
+ok - many-run
 ok - many::a
 ok - many::b
 ok - many::c
-ok - many-run
+ok - a: many::a
+ok - b: many::b
+ok - c: many::c
+ok - a: A
+ok - b: B
+ok - c: C
+ok - a: aa
+ok - b: bb
+ok - c: cc
+ok - aa ~
+ok - bb ~
+ok - cc ~

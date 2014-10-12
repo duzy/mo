@@ -188,8 +188,11 @@ class MO::World is HLL::World {
                 return NQPMu;
             }
 
-#say("World: " ~ nqp::join('::', @name) ~ ' ' ~ nqp::defined($value) ~ ", $final_name " ~ nqp::existskey($value.WHO, $final_name) ~ ' = ' ~ ($value.WHO){$final_name} ~ '; '~nqp::where($*W)~', '~nqp::where($*EXPORT) ~ '; '~nqp::where($value));
             if nqp::existskey($value.WHO, $final_name) {
+                try { # try solving PTP alias first (introduced by ModuleLoader)
+                    my $v := ($value.WHO){$final_name};
+                    $value := $v.pkg if nqp::istype($v, MO::PTP);
+                }
                 my $who := QAST::Op.new( :op<who>, QAST::WVal.new( $value ) );
                 return QAST::Var.new( :node($/), :scope<associative>,
                     $who, QAST::SVal.new( :value($final_name) ) );
@@ -261,7 +264,9 @@ class MO::World is HLL::World {
             my $final := nqp::split('::', $module_name).pop;
             self.add_object($GLOBALish.WHO{$final}) if nqp::defined($GLOBALish);
 
-            @result.push(nqp::ctxlexpad($_)) for @module;
+            # $_[0] is the module name
+            # $_[1] is the module context
+            @result.push(nqp::ctxlexpad($_[1])) for @module;
         }
         @result
     }
@@ -521,6 +526,7 @@ MO::World.add_builtin_code('exit', -> $n { nqp::exit($n) });
 MO::World.add_builtin_code('open', -> $s, $m { nqp::open($s, $m) });
 MO::World.add_builtin_code('slurp', -> $s, *$opts {
     my $h := nqp::open($s, 'r');
+    # $h.encoding('utf8');
     $s := $h.readall();
     $h.close();
     $s
@@ -532,6 +538,22 @@ MO::World.add_builtin_code('system', -> $s, *%opts {
     nqp::shell($s, %opts<wd> // nqp::cwd, %opts<env> // nqp::getenvhash())
 });
 MO::World.add_builtin_code('cwd', -> { nqp::cwd });
+MO::World.add_builtin_code('basename', -> $s, $ext? {
+    my int $i := nqp::rindex($s, '/') + 1;
+    my int $d := nqp::chars($s);
+    if nqp::defined($ext) {
+        my int $el := nqp::chars($ext);
+        my int $di := $d - $el;
+        if $el < $d && $i < $di && nqp::substr($s, $di, $d) eq $ext {
+            $d := $di;
+        }
+    }
+    nqp::substr($s, $i, $d-$i);
+});
+MO::World.add_builtin_code('dirname', -> $s {
+    my int $i := nqp::rindex($s, '/');
+    nqp::substr($s, 0, $i);
+});
 MO::World.add_builtin_code('isdir', -> $s {
     nqp::stat($s, nqp::const::STAT_EXISTS) && nqp::stat($s, nqp::const::STAT_ISDIR)
 });
@@ -544,6 +566,9 @@ MO::World.add_builtin_code('isdev', -> $s {
 MO::World.add_builtin_code('islink', -> $s {
     nqp::stat($s, nqp::const::STAT_EXISTS) && nqp::stat($s, nqp::const::STAT_ISLNK)
 });
+MO::World.add_builtin_code('isreadable', -> $s { nqp::filereadable($s) });
+MO::World.add_builtin_code('iswritable', -> $s { nqp::filewritable($s) });
+MO::World.add_builtin_code('isexecutable', -> $s { nqp::fileexecutable($s) });
 
 MO::World.add_builtin_code('isnull', -> $a { nqp::isnull($a) });
 MO::World.add_builtin_code('defined', -> $a { nqp::defined($a) });
@@ -560,6 +585,13 @@ MO::World.add_builtin_code('index', -> $s, $c { nqp::index($s, $c) });
 MO::World.add_builtin_code('rindex', -> $s, $c { nqp::rindex($s, $c) });
 MO::World.add_builtin_code('substr', -> $s, $a, $b? {
     nqp::defined($b) ?? nqp::substr($s, $a, $b) !! nqp::substr($s, $a)
+});
+MO::World.add_builtin_code('strip', -> $s {
+    my int $i := 0;
+    my int $e := nqp::chars($s);
+    while $i < $e && nqp::iscclass(nqp::const::CCLASS_WHITESPACE, $s, $i) {  $i := $i + 1 }
+    while $i < $e-1 && nqp::iscclass(nqp::const::CCLASS_WHITESPACE, $s, $e-1) { $e := $e - 1 }
+    nqp::substr($s, $i, $e)
 });
 
 # MO::World.add_builtin_code('say',            &nqp::say);

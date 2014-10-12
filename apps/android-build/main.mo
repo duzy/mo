@@ -6,30 +6,32 @@ var $variant = $config::Variant;
 
 "$path/bin/a-$variant.apk": "$path/bin/$variant/_.signed"
 {
-    var $apk = $_.PATH;
+    var $apk = $_.path();
     var $dir = $_.parent_path();
-    var $signed = @_[0].PATH;
+    var $signed = @_[0].path();
     var $cmd = $config::Cmd_zipalign;
     lang shell :escape
 ------------------------
-    mkdir -p $dir
+    mkdir -p $dir || exit -1
     $cmd -f 4 $signed $apk
 ---------------------end
 }
 
 "$path/bin/$variant/_.signed": "$path/bin/$variant/_.pack"
 {
-    var $storepass = isnull($config::Sign_storepass) ? '' : "-storepass $config::Sign_storepass";
-    var $keystore = isnull($config::Sign_keystore) ? '' : "-keystore $config::Sign_keystore";
-    var $keypass = isnull($config::Sign_keypass) ? '' : "-keypass $config::Sign_keypass";
+    var $storepass = isnull($config::Sign_storepass) ? '' : "-storepass '$config::Sign_storepass'";
+    var $keypass = isnull($config::Sign_keypass) ? '' : "-keypass '$config::Sign_keypass'";
+    var $keystore = isnull($config::Sign_keystore) ? '' : "-keystore '$config::Sign_keystore'";
     var $cmd = $config::Cmd_jarsigner;
     var $cert = $config::Sign_cert;
     var $signed = $_.path();
+    var $pack = @_[0].path();
     lang shell :escape
 ------------------------
-    echo "Signing package"
-    $cmd -sigalg MD5withRSA -digestalg SHA1 \
-        $keystore $keypass $storepass $signed $cert
+    echo "Signing package.."
+    cp -f $pack $signed || exit -1
+    $cmd -sigalg MD5withRSA -digestalg SHA1 $keystore $keypass $storepass \
+        $signed $cert
 ---------------------end
 }
 
@@ -47,7 +49,7 @@ var $variant = $config::Variant;
     lang shell :escape
 ------------------------
     echo "Packing resources.."
-    mkdir -p $dir
+    mkdir -p $dir || exit -1
     $cmd package -f -F $pack -M $am $libs $reses $assets \
         $debug --auto-add-overlay
 ---------------------end
