@@ -72,6 +72,7 @@ run $SRCDIR/60-module-load
 run $SRCDIR/61-class
 run $SRCDIR/61-class-static-variable
 run $SRCDIR/70-lang-xml
+run $SRCDIR/70-lang-xml-in
 run $SRCDIR/70-lang-xml-escape-1
 run $SRCDIR/70-lang-xml-escape-2
 run $SRCDIR/70-lang-shell

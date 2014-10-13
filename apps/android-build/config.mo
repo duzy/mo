@@ -1,5 +1,5 @@
 var $sysdir = dirname(@ARGS[0]);
-var $Variant = 0 < +@ARGS ? @ARGS[1] : 'debug';
+var $Variant = 1 < +@ARGS ? @ARGS[1] : 'debug';
 var $APILevel
 
 var $LocalProperties
@@ -7,6 +7,8 @@ var $ProjectProperties
 
 var $SDK
 var $Path
+var $Name
+var $Manifest
 
 var $Platform
 var $PlatformProperties
@@ -34,6 +36,7 @@ var $Cmd_dx
 var $Cmd_rscc
 var $Cmd_zipalign
 var $Cmd_jarsigner
+var $Cmd_javac
 
 var $Sign_storepass_filename;
 var $Sign_storepass;
@@ -87,10 +90,20 @@ def check_notnull($v, $err) {
 }
 
 load {
-    if !isnull($SDK) { return }
+    unless isnull($SDK) { return }
 
     $APILevel = %_{'api'};
     $Path = %_{'path'};
+
+    unless isreg("$Path/AndroidManifest.xml") {
+        die("AndroidManifest.xml was not found under $Path");
+    }
+
+    lang XML as $am in "$Path/AndroidManifest.xml";
+    $Manifest = $am();
+    $Name = basename($Path);
+
+    say($Manifest.package);
 
     $LocalProperties = LoadProperties("$Path/local.properties")
     $ProjectProperties = LoadProperties("$Path/project.properties")
@@ -134,6 +147,10 @@ load {
     $Cmd_rscc              = BuildTool('llvm-rs-cc')
     $Cmd_zipalign          = BuildTool("zipalign")
     $Cmd_jarsigner         = "jarsigner"
+    $Cmd_javac             = "javac"
+
+    if isnull($Cmd_sqlite3)  { $Cmd_sqlite3 = Tool("sqlite3") }
+    if isnull($Cmd_zipalign) { $Cmd_zipalign = Tool("zipalign") }
 
     check_notnull($Cmd_android,         '$SDK/tools/android missing');
     check_notnull($Cmd_lint,            '$SDK/tools/lint missing');

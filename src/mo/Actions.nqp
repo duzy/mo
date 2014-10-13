@@ -816,6 +816,10 @@ class MO::Actions is HLL::Actions {
         make $<template_statement>.made;
     }
 
+    method template_atom:sym<\\>($/) {
+        make QAST::SVal.new( :node($/), :value(~$<char>) );
+    }
+
     method template_atom:sym<.>($/) {
         make QAST::SVal.new( :node($/), :value(~$/) );
     }
@@ -983,6 +987,16 @@ class MO::Actions is HLL::Actions {
             }
         }
 
+        my $source;
+
+        if $<externalfile> {
+            $source := QAST::Op.new( :op<call>,
+                $*W.symbol_ast($/, ['slurp'], 1), $<externalfile>.made,
+            );
+        } else {
+            $source := $<source>.made;
+        }
+
         my $langcode := QAST::Block.new( :node($/),
             QAST::Op.new( :op<bind>,
                 QAST::Var.new( :name<options>, :scope<local>, :decl<var> ),
@@ -991,8 +1005,7 @@ class MO::Actions is HLL::Actions {
             QAST::Op.new( :op<bind>,
                 QAST::Var.new( :name<result>, :scope<local>, :decl<var> ),
                 QAST::Op.new( :op<call>,
-                    QAST::WVal.new(:value($*W.interpreter($langname))),
-                    $<source>.made,
+                    QAST::WVal.new(:value($*W.interpreter($langname))), $source,
                     QAST::Var.new( :name<options>, :scope<local> ),
                 )
             ),

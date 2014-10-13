@@ -3,6 +3,13 @@ var $path = (+@ARGS < 2) ? cwd : @ARGS[1];
 use config 'debug' :api(19), :path($path);
 
 var $variant = $config::Variant;
+#var $java_sources = collect();
+
+def join_target_path($sep, @_) {
+    var @paths = list(); 
+    for @_ { @paths.push($_.path()) }
+    join($sep, @paths)
+}
 
 "$path/bin/a-$variant.apk": "$path/bin/$variant/_.signed"
 {
@@ -21,39 +28,133 @@ var $variant = $config::Variant;
 "$path/bin/$variant/_.signed": "$path/bin/$variant/_.pack"
 {
     var $storepass = isnull($config::Sign_storepass) ? '' : "-storepass '$config::Sign_storepass'";
-    var $keypass = isnull($config::Sign_keypass) ? '' : "-keypass '$config::Sign_keypass'";
-    var $keystore = isnull($config::Sign_keystore) ? '' : "-keystore '$config::Sign_keystore'";
-    var $cmd = $config::Cmd_jarsigner;
+    var $keypass   = isnull($config::Sign_keypass)   ? '' : "-keypass '$config::Sign_keypass'";
+    var $keystore  = isnull($config::Sign_keystore)  ? '' : "-keystore '$config::Sign_keystore'";
+    var $cmd  = $config::Cmd_jarsigner;
     var $cert = $config::Sign_cert;
     var $signed = $_.path();
-    var $pack = @_[0].path();
+    var $pack   = @_[0].path();
     var $tsa = 1 ? "-tsacert $cert" : '-tsa'
     lang shell :escape
 -------------------------------
     echo "Signing package.."
     cp -f $pack $signed || exit -1
-    $cmd -strict -sigalg MD5withRSA -digestalg SHA1 $keystore $keypass $storepass \
+    $cmd -sigalg MD5withRSA -digestalg SHA1 $keystore $keypass $storepass \\
         $signed $cert
 ----------------------------end
 }
 
 "$path/bin/$variant/_.pack": "$path/AndroidManifest.xml"
+                             "$path/bin/$variant/classes.dex"
 {
-    var $dir = $_.parent_path();
+    var $dir  = $_.parent_path();
     var $pack = $_.path();
-    var $am = @_[0].path();
-    var $libs = "-I $config::Platform_jar";
-    var $reses = "-S '$path/res'";
+    var $am   = @_[0].path();
+    var $dex  = @_[1].path();
+    var $libs   = "-I $config::Platform_jar";
+    var $reses  = "-S '$path/res'";
     var $assets = "-A '$path/assets'";
-    var $debug = $variant eq 'debug' ? '--debug-mode' : '';
+    var $debug  = $variant eq 'debug' ? '--debug-mode' : '';
     var $cmd = $config::Cmd_aapt;
     unless isdir($assets) { $assets = '' }
     lang shell :escape
 -------------------------------
     echo "Packing resources.."
     mkdir -p $dir || exit -1
-    $cmd package -f -F $pack -M $am $libs $reses $assets \
+    $cmd package -f -F $pack -M $am $libs $reses $assets \\
         $debug --auto-add-overlay
+
+    echo "Packing natives.. (TODO)"
+
+    echo "Packing classes.."
+    $cmd add -k $pack $dex > /dev/null
+----------------------------end
+}
+
+"$path/bin/$variant/classes.dex": "$path/bin/$variant/classes.list"
+{
+    var $out = "$path/bin/$variant";
+    var $is_windows = 0;
+    var $os_options = $is_windows ? '' : '-JXms16M -JXmx1536M';
+    var $apk = "$path/bin/a-$variant.apk";
+    var $dex = $_.path();
+    var $libs = ''
+    var $input = "$out/classes"
+    var $debug  = $variant eq 'debug' ? '--debug' : '';
+    var $cmd = $config::Cmd_dx;
+    lang shell :escape
+-------------------------------
+    echo "Generating dex file.."
+    rm -f $apk $out/_.signed $out/_.unsigned $out/_.pack
+    $cmd $os_options --dex $debug --output $dex $libs $input
+----------------------------end
+}
+
+"$path/bin/$variant/classes.list": "$path/bin/$variant/sources.list"
+                                   "$path/bin/$variant/classpath"
+{
+    var $out = "$path/bin/$variant";
+    var $debug  = $variant eq 'debug' ? '-g' : '';
+    var $cmd = $config::Cmd_javac;
+    lang shell :escape
+-------------------------------
+    echo "Generating classes.."
+    rm -f $out/classes.{dex,jar}
+    [[ -d $out/classes ]] || mkdir -p $out/classes || exit -1
+    $cmd -d $out/classes $debug -Xlint:unchecked -encoding "UTF-8" -source 1.5 -target 1.5 \\
+        -sourcepath "$out/sources" "\@$out/classpath" "\@$out/sources.list"
+    find $out/classes -type f -name '*.class' > $out/classes.list
+----------------------------end
+}
+
+"$path/bin/$variant/classpath":
+{
+    var $platform_jar =  "$config::Platform_jar";
+    var $classpath = $_.path();
+    lang shell :escape
+-------------------------------
+    echo "Generating classpath.."
+    (
+        echo '-bootclasspath "$platform_jar"'
+    ) > $classpath
+----------------------------end
+}
+
+"$path/bin/$variant/sources.list": "$path/bin/$variant/sources/R.java.d"
+                                   "$path/src/com/example/hello/HelloActivity.java"
+{
+    var $d = @_.shift(); # remove R.java.d
+    var $out = "$path/bin/$variant";
+    var $sources = join_target_path(' ', @_);
+    var $outfile = $_.path();
+    lang shell :escape
+-------------------------------
+    echo "Generating source list.."
+    echo '# AUTOMACTICLY GENERATED, DONNOT EDDIT' > $outfile
+    (for s in $sources ; do echo \$s ; done) >> $outfile
+    find $out/sources -type f -name '*.java' >> $outfile
+----------------------------end
+}
+
+"$path/bin/$variant/sources/R.java.d": "$path/AndroidManifest.xml" "$path/res"
+{
+    var $out    = "$path/bin/$variant"
+    var $libs   = "-I $config::Platform_jar";
+    var $reses  = isdir("$path/res") ? "-S '$path/res'" : '';
+    var $assets = isdir("$path/assets") ? "-A '$path/assets'" : '';
+    var $am  = @_[0].path();
+    var $cmd = $config::Cmd_aapt;
+    lang shell :escape
+-------------------------------
+    echo "Generating R.java.."
+    mkdir -p "$out/sources" || exit -1
+    $cmd package -f -m -M $am \\
+        -J "$out/sources" \\
+        -P "$out/sources/R.public" \\
+        -G "$out/sources/R.proguard" \\
+	--output-text-symbols "$out/sources" \\
+        --generate-dependencies --auto-add-overlay \\
+        $libs $reses $assets
 ----------------------------end
 }
 

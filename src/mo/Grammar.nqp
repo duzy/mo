@@ -123,6 +123,7 @@ grammar MO::Grammar is HLL::Grammar {
     }
 
     token infix:sym<=>  { <sym><![>]> <O('%assignment, :op<bind>')> }
+    token infix:sym<:=> { <sym><.panic: '":=" as an assignment is not supported'> }
 
     token prefix:sym<not> { <sym>  <O('%loose_not,     :op<not_i>')> }
     token infix:sym<and>  { <sym>  <O('%loose_logical, :op<if>')> }
@@ -427,7 +428,7 @@ grammar MO::Grammar is HLL::Grammar {
     }
 
     rule declaration:sym<rule> {
-        <targets=.quote>+ ':' <prerequisites=.quote>*
+        <targets=.quote>+ ':' [<prerequisites=.quote>\s*]*
         '{' ~ '}'
         [
             { self.push_scope( ~$<sym>, [ '$_', '@_' ] ) }
@@ -465,7 +466,8 @@ grammar MO::Grammar is HLL::Grammar {
     token template_atom:sym<()> { '$(' ~ ')' <EXPR> }
     token template_atom:sym<{}> { '${' ~ '}' <statements> }
     token template_atom:sym<^^> { <template_statement> }
-    token template_atom:sym<.>  { [<![$]><template_char_atom>]+ }
+    token template_atom:sym<\\> { \\$<char>=. }
+    token template_atom:sym<.>  { [<![$\\]><template_char_atom>]+ }
 
     token template_char_atom { <!before <.template_stopper>|<.tsp>>. }
 
@@ -570,8 +572,11 @@ grammar MO::Grammar is HLL::Grammar {
         { $*IN_DECL := 'lang'; %*option<escape> := 0; }
         <sym>\s <langname=.ident> <lang_modifier>*
         ['as'\s [<variable>|<name=.ident>]]?
-        <template_starter> ~ <template_stopper>
-        [ { $*IN_DECL := 'lang-source' }<source=.lang_source> ]
+        [
+        | 'in' <externalfile=.EXPR> ';'?
+        | <template_starter> ~ <template_stopper>
+            [ { $*IN_DECL := 'lang-source' }<source=.lang_source> ]
+        ]
         { $*IN_DECL := 0; }
     }
 

@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<root>
+  <child name="child-1" />
+  <child name="child-2" />
+  <child name="child-3">
+    <child name="child-3-1" />
+    <child name="child-3-2" />
+    <child name="child-3-3" />
+  </child>
+</root>

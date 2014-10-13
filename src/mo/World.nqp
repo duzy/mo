@@ -524,9 +524,9 @@ MO::World.add_builtin_code('say', -> $s { nqp::say($s) });
 MO::World.add_builtin_code('die', -> $s { nqp::die($s) });
 MO::World.add_builtin_code('exit', -> $n { nqp::exit($n) });
 MO::World.add_builtin_code('open', -> $s, $m { nqp::open($s, $m) });
-MO::World.add_builtin_code('slurp', -> $s, *$opts {
+MO::World.add_builtin_code('slurp', -> $s, *%opts {
     my $h := nqp::open($s, 'r');
-    # $h.encoding('utf8');
+    $h.encoding(%opts<encoding>) if nqp::existskey(%opts, 'encoding');
     $s := $h.readall();
     $h.close();
     $s
@@ -575,6 +575,9 @@ MO::World.add_builtin_code('defined', -> $a { nqp::defined($a) });
 
 MO::World.add_builtin_code('list', -> { nqp::list() });
 MO::World.add_builtin_code('hash', -> { nqp::hash() });
+
+MO::World.add_builtin_code('elems', -> $l { nqp::elems($l) });
+MO::World.add_builtin_code('splice', -> $l, $a, $b, $c { nqp::splice($l, $a, $b, $c) });
 
 # String manipulation..
 MO::World.add_builtin_code('split', -> $l, $s { nqp::split($l, $s) });
