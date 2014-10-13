@@ -3,6 +3,8 @@ var $path = (+@ARGS < 2) ? cwd : @ARGS[1];
 use config 'debug' :api(19), :path($path);
 
 var $variant = $config::Variant;
+var $name = $config::Name;
+var $out = "$path/bin/$variant";
 #var $java_sources = collect();
 
 def join_target_path($sep, @_) {
@@ -11,7 +13,7 @@ def join_target_path($sep, @_) {
     join($sep, @paths)
 }
 
-"$path/bin/a-$variant.apk": "$path/bin/$variant/_.signed"
+"$out/$name.apk": "$out/_.signed"
 {
     var $apk = $_.path();
     var $dir = $_.parent_path();
@@ -25,7 +27,7 @@ def join_target_path($sep, @_) {
 ----------------------------end
 }
 
-"$path/bin/$variant/_.signed": "$path/bin/$variant/_.pack"
+"$out/_.signed": "$out/_.pack"
 {
     var $storepass = isnull($config::Sign_storepass) ? '' : "-storepass '$config::Sign_storepass'";
     var $keypass   = isnull($config::Sign_keypass)   ? '' : "-keypass '$config::Sign_keypass'";
@@ -44,8 +46,7 @@ def join_target_path($sep, @_) {
 ----------------------------end
 }
 
-"$path/bin/$variant/_.pack": "$path/AndroidManifest.xml"
-                             "$path/bin/$variant/classes.dex"
+"$out/_.pack": "$path/AndroidManifest.xml" "$out/classes.dex"
 {
     var $dir  = $_.parent_path();
     var $pack = $_.path();
@@ -71,12 +72,11 @@ def join_target_path($sep, @_) {
 ----------------------------end
 }
 
-"$path/bin/$variant/classes.dex": "$path/bin/$variant/classes.list"
+"$out/classes.dex": "$out/classes.list"
 {
-    var $out = "$path/bin/$variant";
     var $is_windows = 0;
     var $os_options = $is_windows ? '' : '-JXms16M -JXmx1536M';
-    var $apk = "$path/bin/a-$variant.apk";
+    var $apk = "$out/$name.apk";
     var $dex = $_.path();
     var $libs = ''
     var $input = "$out/classes"
@@ -90,10 +90,8 @@ def join_target_path($sep, @_) {
 ----------------------------end
 }
 
-"$path/bin/$variant/classes.list": "$path/bin/$variant/sources.list"
-                                   "$path/bin/$variant/classpath"
+"$out/classes.list": "$out/sources.list" "$out/classpath"
 {
-    var $out = "$path/bin/$variant";
     var $debug  = $variant eq 'debug' ? '-g' : '';
     var $cmd = $config::Cmd_javac;
     lang shell :escape
@@ -107,7 +105,7 @@ def join_target_path($sep, @_) {
 ----------------------------end
 }
 
-"$path/bin/$variant/classpath":
+"$out/classpath":
 {
     var $platform_jar =  "$config::Platform_jar";
     var $classpath = $_.path();
@@ -120,11 +118,9 @@ def join_target_path($sep, @_) {
 ----------------------------end
 }
 
-"$path/bin/$variant/sources.list": "$path/bin/$variant/sources/R.java.d"
-                                   "$path/src/com/example/hello/HelloActivity.java"
+"$out/sources.list": "$out/sources/R.java.d" "$path/src/com/example/hello/HelloActivity.java"
 {
     var $d = @_.shift(); # remove R.java.d
-    var $out = "$path/bin/$variant";
     var $sources = join_target_path(' ', @_);
     var $outfile = $_.path();
     lang shell :escape
@@ -136,9 +132,8 @@ def join_target_path($sep, @_) {
 ----------------------------end
 }
 
-"$path/bin/$variant/sources/R.java.d": "$path/AndroidManifest.xml" "$path/res"
+"$out/sources/R.java.d": "$path/AndroidManifest.xml" "$path/res"
 {
-    var $out    = "$path/bin/$variant"
     var $libs   = "-I $config::Platform_jar";
     var $reses  = isdir("$path/res") ? "-S '$path/res'" : '';
     var $assets = isdir("$path/assets") ? "-A '$path/assets'" : '';
@@ -158,4 +153,4 @@ def join_target_path($sep, @_) {
 ----------------------------end
 }
 
-<"$path/bin/a-$variant.apk">.make();
+<"$out/$name.apk">.make();

@@ -102,8 +102,9 @@ load {
     lang XML as $am in "$Path/AndroidManifest.xml";
     $Manifest = $am();
     $Name = basename($Path);
-
-    say($Manifest.package);
+    if isnull($Name) {
+         $Name = split('.', $Manifest.package).pop();
+    }
 
     $LocalProperties = LoadProperties("$Path/local.properties")
     $ProjectProperties = LoadProperties("$Path/project.properties")
