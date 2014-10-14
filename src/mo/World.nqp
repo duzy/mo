@@ -161,7 +161,6 @@ class MO::World is HLL::World {
                     QAST::Var.new( :name<me>, :scope<lexical> ),
                     QAST::WVal.new( :value($class) ) );
             } elsif self.is_export_name($first) {
-#say("World: $first " ~ ' = ' ~ ($*EXPORT.WHO){$first} ~'; '~nqp::where($*W)~', '~nqp::where($*EXPORT));
                 return QAST::Var.new( :node($/), :scope<associative>,
                     QAST::Var.new( :name<EXPORT.WHO>, :scope<lexical> ),
                     QAST::SVal.new( :value($first) ) );
@@ -586,6 +585,18 @@ MO::World.add_builtin_code('concat', -> $a, $b { nqp::concat($a, $b) });
 MO::World.add_builtin_code('chars', -> $s { nqp::chars($s) });
 MO::World.add_builtin_code('index', -> $s, $c { nqp::index($s, $c) });
 MO::World.add_builtin_code('rindex', -> $s, $c { nqp::rindex($s, $c) });
+MO::World.add_builtin_code('endswith', -> $s, *@a {
+    my int $res := 0;
+    my int $sl := nqp::chars($s);
+    for @a {
+        my int $l := nqp::chars($_);
+        if $l < $sl && nqp::substr($s, $sl-$l, $l) eq $_ {
+            $res := 1;
+            last;
+        }
+    }
+    $res
+});
 MO::World.add_builtin_code('substr', -> $s, $a, $b? {
     nqp::defined($b) ?? nqp::substr($s, $a, $b) !! nqp::substr($s, $a)
 });

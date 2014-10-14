@@ -51,7 +51,7 @@ def LoadProperties($filename) {
     for split("\n", $source) {
         var $i = index($_, '=');
         if 0 < $i {
-            $hash{substr($_, 0, $i)} = substr($_, $i+1);
+            $hash{strip(substr($_, 0, $i))} = substr($_, $i+1);
         }
     }
     $hash
@@ -92,7 +92,6 @@ def check_notnull($v, $err) {
 load {
     unless isnull($SDK) { return }
 
-    $APILevel = %_{'api'};
     $Path = %_{'path'};
 
     unless isreg("$Path/AndroidManifest.xml") {
@@ -118,7 +117,10 @@ load {
 
     check_notnull($SDK,  '$SDK missing');
 
-    $Platform = "android-$APILevel"
+    $Platform = $ProjectProperties{'target'}
+
+    check_notnull($Platform,  '$Platform target missing');
+
     $PlatformProperties = LoadProperties("$SDK/platforms/$Platform/source.properties")
     $Platform_jar  = any isreg "$SDK/platforms/$Platform/android.jar"
     $Platform_aidl = any isreg "$SDK/platforms/$Platform/framework.aidl"

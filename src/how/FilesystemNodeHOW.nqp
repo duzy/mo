@@ -2,6 +2,27 @@ knowhow MO::FilesystemNodeHOW {
     my %cache;
     my $type;
 
+    my sub filter_dir_names($os, $path, $pred, $recursive) {
+        my @result;
+        my @names := $os.readdir($path);
+        for @names {
+            if $_ ne '.' && $_ ne '..' {
+                my $pathname := "$path/$_";
+                @result.push($pathname) if $pred($path, $_);
+                if $recursive && nqp::stat($pathname, nqp::const::STAT_ISDIR) {
+                    @result.push($_) for filter_dir_names($os, $pathname, $pred, $recursive);
+                }
+            }
+        }
+        @result
+    }
+
+    my sub node_find($node, $pred, $recursive) {
+        my $base := $node.name(); #$node.get('PATH');
+        my $os := pir::new__PS('OS');
+        filter_dir_names($os, $base, $pred, $recursive)
+    }
+
     my sub method_set($node, $name, $value) { nqp::die('filesystem nodes are readonly') }
     my sub method_children($node, $subpath = nqp::null()) {
         my $child;
@@ -20,6 +41,8 @@ knowhow MO::FilesystemNodeHOW {
         }
         $child;
     }
+    my sub method_find($node, $pred)    { node_find($node, $pred, 0) }
+    my sub method_findall($node, $pred) { node_find($node, $pred, 1) }
     my sub method_stat($node, $flag) { nqp::stat(method_path($node), $flag) }
     my sub method_exists($node)      { method_stat($node, nqp::const::STAT_EXISTS) }
     my sub method_isdir($node)       { method_stat($node, nqp::const::STAT_ISDIR) }
@@ -47,6 +70,9 @@ knowhow MO::FilesystemNodeHOW {
     my sub method_lastname($node)    { pathname(nqp::getattr($node, $type, '')) }
     my sub method_depends($node)     { nqp::getattr($node, $type, '@depends') }
     my sub method_depend($node, $path) {
+        unless nqp::isstr($path) {
+            nqp::die('"depend" accepts only string');
+        }
         my @depends := method_depends($node);
         my $dep;
         if nqp::isstr($path) {
@@ -101,6 +127,8 @@ knowhow MO::FilesystemNodeHOW {
         my %methods := MO::NodeHOW.methods();
         %methods<set>                   := &method_set;
         %methods<children>              := &method_children;
+        %methods<find>                  := &method_find;
+        %methods<findall>               := &method_findall;
         %methods<exists>                := &method_exists;
         %methods<isdir>                 := &method_isdir;
         %methods<isreg>                 := &method_isreg;

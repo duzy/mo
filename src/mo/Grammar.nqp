@@ -428,7 +428,8 @@ grammar MO::Grammar is HLL::Grammar {
     }
 
     rule declaration:sym<rule> {
-        <targets=.quote>+ ':' [<prerequisites=.quote>\s*]*
+        #<targets=.quote>+ ':' [<prerequisites=.quote>\s*]*
+        <targets=.EXPR>+ ':' <prerequisites=.EXPR>*
         '{' ~ '}'
         [
             { self.push_scope( ~$<sym>, [ '$_', '@_' ] ) }

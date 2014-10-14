@@ -1,11 +1,12 @@
 var $path = (+@ARGS < 2) ? cwd : @ARGS[1];
 
-use config 'debug' :api(19), :path($path);
+use config 'debug' :path($path);
 
 var $variant = $config::Variant;
 var $name = $config::Name;
 var $out = "$path/bin/$variant";
-#var $java_sources = collect();
+var @java_sources = <"$path/src">.findall(def($path, $name){ endswith($name, '.java') });
+var @res_files = <"$path/res">.findall(def($path, $name){ endswith($name, '.xml', '.png', '.jpg', '.xml') });
 
 def join_target_path($sep, @_) {
     var @paths = list(); 
@@ -118,7 +119,7 @@ def join_target_path($sep, @_) {
 ----------------------------end
 }
 
-"$out/sources.list": "$out/sources/R.java.d" "$path/src/com/example/hello/HelloActivity.java"
+"$out/sources.list": "$out/sources/R.java.d" @java_sources
 {
     var $d = @_.shift(); # remove R.java.d
     var $sources = join_target_path(' ', @_);
@@ -132,7 +133,7 @@ def join_target_path($sep, @_) {
 ----------------------------end
 }
 
-"$out/sources/R.java.d": "$path/AndroidManifest.xml" "$path/res"
+"$out/sources/R.java.d": "$path/AndroidManifest.xml" "$path/res" @res_files
 {
     var $libs   = "-I $config::Platform_jar";
     var $reses  = isdir("$path/res") ? "-S '$path/res'" : '';

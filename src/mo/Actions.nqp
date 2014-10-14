@@ -771,8 +771,22 @@ class MO::Actions is HLL::Actions {
                 QAST::Op.new( :op<callmethod>, :name<get>,  $how, $_.made ) ) );
             $stmts.push( QAST::Op.new( :op<callmethod>, :name<install_build_code>, $target,
                 QAST::BVal.new( :value( $build ) ) ) );
-            $stmts.push( QAST::Op.new( :op<callmethod>, :name<depend>, $target, $_.made ) )
-                for $<prerequisites> ;
+            for $<prerequisites> {
+                my $pre := $_.made;
+                $stmts.push(QAST::Op.new( :op<if>, QAST::Op.new( :op<isstr>, $pre ),
+                    QAST::Op.new( :op<callmethod>, :name<depend>, $target, $pre ),
+                    QAST::Op.new( :op<if>, QAST::Op.new( :op<islist>, $pre ),
+                        QAST::Op.new( :op<for>, $pre, QAST::Block.new(
+                            QAST::Var.new( :name<pre>, :scope<local>, :decl<param> ),
+                            QAST::Op.new( :op<if>, QAST::Op.new( :op<isstr>, QAST::Var.new( :name<pre>, :scope<local> ) ),
+                                QAST::Op.new( :op<callmethod>, :name<depend>, $target, QAST::Var.new( :name<pre>, :scope<local> ) ),
+                                QAST::Op.new( :op<die>, QAST::SVal.new(:value('unsupported type')) ),
+                            ),
+                        )),
+                        QAST::Op.new( :op<die>, QAST::SVal.new(:value('unsupported type')) ),
+                    ),
+                ));
+            }
         }
         make $stmts;
     }
