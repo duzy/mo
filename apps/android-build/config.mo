@@ -89,6 +89,9 @@ def check_notnull($v, $err) {
     if isnull($v) { die($err) }
 }
 
+def initSDKConfig() {
+}
+
 load {
     unless isnull($SDK) { return }
 
@@ -105,7 +108,7 @@ load {
          $Name = split('.', $Manifest.package).pop();
     }
 
-    $LocalProperties = LoadProperties("$Path/local.properties")
+    $LocalProperties   = LoadProperties("$Path/local.properties")
     $ProjectProperties = LoadProperties("$Path/project.properties")
 
     check_notnull($LocalProperties,     "$Path/local.properties missing");

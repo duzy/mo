@@ -70,9 +70,8 @@ knowhow MO::FilesystemNodeHOW {
     my sub method_lastname($node)    { pathname(nqp::getattr($node, $type, '')) }
     my sub method_depends($node)     { nqp::getattr($node, $type, '@depends') }
     my sub method_depend($node, $path) {
-        unless nqp::isstr($path) {
-            nqp::die('"depend" accepts only string');
-        }
+        nqp::die('"$node.depend()" needs a path string') unless nqp::isstr($path);
+
         my @depends := method_depends($node);
         my $dep;
         if nqp::isstr($path) {

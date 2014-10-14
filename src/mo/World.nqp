@@ -597,6 +597,18 @@ MO::World.add_builtin_code('endswith', -> $s, *@a {
     }
     $res
 });
+MO::World.add_builtin_code('startswith', -> $s, *@a {
+    my int $res := 0;
+    my int $sl := nqp::chars($s);
+    for @a {
+        my int $l := nqp::chars($_);
+        if $l < $sl && nqp::substr($s, 0, $l) eq $_ {
+            $res := 1;
+            last;
+        }
+    }
+    $res
+});
 MO::World.add_builtin_code('substr', -> $s, $a, $b? {
     nqp::defined($b) ?? nqp::substr($s, $a, $b) !! nqp::substr($s, $a)
 });
