@@ -139,7 +139,8 @@ def Add($path, $variant) {
     echo "Generating classes.."
     rm -f $out/classes.{dex,jar}
     [[ -d $out/classes ]] || mkdir -p $out/classes || exit -1
-    $cmd -d $out/classes $debug -Xlint:unchecked -encoding "UTF-8" -source 1.5 -target 1.5 \\
+    $cmd -d $out/classes $debug -Xlint:unchecked -encoding "UTF-8" \\
+        -Xlint:-options -source 1.5 -target 1.5 \\
         -sourcepath "$out/sources" "\@$out/classpath" "\@$out/sources.list"
     find $out/classes -type f -name '*.class' > $out/classes.list
 ----------------------------end
