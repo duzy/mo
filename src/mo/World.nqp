@@ -576,7 +576,17 @@ MO::World.add_builtin_code('list', -> { nqp::list() });
 MO::World.add_builtin_code('hash', -> { nqp::hash() });
 
 MO::World.add_builtin_code('elems', -> $l { nqp::elems($l) });
-MO::World.add_builtin_code('splice', -> $l, $a, $b, $c { nqp::splice($l, $a, $b, $c) });
+MO::World.add_builtin_code('splice', -> $l, $a, $pos, $sz { nqp::splice($l, $a, $pos, $sz) });
+MO::World.add_builtin_code('slice', -> $l, $pos, $sz? {
+    my @result;
+    my int $m := nqp::elems($l);
+    $sz := $m - $pos unless nqp::defined($sz);
+    while $pos < $m && nqp::elems(@result) < $sz {
+        @result.push($l[$pos]);
+        $pos := $pos + 1;
+    }
+    @result
+});
 
 # String manipulation..
 MO::World.add_builtin_code('split', -> $l, $s { nqp::split($l, $s) });

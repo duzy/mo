@@ -1,14 +1,6 @@
 var $sysdir = dirname(@ARGS[0]);
-var $Variant = 1 < +@ARGS ? @ARGS[1] : 'debug';
-var $APILevel
-
-var $LocalProperties
-var $ProjectProperties
 
 var $SDK
-var $Path
-var $Name
-var $Manifest
 
 var $Platform
 var $PlatformProperties
@@ -37,13 +29,6 @@ var $Cmd_rscc
 var $Cmd_zipalign
 var $Cmd_jarsigner
 var $Cmd_javac
-
-var $Sign_storepass_filename;
-var $Sign_storepass;
-var $Sign_keypass_filename;
-var $Sign_keypass;
-var $Sign_keystore;
-var $Sign_cert = 'cert';
 
 def LoadProperties($filename) {
     var $hash = hash();
@@ -89,30 +74,8 @@ def check_notnull($v, $err) {
     if isnull($v) { die($err) }
 }
 
-def initSDKConfig() {
-}
-
-load {
-    unless isnull($SDK) { return }
-
-    $Path = %_{'path'};
-
-    unless isreg("$Path/AndroidManifest.xml") {
-        die("AndroidManifest.xml was not found under $Path");
-    }
-
-    lang XML as $am in "$Path/AndroidManifest.xml";
-    $Manifest = $am();
-    $Name = basename($Path);
-    if isnull($Name) {
-         $Name = split('.', $Manifest.package).pop();
-    }
-
-    $LocalProperties   = LoadProperties("$Path/local.properties")
-    $ProjectProperties = LoadProperties("$Path/project.properties")
-
-    check_notnull($LocalProperties,     "$Path/local.properties missing");
-    check_notnull($ProjectProperties,   "$Path/project.properties missing");
+def InitSDK($LocalProperties, $ProjectProperties) {
+    unless isnull($SDK) { return 0 }
 
     $SDK = any isdir $LocalProperties{'sdk.dir'},
         '/home/zhan/tools/android-studio/sdk',
@@ -155,7 +118,7 @@ load {
     $Cmd_jarsigner         = "jarsigner"
     $Cmd_javac             = "javac"
 
-    if isnull($Cmd_sqlite3)  { $Cmd_sqlite3 = Tool("sqlite3") }
+    if isnull($Cmd_sqlite3)  { $Cmd_sqlite3  = Tool("sqlite3") }
     if isnull($Cmd_zipalign) { $Cmd_zipalign = Tool("zipalign") }
 
     check_notnull($Cmd_android,         '$SDK/tools/android missing');
@@ -168,17 +131,6 @@ load {
     check_notnull($Cmd_rscc,            '$SDK/build-tools/.../llvm-rs-cc missing');
     check_notnull($Cmd_zipalign,        '$SDK/build-tools/.../zipalign missing');
     check_notnull($Cmd_jarsigner,       'jarsigner missing');
-
-    $Sign_cert = 'cert';
-    $Sign_storepass_filename = any isreg "$Path/.android/storepass", "$sysdir/key/storepass"
-    $Sign_keypass_filename = any isreg "$Path/.android/keypass", "$sysdir/key/keypass"
-    $Sign_keystore = any isreg "$Path/.android/keystore", "$sysdir/key/keystore"
-
-    unless isnull($Sign_storepass_filename) { $Sign_storepass = strip(slurp($Sign_storepass_filename)) }
-    unless isnull($Sign_keypass_filename)   { $Sign_keypass = strip(slurp($Sign_keypass_filename)) }
-    
-    say("config.mo: Platform = $Platform");
-    say("config.mo: SDK = $SDK");
+   
+    1
 }
-
-say("config.mo: Variant = $Variant")

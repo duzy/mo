@@ -8,4 +8,4 @@ function run() {
     $RUNNER $@
 }
 
-run $SRCDIR/main.mo $SRCDIR/hello
+run $SRCDIR/main.mo $SRCDIR/hello $SRCDIR/hello2
