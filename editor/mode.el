@@ -92,7 +92,6 @@
        (message "template"))
     (perl-indent-command arg)))
 
-;(define-derived-mode mo-mode perl-mode "MO"
 (define-derived-mode mo-mode prog-mode "MO"
   "Major mode for editing .mo files."
   (set (make-local-variable 'font-lock-defaults) '(mo-font-lock-defaults))

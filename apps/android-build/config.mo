@@ -56,18 +56,18 @@ def BuildTool($name) {
     var $sdk = $SDK;
     var $version = $PlatformProperties{'Platform.Version'};
     any isreg
-    "$sdk/build-tools/android-$version/$name",
-    "$sdk/build-tools/android-4.4W/$name",
-    "$sdk/build-tools/android-4.4.2/$name",
-    "$sdk/build-tools/19.1.0/$name",
-    "$sdk/build-tools/19.0.3/$name",
-    "$sdk/build-tools/19.0.2/$name",
-    "$sdk/build-tools/19.0.1/$name",
-    "$sdk/build-tools/19.0.0/$name",
-    "$sdk/build-tools/18.1.1/$name",
-    "$sdk/build-tools/18.1.0/$name",
-    "$sdk/build-tools/18.0.1/$name",
-    "$sdk/build-tools/17.0.0/$name"
+        "$sdk/build-tools/android-$version/$name",
+        "$sdk/build-tools/android-4.4W/$name",
+        "$sdk/build-tools/android-4.4.2/$name",
+        "$sdk/build-tools/19.1.0/$name",
+        "$sdk/build-tools/19.0.3/$name",
+        "$sdk/build-tools/19.0.2/$name",
+        "$sdk/build-tools/19.0.1/$name",
+        "$sdk/build-tools/19.0.0/$name",
+        "$sdk/build-tools/18.1.1/$name",
+        "$sdk/build-tools/18.1.0/$name",
+        "$sdk/build-tools/18.0.1/$name",
+        "$sdk/build-tools/17.0.0/$name"
 }
 
 def check_notnull($v, $err) {
