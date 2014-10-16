@@ -15,6 +15,15 @@ class c
 
         var $y = load_xml($xml);
         say($y.name());
+
+        $x = load_xml($xml);
+        say($x.name());
+
+        $x = load_xml($xml);
+        say($x.name());
+
+        $x = load_xml($xml);
+        say($x.name());
     }
 }
 
