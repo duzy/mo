@@ -13,6 +13,7 @@ def join_target_path($sep, @_) {
 }
 
 def load_manifest($path) {
+say($path);
     lang XML in "$path/AndroidManifest.xml"
 }
 
@@ -26,6 +27,7 @@ def Add($path, $variant) {
 
     var $name = basename($path);
     var $manifest = load_manifest($path);
+say($path);
     if isnull($name) { $name = split('.', $manifest.package).pop() }
 
     var $localProperties   = config::LoadProperties("$path/local.properties")
@@ -33,7 +35,10 @@ def Add($path, $variant) {
     check_notnull($localProperties,   "local.properties is not underneath $path");
     check_notnull($projectProperties, "project.properties is not underneath $path");
 
-    config::InitSDK($localProperties, $projectProperties)
+    var $sdk = any isdir $localProperties{'sdk.dir'}
+    check_notnull($sdk,  'SDK missing');
+
+    var $config = config::ParseProject($sdk, $localProperties, $projectProperties)
 
     var @java_sources = <"$path/src">.findall(def($path, $name){ endswith($name, '.java') });
     var @res_files = <"$path/res">.findall(def($path, $name){ endswith($name, '.xml', '.png', '.jpg', '.xml') });
@@ -52,13 +57,16 @@ def Add($path, $variant) {
     var $sign_keypass   = isnull($sign_keypass_filename)   ? null : strip(slurp($sign_keypass_filename));
 
     var $out = "$path/bin/$variant";
+    var $target = "$out/$name.apk";
+    var $platform_jar  = $config.platform_jar();
+    var $platform_aidl = $config.platform_aidl();
 
-"$out/$name.apk": "$out/_.signed"
+$target: "$out/_.signed"
 {
-    var $apk = $_.path();
-    var $dir = $_.parent_path();
+    var $apk    = $_.path();
+    var $dir    = $_.parent_path();
     var $signed = @_[0].path();
-    var $cmd = $config::Cmd_zipalign;
+    var $cmd    = $config.cmd('zipalign');
     lang shell :escape
 -------------------------------
     echo "Generating APK.."
@@ -72,8 +80,8 @@ def Add($path, $variant) {
     var $storepass = isnull($sign_storepass) ? '' : "-storepass '$sign_storepass'";
     var $keypass   = isnull($sign_keypass)   ? '' : "-keypass '$sign_keypass'";
     var $keystore  = isnull($sign_keystore)  ? '' : "-keystore '$sign_keystore'";
-    var $cmd  = $config::Cmd_jarsigner;
-    var $cert = $sign_cert;
+    var $cmd    = $config.cmd('jarsigner');
+    var $cert   = $sign_cert;
     var $signed = $_.path();
     var $pack   = @_[0].path();
     var $tsa = 1 ? "-tsacert $cert" : '-tsa'
@@ -92,11 +100,11 @@ def Add($path, $variant) {
     var $pack = $_.path();
     var $am   = @_[0].path();
     var $dex  = @_[1].path();
-    var $libs   = "-I $config::Platform_jar";
+    var $libs   = "-I $platform_jar";
     var $reses  = "-S '$path/res'";
     var $assets = "-A '$path/assets'";
     var $debug  = $variant eq 'debug' ? '--debug-mode' : '';
-    var $cmd = $config::Cmd_aapt;
+    var $cmd = $config.cmd('aapt');
     unless isdir($assets) { $assets = '' }
     lang shell :escape
 -------------------------------
@@ -121,7 +129,7 @@ def Add($path, $variant) {
     var $libs = ''
     var $input = "$out/classes"
     var $debug  = $variant eq 'debug' ? '--debug' : '';
-    var $cmd = $config::Cmd_dx;
+    var $cmd = $config.cmd('dx');
     lang shell :escape
 -------------------------------
     echo "Generating dex file.."
@@ -133,7 +141,7 @@ def Add($path, $variant) {
 "$out/classes.list": "$out/sources.list" "$out/classpath"
 {
     var $debug  = $variant eq 'debug' ? '-g' : '';
-    var $cmd = $config::Cmd_javac;
+    var $cmd = $config.cmd('javac');
     lang shell :escape
 -------------------------------
     echo "Generating classes.."
@@ -148,7 +156,6 @@ def Add($path, $variant) {
 
 "$out/classpath":
 {
-    var $platform_jar =  "$config::Platform_jar";
     var $classpath = $_.path();
     lang shell :escape
 -------------------------------
@@ -175,11 +182,11 @@ def Add($path, $variant) {
 
 "$out/sources/R.java.d": "$path/AndroidManifest.xml" "$path/res" @res_files
 {
-    var $libs   = "-I $config::Platform_jar";
+    var $libs   = "-I $platform_jar";
     var $reses  = isdir("$path/res") ? "-S '$path/res'" : '';
     var $assets = isdir("$path/assets") ? "-A '$path/assets'" : '';
     var $am  = @_[0].path();
-    var $cmd = $config::Cmd_aapt;
+    var $cmd = $config.cmd('aapt');
     lang shell :escape
 -------------------------------
     echo "Generating R.java.."
@@ -194,5 +201,5 @@ def Add($path, $variant) {
 ----------------------------end
 }
 
-<"$out/$name.apk">
+<"$target">
 }

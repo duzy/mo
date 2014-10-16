@@ -401,18 +401,18 @@ class MO::Actions is HLL::Actions {
                 QAST::Var.new( :scope<lexical>, :decl<var>, :name<GLOBAL> ),
                 QAST::Op.new( :op<getcurhllsym>, QAST::SVal.new( :value<GLOBAL> ) ),
             ),
-            QAST::Op.new( :op<bind>,
-                QAST::Var.new( :scope<lexical>, :decl<var>, :name<GLOBAL.WHO> ),
-                QAST::Op.new( :op<who>, QAST::Var.new( :scope<lexical>, :name<GLOBAL> ) ),
-            ),
+            # QAST::Op.new( :op<bind>,
+            #     QAST::Var.new( :scope<lexical>, :decl<var>, :name<GLOBAL.WHO> ),
+            #     QAST::Op.new( :op<who>, QAST::Var.new( :scope<lexical>, :name<GLOBAL> ) ),
+            # ),
             QAST::Op.new( :op<bind>,
                 QAST::Var.new( :scope<lexical>, :decl<var>, :name<EXPORT> ),
                 QAST::Op.new( :op<getcurhllsym>, QAST::SVal.new( :value<EXPORT> ) ),
             ),
-            QAST::Op.new( :op<bind>,
-                QAST::Var.new( :scope<lexical>, :decl<var>, :name<EXPORT.WHO> ),
-                QAST::Op.new( :op<who>, QAST::Var.new( :scope<lexical>, :name<EXPORT> ) ),
-            ),
+            # QAST::Op.new( :op<bind>,
+            #     QAST::Var.new( :scope<lexical>, :decl<var>, :name<EXPORT.WHO> ),
+            #     QAST::Op.new( :op<who>, QAST::Var.new( :scope<lexical>, :name<EXPORT> ) ),
+            # ),
             QAST::Op.new( :op<bind>,
                 QAST::Var.new( :name<$_>, :scope<lexical>, :decl<var> ),
                 QAST::Op.new( :op<callmethod>, :name<root>, QAST::Var.new( :scope<lexical>, :name<MODEL> ) ),
@@ -658,7 +658,7 @@ class MO::Actions is HLL::Actions {
             }
         } elsif $*W.is_export_name($final_name) {
             ($*EXPORT.WHO){$name} := nqp::null(); # bind the key immediately to avoid undefined symbol
-            $who := QAST::Var.new( :name<EXPORT.WHO>, :scope<lexical> );
+            $who := QAST::Op.new( :op<who>, QAST::WVal.new( :value($*EXPORT) ) ); #QAST::Var.new( :name<EXPORT.WHO>, :scope<lexical> );
         }
 
         my $initializer := $<initializer> ?? $<initializer>.made
@@ -896,7 +896,7 @@ class MO::Actions is HLL::Actions {
 
         if $*W.is_export_name($name) {
             $outer[0].push( QAST::Op.new( :node($/), :op<bindkey>,
-                QAST::Var.new( :name<EXPORT.WHO>, :scope<lexical> ),
+                QAST::Op.new( :op<who>, QAST::WVal.new( :value($*EXPORT) ) ), #QAST::Var.new( :name<EXPORT.WHO>, :scope<lexical> ),
                 QAST::SVal.new( :value($name) ),
                 QAST::Var.new( :name('&' ~ $name), :scope<lexical> ),
             ) );
@@ -1011,25 +1011,28 @@ class MO::Actions is HLL::Actions {
             $source := $<source>.made;
         }
 
-        my $langcode := QAST::Block.new( :node($/),
+        my $langcode := QAST::Block.new( :node($/), QAST::Stmts.new(
             QAST::Op.new( :op<bind>,
                 QAST::Var.new( :name<options>, :scope<local>, :decl<var> ),
                 $options,
             ),
+    QAST::Op.new( :op<say>, QAST::SVal.new( :value<langcode-1> ) ),
             QAST::Op.new( :op<bind>,
                 QAST::Var.new( :name<result>, :scope<local>, :decl<var> ),
                 QAST::Op.new( :op<call>,
-                    QAST::WVal.new(:value($*W.interpreter($langname))), $source,
+                    QAST::WVal.new(:value($*W.interpreter($langname))),
+                    $source, # QAST::Var.new( :name<source>, :scope<local>, :decl<param> ),
                     QAST::Var.new( :name<options>, :scope<local> ),
                 )
             ),
-        );
+    QAST::Op.new( :op<say>, QAST::SVal.new( :value<langcode-2> ) ),
+        ));
 
         for $<lang_modifier> {
-            $langcode.push($_.made) if nqp::defined($_.made);
+            $langcode[0].push($_.made) if nqp::defined($_.made);
         }
 
-        $langcode.push(QAST::Var.new( :name<result>, :scope<local> ));
+        $langcode[0].push(QAST::Var.new( :name<result>, :scope<local> ));
 
         if $<variable> {
             self.'declaration:sym<var>'($/, :init($langcode));
@@ -1043,12 +1046,12 @@ class MO::Actions is HLL::Actions {
             $scope.symbol('&' ~ $name, :scope<lexical>, :declared(1) );
             $scope[0].push( QAST::Op.new( :op<bind>,
                 QAST::Var.new( :name('&' ~ $name), :scope<lexical>, :decl<var> ),
-                $langcode
+                QAST::Op.new( :op<takeclosure>, $langcode ),
             ) );
 
             if $*W.is_export_name($name) {
                 $scope[0].push( QAST::Op.new( :node($/), :op<bindkey>,
-                    QAST::Var.new( :name<EXPORT.WHO>, :scope<lexical> ),
+                    QAST::Op.new( :op<who>, QAST::WVal.new( :value($*EXPORT) ) ),
                     QAST::SVal.new( :value($name) ),
                     QAST::Var.new( :name('&' ~ $name), :scope<lexical> ),
                 ) );
@@ -1056,7 +1059,7 @@ class MO::Actions is HLL::Actions {
 
             make QAST::Var.new( :name('&' ~ $name), :scope<lexical> );
         } else {
-            make QAST::Op.new( :op<call>, $langcode );
+            make QAST::Op.new( :op<call>, QAST::Op.new( :op<takeclosure>, $langcode ) );
         }
     }
 

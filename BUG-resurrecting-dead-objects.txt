@@ -1,0 +1,66 @@
+make run-apps
+apps/android-build/hello
+langcode-1
+langcode-2
+apps/android-build/hello
+apps/android-build/hello2
+langcode-1
+src/gc/gc_gms.c:1186: failed assertion '!PObj_on_free_list_TEST(pmc) || !"Resurrecting of dead objects is not supported"'
+Backtrace - Obtained 30 stack frames (max trace depth is 32).
+/usr/local/lib/libparrot.so.6.7.0(+0x19c985) [0x2b113f769985]
+/usr/local/lib/libparrot.so.6.7.0(Parrot_confess+0x8a) [0x2b113f76994a]
+/usr/local/lib/libparrot.so.6.7.0(+0x1ab6ff) [0x2b113f7786ff]
+/usr/local/lib/libparrot.so.6.7.0(Parrot_gc_mark_PMC_alive_fun+0x5d) [0x2b113f76efdd]
+/usr/local/lib/parrot/6.7.0-devel/dynext/nqp_group.so(+0x1f105) [0x2b1143fca105]
+/usr/local/lib/libparrot.so.6.7.0(+0x1aac9a) [0x2b113f777c9a]
+/usr/local/lib/libparrot.so.6.7.0(+0x1aa394) [0x2b113f777394]
+/usr/local/lib/libparrot.so.6.7.0(+0x1ac098) [0x2b113f779098]
+/usr/local/lib/libparrot.so.6.7.0(Parrot_gc_new_pmc_header+0x53) [0x2b113f76f6c3]
+/usr/local/lib/libparrot.so.6.7.0(+0x1e8616) [0x2b113f7b5616]
+/usr/local/lib/libparrot.so.6.7.0(Parrot_pmc_new+0x117) [0x2b113f7b4dc7]
+/usr/local/lib/libparrot.so.6.7.0(Parrot_pcc_invoke_from_sig_object+0x8a) [0x2b113f78678a]
+/usr/local/lib/parrot/6.7.0-devel/dynext/nqp_group.so(+0x1be5f) [0x2b1143fc6e5f]
+/usr/local/lib/libparrot.so.6.7.0(+0x1648a6) [0x2b113f7318a6]
+/usr/local/lib/libparrot.so.6.7.0(+0x1eaeb9) [0x2b113f7b7eb9]
+/usr/local/lib/libparrot.so.6.7.0(+0x1ea362) [0x2b113f7b7362]
+/usr/local/lib/libparrot.so.6.7.0(+0x1c0743) [0x2b113f78d743]
+/usr/local/lib/libparrot.so.6.7.0(Parrot_pcc_invoke_from_sig_object+0x18d) [0x2b113f78688d]
+/usr/local/lib/libparrot.so.6.7.0(Parrot_ext_call+0x188) [0x2b113f76a558]
+/usr/local/lib/libparrot.so.6.7.0(+0x30d094) [0x2b113f8da094]
+/usr/local/lib/libparrot.so.6.7.0(Parrot_pcc_invoke_from_sig_object+0x12b) [0x2b113f78682b]
+/usr/local/lib/libparrot.so.6.7.0(Parrot_ext_call+0x188) [0x2b113f76a558]
+/usr/local/lib/libparrot.so.6.7.0(+0x1f1b6d) [0x2b113f7beb6d]
+/usr/local/lib/libparrot.so.6.7.0(+0x1f17bf) [0x2b113f7be7bf]
+/usr/local/lib/libparrot.so.6.7.0(Parrot_cx_begin_execution+0x125) [0x2b113f7be6e5]
+/usr/local/lib/libparrot.so.6.7.0(Parrot_pf_execute_bytecode_program+0x183) [0x2b113f7cf603]
+/usr/local/lib/libparrot.so.6.7.0(Parrot_api_run_bytecode+0x1a8) [0x2b113f7624d8]
+parrot() [0x40185e]
+/lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0xf5) [0x2b113fcacec5]
+parrot() [0x401499]
+Attempting to get PIR backtrace.  No guarantees.  Here goes...
+current instr.: '!cursor_start_all' pc 10178 (gen/parrot/stage2/QRegex.pir:4078) (gen/parrot/stage2/QRegex.nqp:622)
+called from Sub 'tag_name' pc 3841 (gen/xml.pir:1356) (gen/xml.nqp:44)
+called from Sub 'tag:sym<start>' pc 3061 (gen/xml.pir:1098) (gen/xml.nqp:33)
+called from Sub '!protoregex' pc 12079 (gen/parrot/stage2/QRegex.pir:4782) (gen/parrot/stage2/QRegex.nqp:810)
+called from Sub 'tag' pc 2939 (gen/xml.pir:1047) (gen/xml.nqp:32)
+called from Sub 'markup_content:sym<tag>' pc 2366 (gen/xml.pir:840) (gen/xml.nqp:28)
+called from Sub '!protoregex' pc 12079 (gen/parrot/stage2/QRegex.pir:4782) (gen/parrot/stage2/QRegex.nqp:810)
+called from Sub 'markup_content' pc 2268 (gen/xml.pir:795) (gen/xml.nqp:27)
+called from Sub 'go' pc 926 (gen/xml.pir:380) (gen/xml.nqp:14)
+called from Sub 'TOP' pc 663 (gen/xml.pir:283) (gen/xml.nqp:11)
+called from Sub 'parse' pc 20527 (gen/parrot/stage2/QRegex.pir:8031) (gen/parrot/stage2/QRegex.nqp:1404)
+called from Sub 'XML' pc 128405 (gen/mo.pir:43230) (gen/mo.nqp:2413)
+called from Sub '' pc 99 ((file unknown):66) (apps/android-build/main.mo:17)
+called from Sub 'load_manifest' pc 45 ((file unknown):45) (apps/android-build/main.mo:16)
+called from Sub 'Add' pc 786 ((file unknown):363) (/home/zhan/tools/a/work/mo/apps/android-build/build.mo:29)
+called from Sub '' pc 298 ((file unknown):135) (apps/android-build/main.mo:6)
+called from Sub '' pc 224 ((file unknown):89) (apps/android-build/main.mo:5)
+called from Sub 'eval' pc 27839 (gen/parrot/stage2/NQPHLL.pir:10706) (gen/parrot/stage2/NQPHLL.nqp:1173)
+called from Sub 'evalfiles' pc 30722 (gen/parrot/stage2/NQPHLL.pir:11905) (gen/parrot/stage2/NQPHLL.nqp:1367)
+called from Sub 'command_eval' pc 29225 (gen/parrot/stage2/NQPHLL.pir:11336) (gen/parrot/stage2/NQPHLL.nqp:1270)
+called from Sub 'my_command_line' pc 118174 (gen/mo.pir:39198) (gen/mo.nqp:1721)
+called from Sub 'MAIN' pc 1542 (gen/mo.pir:488) (gen/mo.nqp:1750)
+called from Sub '<mainline>' pc 1521 (gen/mo.pir:476) (gen/mo.nqp:2850)
+called from Sub '' pc 143642 (gen/mo.pir:48933) (gen/mo.nqp:2851)
+apps/android-build/run.bash: line 5:  8770 Aborted                 (core dumped) $RUNNER $@
+make: *** [run-apps] Error 134

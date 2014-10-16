@@ -40,13 +40,13 @@
       "isreg" "isdir" "isdev" "islink" "isreadable" "iswritable" "isexecutable" "isnull" "defined"
       "list" "hash" "elems" "splice" "slice" "split" "join" "concat" "chars" "index" "rindex"
       "endswith" "startswith" "substr" "strip" "addprefix" "addsuffix" "addinfix"
-      "load" "init"))
+      "load" "init" "getattr" "setattr"))
 
 (defun mo-ppre (re) (format "\\<\\(%s\\)\\>" (regexp-opt re)))
 
 (defvar mo-font-lock-defaults
   (list
-   (cons "[\$@%][A-Za-z_][A-Za-z_0-9:]*" mo-variable-name-face)
+   (cons "[\$@%][\.]?[A-Za-z_][A-Za-z_0-9:]*" mo-variable-name-face)
    (cons (mo-ppre mo-keyword-list) mo-keyword-face)
    (cons (mo-ppre mo-builtin-list) mo-builtin-face)
    (cons "\s\\(:[A-Za-z_][A-Za-z_0-9]*\\)" '(1 mo-constant-face)) ;;  :keyword

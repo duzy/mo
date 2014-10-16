@@ -117,8 +117,11 @@ class MO::World is HLL::World {
         # far and the builtin symbol table.
         if +@name == 1 {
             if $first eq 'GLOBAL' {
-                # return QAST::Op.new( :op<getcurhllsym>, QAST::SVal.new(:value<GLOBAL>) );
-                return QAST::Var.new( :scope<lexical>, :name<GLOBAL> );
+                # return QAST::WVal.new( :value($*GLOBALish) );
+                return QAST::Op.new( :op<getcurhllsym>, QAST::SVal.new(:value<GLOBAL>) );
+            } elsif $first eq 'EXPORT' {
+                # return QAST::WVal.new( :value($*EXPORT) );
+                return QAST::Op.new( :op<getcurhllsym>, QAST::SVal.new(:value<EXPORT>) );
             } elsif $first eq 'null' {
                 return QAST::Op.new( :op<null> );
             }
@@ -162,7 +165,8 @@ class MO::World is HLL::World {
                     QAST::WVal.new( :value($class) ) );
             } elsif self.is_export_name($first) {
                 return QAST::Var.new( :node($/), :scope<associative>,
-                    QAST::Var.new( :name<EXPORT.WHO>, :scope<lexical> ),
+                    # QAST::Var.new( :name<EXPORT.WHO>, :scope<lexical> ),
+                    QAST::Op.new( :op<who>, QAST::WVal.new( :value($*EXPORT) ) ),
                     QAST::SVal.new( :value($first) ) );
             } else {
                 # Finally try to lookup the GLOBAL
@@ -516,6 +520,8 @@ MO::World.add_builtin_code('new', -> $t {
     $obj.'~ctor'() if nqp::can($obj, '~ctor');
     $obj;
 });
+MO::World.add_builtin_code('getattr', -> $o, $n { nqp::getattr($o, $o, $n) });
+MO::World.add_builtin_code('setattr', -> $o, $n, $v { nqp::bindattr($o, $o, $n, $v) });
 
 # I/O opcodes (vm/parrot/QAST/Operations.nqp)
 MO::World.add_builtin_code('print', -> $s { nqp::print($s) });
