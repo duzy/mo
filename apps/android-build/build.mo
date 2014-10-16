@@ -13,7 +13,6 @@ def join_target_path($sep, @_) {
 }
 
 def load_manifest($path) {
-say($path);
     lang XML in "$path/AndroidManifest.xml"
 }
 
@@ -27,7 +26,6 @@ def Add($path, $variant) {
 
     var $name = basename($path);
     var $manifest = load_manifest($path);
-say($path);
     if isnull($name) { $name = split('.', $manifest.package).pop() }
 
     var $localProperties   = config::LoadProperties("$path/local.properties")
@@ -35,7 +33,7 @@ say($path);
     check_notnull($localProperties,   "local.properties is not underneath $path");
     check_notnull($projectProperties, "project.properties is not underneath $path");
 
-    var $sdk = any isdir $localProperties{'sdk.dir'}
+    var $sdk = any isdir $localProperties{'sdk.dir'}, "/open/android/android-studio/sdk"
     check_notnull($sdk,  'SDK missing');
 
     var $config = config::ParseProject($sdk, $localProperties, $projectProperties)

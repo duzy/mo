@@ -1016,7 +1016,6 @@ class MO::Actions is HLL::Actions {
                 QAST::Var.new( :name<options>, :scope<local>, :decl<var> ),
                 $options,
             ),
-    QAST::Op.new( :op<say>, QAST::SVal.new( :value<langcode-1> ) ),
             QAST::Op.new( :op<bind>,
                 QAST::Var.new( :name<result>, :scope<local>, :decl<var> ),
                 QAST::Op.new( :op<call>,
@@ -1025,7 +1024,6 @@ class MO::Actions is HLL::Actions {
                     QAST::Var.new( :name<options>, :scope<local> ),
                 )
             ),
-    QAST::Op.new( :op<say>, QAST::SVal.new( :value<langcode-2> ) ),
         ));
 
         for $<lang_modifier> {

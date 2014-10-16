@@ -10,6 +10,11 @@
   '((t (:inherit 'font-lock-builtin-face))) "mo: builtin face"
   :group 'mo)
 
+(defvar mo-string-name-face 'mo-string-name-face)
+(defface mo-string-name-face
+  '((t (:inherit 'font-lock-string-name-face))) "mo: string face"
+  :group 'mo)
+
 (defvar mo-variable-name-face 'mo-variable-name-face)
 (defface mo-variable-name-face
   '((t (:inherit 'font-lock-variable-name-face))) "mo: variable face"
@@ -31,22 +36,22 @@
   :group 'mo)
 
 (defvar mo-keyword-list
-    '("if" "else" "elsif" "unless" "for" "any" "while" "until" "yield" "str" "def" "end"
-      "le" "ge" "lt" "gt" "eq" "ne" "cmp" "not" "and" "or" "use" "var" "return" "as"
-      "template" "lang" "class" "method" "in"))
+  '("if" "else" "elsif" "unless" "for" "any" "while" "until" "yield" "str" "def" "end"
+    "le" "ge" "lt" "gt" "eq" "ne" "cmp" "not" "and" "or" "use" "var" "return" "as"
+    "template" "lang" "class" "method" "in"))
 
 (defvar mo-builtin-list
-    '("new" "print" "say" "die" "exit" "open" "slurp" "shell" "system" "cwd" "basename" "dirname"
-      "isreg" "isdir" "isdev" "islink" "isreadable" "iswritable" "isexecutable" "isnull" "defined"
-      "list" "hash" "elems" "splice" "slice" "split" "join" "concat" "chars" "index" "rindex"
-      "endswith" "startswith" "substr" "strip" "addprefix" "addsuffix" "addinfix"
-      "load" "init" "getattr" "setattr"))
+  '("new" "print" "say" "die" "exit" "open" "slurp" "shell" "system" "cwd" "basename" "dirname"
+    "isreg" "isdir" "isdev" "islink" "isreadable" "iswritable" "isexecutable" "isnull" "defined"
+    "list" "hash" "elems" "splice" "slice" "split" "join" "concat" "chars" "index" "rindex"
+    "endswith" "startswith" "substr" "strip" "addprefix" "addsuffix" "addinfix"
+    "load" "init" "getattr" "setattr"))
 
-(defun mo-ppre (re) (format "\\<\\(%s\\)\\>" (regexp-opt re)))
+(defun mo-ppre (re) (format "\\<\\(%s\\)\\>[^_]" (regexp-opt re)))
 
 (defvar mo-font-lock-defaults
   (list
-   (cons "[\$@%][\.]?[A-Za-z_][A-Za-z_0-9:]*" mo-variable-name-face)
+   (cons "[\$@%][\.]?[A-Za-z_][A-Za-z_0-9:]*\\(<.*?>\\)?" mo-variable-name-face)
    (cons (mo-ppre mo-keyword-list) mo-keyword-face)
    (cons (mo-ppre mo-builtin-list) mo-builtin-face)
    (cons "\s\\(:[A-Za-z_][A-Za-z_0-9]*\\)" '(1 mo-constant-face)) ;;  :keyword
@@ -54,6 +59,15 @@
    (cons "[A-Za-z_][A-Za-z_0-9]*" mo-reference-face)
    )
   "Minimal highlighting expressions for MO mode")
+
+(defvar mo-syntax-table
+  (let ((mo-syntax-table (make-syntax-table)))
+    ;;(modify-syntax-entry ?\" "\"" mo-syntax-table)
+    (modify-syntax-entry ?\' "\"" mo-syntax-table) ;; single-quote used as string quote
+    ;;(modify-syntax-entry ?< "(" mo-syntax-table)
+    ;;(modify-syntax-entry ?> ")" mo-syntax-table)
+    mo-syntax-table)
+  "Syntax table for MO mode. See `Table of Syntax Classes'")
 
 (defvar mo-other-file-alist
   '(("\\.mo$" (".mo")) ("\\.MO$" (".MO")))
@@ -94,6 +108,7 @@
 
 (define-derived-mode mo-mode prog-mode "MO"
   "Major mode for editing .mo files."
+  (set-syntax-table mo-syntax-table)
   (set (make-local-variable 'font-lock-defaults) '(mo-font-lock-defaults))
   (set (make-local-variable 'ff-other-file-alist) 'mo-other-file-alist)
   (set (make-local-variable 'comment-start) "#")
