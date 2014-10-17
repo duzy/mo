@@ -671,9 +671,24 @@ MO::World.add_interpreter('shell', -> $s, %opts {
         %opts<stdout> := $h.readall;
         $h.close;
     } else {
+        # my @cl := [ 'sh', '-c', $s ];
+        # nqp::spawn(@cl, nqp::cwd, nqp::getenvhash())
         nqp::shell($s, nqp::cwd, nqp::getenvhash())
     }
 });
 MO::World.add_interpreter('bash', -> $s, %opts {
-    nqp::shell($s, nqp::cwd, nqp::getenvhash())
+    my @cl := [ 'bash', '-c', $s ];
+    nqp::spawn(@cl, nqp::cwd, nqp::getenvhash())
+});
+MO::World.add_interpreter('Python', -> $s, %opts {
+    my @cl := [ 'python', '-c', $s ];
+    nqp::spawn(@cl, nqp::cwd, nqp::getenvhash())
+});
+MO::World.add_interpreter('Perl5', -> $s, %opts {
+    my @cl := [ 'perl', '-E', $s ];
+    nqp::spawn(@cl, nqp::cwd, nqp::getenvhash())
+});
+MO::World.add_interpreter('Perl6', -> $s, %opts {
+    my @cl := [ 'perl6', '-e', $s ];
+    nqp::spawn(@cl, nqp::cwd, nqp::getenvhash())
 });

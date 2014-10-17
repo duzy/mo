@@ -12,6 +12,25 @@ lang XML
 </node>
 -------------------------end
 
+lang Perl5
+------------------------
+my $var = "test";
+sub test() {
+}
+---------------------end
+
+lang Perl6
+------------------------
+my $var = "test";
+sub test() {
+}
+---------------------end
+
+lang Python
+------------------------
+class
+---------------------end
+
 var $sysdir = dirname(@ARGS[0]);
 
 def check_notnull($v, $err) {

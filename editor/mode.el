@@ -113,8 +113,8 @@
    (list "[\$@%][\.]?[A-Za-z_][A-Za-z_0-9:]*\\(<\\)\\(.*?\\)\\(>\\)"
          '(1 mo-constant-face) '(2 mo-string-face) '(3 mo-constant-face))
 
-   (cons "class\s+\\([A-Z][A-Za-z_0-9]*\\)" '(1 mo-type-bold-face))
-   (cons "class\s+\\([a-z_][A-Za-z_0-9]*\\)" '(1 mo-type-face))
+   (cons "\\(?:class\\|template\\)\s+\\([A-Z][A-Za-z_0-9]*\\)" '(1 mo-type-bold-face))
+   (cons "\\(?:class\\|template\\)\s+\\([a-z_][A-Za-z_0-9]*\\)" '(1 mo-type-face))
 
    (cons "lang\s+\\([a-z_][A-Za-z_0-9]*\\)" '(1 mo-reference-bold-face))
 
