@@ -1,3 +1,6 @@
+;;
+;;      Duzy Chan <code@duzy.info>
+;; 
 (require 'perl-mode)
 
 (defvar mo-keyword-face 'mo-keyword-face)
@@ -10,9 +13,29 @@
   '((t (:inherit 'font-lock-builtin-face))) "mo: builtin face"
   :group 'mo)
 
-(defvar mo-string-name-face 'mo-string-name-face)
-(defface mo-string-name-face
-  '((t (:inherit 'font-lock-string-name-face))) "mo: string face"
+(defvar mo-warning-face 'mo-warning-face)
+(defface mo-warning-face
+  '((t (:inherit 'font-lock-warning-face))) "mo: warning face"
+  :group 'mo)
+
+(defvar mo-string-face 'mo-string-face)
+(defface mo-string-face
+  '((t (:inherit 'font-lock-string-face))) "mo: string face"
+  :group 'mo)
+
+(defvar mo-string-bold-face 'mo-string-bold-face)
+(defface mo-string-bold-face
+  '((t (:inherit 'mo-string-face))) "mo: bold string face"
+  :group 'mo)
+
+(defvar mo-type-face 'mo-type-face)
+(defface mo-type-face
+  '((t (:inherit 'font-lock-type-face))) "mo: type face"
+  :group 'mo)
+
+(defvar mo-type-bold-face 'mo-type-bold-face)
+(defface mo-type-bold-face
+  '((t (:inherit 'mo-type-face :weight bold))) "mo: bold type face"
   :group 'mo)
 
 (defvar mo-variable-name-face 'mo-variable-name-face)
@@ -20,20 +43,51 @@
   '((t (:inherit 'font-lock-variable-name-face))) "mo: variable face"
   :group 'mo)
 
+(defconst vc (face-foreground font-lock-variable-name-face))
+(defvar mo-variable-name-bold-face 'mo-variable-name-bold-face)
+(defface mo-variable-name-bold-face
+  '((t (:inherit 'mo-variable-name-face :weight bold))) "mo: bold variable face"
+  :group 'mo)
+
 (defvar mo-function-name-face 'mo-function-name-face)
 (defface mo-function-name-face
   '((t (:inherit 'font-lock-function-name-face))) "mo: function face"
   :group 'mo)
 
+(defvar mo-function-name-bold-face 'mo-function-name-bold-face)
+(defface mo-function-name-bold-face
+  '((t (:inherit 'mo-function-name-face :weight bold))) "mo: bold function face"
+  :group 'mo)
+
 (defvar mo-reference-face 'mo-reference-face)
 (defface mo-reference-face
-  '((t (:inherit 'font-lock-reference-face))) "mo: reference face"
+  '((t (:inherit 'font-lock-reference-face :foreground "DimGray"))) ;;DarkGray, DimGray, gray
+  "mo: reference face"
+  :group 'mo)
+
+(defvar mo-reference-bold-face 'mo-reference-bold-face)
+(defface mo-reference-bold-face
+  '((t (:inherit 'mo-reference-bold-face :weight bold))) "mo: bold reference face"
   :group 'mo)
 
 (defvar mo-constant-face 'mo-constant-face)
 (defface mo-constant-face
   '((t (:inherit 'font-lock-constant-face))) "mo: constant face"
   :group 'mo)
+
+(defvar mo-constant-bold-face 'mo-constant-bold-face)
+(defface mo-constant-bold-face
+  '((t (:inherit 'mo-constant-face :weight bold))) "mo: bold constant face"
+  :group 'mo)
+
+;; font-lock-builtin-face 	font-lock-comment-delimiter-face
+;; font-lock-comment-face 	font-lock-constant-face
+;; font-lock-doc-face 	font-lock-function-name-face
+;; font-lock-keyword-face 	font-lock-negation-char-face
+;; font-lock-preprocessor-face 	font-lock-reference-face
+;; font-lock-string-face 	font-lock-syntactic-face-function
+;; font-lock-type-face 	font-lock-variable-name-face
+;; font-lock-warning-face
 
 (defvar mo-keyword-list
   '("if" "else" "elsif" "unless" "for" "any" "while" "until" "yield" "str" "def" "end"
@@ -45,18 +99,30 @@
     "isreg" "isdir" "isdev" "islink" "isreadable" "iswritable" "isexecutable" "isnull" "defined"
     "list" "hash" "elems" "splice" "slice" "split" "join" "concat" "chars" "index" "rindex"
     "endswith" "startswith" "substr" "strip" "addprefix" "addsuffix" "addinfix"
-    "load" "init" "getattr" "setattr"))
+    "load" "init" "getattr" "setattr" "me"))
 
 (defun mo-ppre (re) (format "\\<\\(%s\\)\\>[^_]" (regexp-opt re)))
+(defun mo-idre () nil)
 
 (defvar mo-font-lock-defaults
   (list
-   (cons "[\$@%][\.]?[A-Za-z_][A-Za-z_0-9:]*\\(<.*?>\\)?" mo-variable-name-face)
-   (cons (mo-ppre mo-keyword-list) mo-keyword-face)
-   (cons (mo-ppre mo-builtin-list) mo-builtin-face)
+   (list "\\([\$@%]\\)\\([\.]?\\)\\([a-z_][A-Za-z_0-9:]*\\)"
+         '(1 mo-variable-name-face) '(2 mo-variable-name-bold-face) '(3 mo-variable-name-face))
+   (list "\\([\$@%]\\)\\([\.]?\\)\\([A-Z][A-Za-z_0-9:]*\\)"
+         '(1 mo-variable-name-bold-face) '(2 mo-variable-name-bold-face) '(3 mo-variable-name-bold-face))
+   (list "[\$@%][\.]?[A-Za-z_][A-Za-z_0-9:]*\\(<\\)\\(.*?\\)\\(>\\)"
+         '(1 mo-constant-face) '(2 mo-string-face) '(3 mo-constant-face))
+
+   (cons "class\s+\\([A-Z][A-Za-z_0-9]*\\)" '(1 mo-type-bold-face))
+   (cons "class\s+\\([a-z_][A-Za-z_0-9]*\\)" '(1 mo-type-face))
+
+   (cons (mo-ppre mo-keyword-list) '(1 mo-keyword-face))
+   (cons (mo-ppre mo-builtin-list) '(1 mo-builtin-face))
    (cons "\s\\(:[A-Za-z_][A-Za-z_0-9]*\\)" '(1 mo-constant-face)) ;;  :keyword
-   (cons "\\([A-Za-z_][A-Za-z_0-9]*\\)(" '(1 mo-function-name-face))
-   (cons "[A-Za-z_][A-Za-z_0-9]*" mo-reference-face)
+   (cons "\\([A-Z][A-Za-z_0-9]*\\)(" '(1 mo-function-name-bold-face))
+   (cons "\\([a-z_][A-Za-z_0-9]*\\)(" '(1 mo-function-name-face))
+   (cons "[A-Z][A-Za-z_0-9]*" mo-reference-bold-face)
+   (cons "[a-z_][A-Za-z_0-9]*" mo-reference-face)
    )
   "Minimal highlighting expressions for MO mode")
 
