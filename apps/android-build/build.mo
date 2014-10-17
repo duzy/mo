@@ -1,5 +1,17 @@
 use config;
 
+template x
+------------------------
+ ddd
+---------------------end
+
+lang XML
+-------------------------
+<node>
+  <child>
+</node>
+-------------------------end
+
 var $sysdir = dirname(@ARGS[0]);
 
 def check_notnull($v, $err) {
@@ -105,7 +117,7 @@ $target: "$out/_.signed"
     var $cmd = $config.cmd('aapt');
     unless isdir($assets) { $assets = '' }
     lang shell :escape
--------------------------------
+--------------------------------
     echo "Packing resources.."
     mkdir -p $dir || exit -1
     $cmd package -f -F $pack -M $am $libs $reses $assets \\
@@ -141,7 +153,7 @@ $target: "$out/_.signed"
     var $debug  = $variant eq 'debug' ? '-g' : '';
     var $cmd = $config.cmd('javac');
     lang shell :escape
--------------------------------
+--------------------------------
     echo "Generating classes.."
     rm -f $out/classes.{dex,jar}
     [[ -d $out/classes ]] || mkdir -p $out/classes || exit -1
@@ -186,7 +198,7 @@ $target: "$out/_.signed"
     var $am  = @_[0].path();
     var $cmd = $config.cmd('aapt');
     lang shell :escape
--------------------------------
+--------------------------------
     echo "Generating R.java.."
     mkdir -p "$out/sources" || exit -1
     $cmd package -f -m -M $am \\

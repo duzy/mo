@@ -99,7 +99,7 @@
     "isreg" "isdir" "isdev" "islink" "isreadable" "iswritable" "isexecutable" "isnull" "defined"
     "list" "hash" "elems" "splice" "slice" "split" "join" "concat" "chars" "index" "rindex"
     "endswith" "startswith" "substr" "strip" "addprefix" "addsuffix" "addinfix"
-    "load" "init" "getattr" "setattr" "me"))
+    "load" "init" "getattr" "setattr" "me" "null"))
 
 (defun mo-ppre (re) (format "\\<\\(%s\\)\\>[^_]" (regexp-opt re)))
 (defun mo-idre () nil)
@@ -116,9 +116,11 @@
    (cons "class\s+\\([A-Z][A-Za-z_0-9]*\\)" '(1 mo-type-bold-face))
    (cons "class\s+\\([a-z_][A-Za-z_0-9]*\\)" '(1 mo-type-face))
 
+   (cons "lang\s+\\([a-z_][A-Za-z_0-9]*\\)" '(1 mo-reference-bold-face))
+
    (cons (mo-ppre mo-keyword-list) '(1 mo-keyword-face))
    (cons (mo-ppre mo-builtin-list) '(1 mo-builtin-face))
-   (cons "\s\\(:[A-Za-z_][A-Za-z_0-9]*\\)" '(1 mo-constant-face)) ;;  :keyword
+   (cons "\s\\(:[A-Za-z_][A-Za-z_0-9]*\\)\\>" '(1 mo-constant-face)) ;;  :keyword
    (cons "\\([A-Z][A-Za-z_0-9]*\\)(" '(1 mo-function-name-bold-face))
    (cons "\\([a-z_][A-Za-z_0-9]*\\)(" '(1 mo-function-name-face))
    (cons "[A-Z][A-Za-z_0-9]*" mo-reference-bold-face)
