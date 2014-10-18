@@ -521,11 +521,15 @@ class MO::Actions is HLL::Actions {
     }
 
     method control:sym<loop>($/) {
-        make QAST::Op.new( :node($/), :op(~$<op>), $<EXPR>.made, $<loop_block>.made );
+        make QAST::Op.new( :node($/), :op(~$<op>), $<EXPR>.made,
+            QAST::Op.new( :op<takeclosure>, $<loop_block>.made ),
+        );
     }
 
     method control:sym<for>($/) {
-        make QAST::Op.new( :node($/), :op<for>, $<EXPR>.made, $<for_block>.made );
+        make QAST::Op.new( :node($/), :op<for>, $<EXPR>.made,
+            $<for_block>.made, # QAST::Op.new( :op<takeclosure>, $<for_block>.made ),
+        );
     }
 
     sub expr_list_ast($ast) {

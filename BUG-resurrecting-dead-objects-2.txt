@@ -1,0 +1,71 @@
+src/gc/gc_gms.c:1186: failed assertion '!PObj_on_free_list_TEST(pmc) || !"Resurrecting of dead objects is not supported"'
+Backtrace - Obtained 29 stack frames (max trace depth is 32).
+/usr/local/lib/libparrot.so.6.8.0(+0x19e075) [0x2b52ab6f1075]
+/usr/local/lib/libparrot.so.6.8.0(Parrot_confess+0x8a) [0x2b52ab6f103a]
+/usr/local/lib/libparrot.so.6.8.0(+0x1acdef) [0x2b52ab6ffdef]
+/usr/local/lib/libparrot.so.6.8.0(Parrot_gc_mark_PMC_alive_fun+0x5d) [0x2b52ab6f66cd]
+/usr/local/lib/parrot/6.8.0-devel/dynext/nqp_group.so(+0x1f105) [0x2b52b0157105]
+/usr/local/lib/libparrot.so.6.8.0(+0x1ac38a) [0x2b52ab6ff38a]
+/usr/local/lib/libparrot.so.6.8.0(+0x1aba84) [0x2b52ab6fea84]
+/usr/local/lib/libparrot.so.6.8.0(+0x1ad788) [0x2b52ab700788]
+/usr/local/lib/libparrot.so.6.8.0(Parrot_gc_new_pmc_header+0x53) [0x2b52ab6f6db3]
+/usr/local/lib/libparrot.so.6.8.0(+0x1ebb66) [0x2b52ab73eb66]
+/usr/local/lib/libparrot.so.6.8.0(Parrot_pmc_new+0x117) [0x2b52ab73e317]
+/usr/local/lib/libparrot.so.6.8.0(Parrot_pcc_reuse_continuation+0x18c) [0x2b52ab71673c]
+/usr/local/lib/libparrot.so.6.8.0(+0x15ce34) [0x2b52ab6afe34]
+/usr/local/lib/libparrot.so.6.8.0(+0x1ee409) [0x2b52ab741409]
+/usr/local/lib/libparrot.so.6.8.0(+0x1ed8b2) [0x2b52ab7408b2]
+/usr/local/lib/libparrot.so.6.8.0(+0x1c1e43) [0x2b52ab714e43]
+/usr/local/lib/libparrot.so.6.8.0(Parrot_pcc_invoke_from_sig_object+0x18d) [0x2b52ab70df8d]
+/usr/local/lib/libparrot.so.6.8.0(Parrot_ext_call+0x188) [0x2b52ab6f1c48]
+/usr/local/lib/libparrot.so.6.8.0(+0x310f24) [0x2b52ab863f24]
+/usr/local/lib/libparrot.so.6.8.0(Parrot_pcc_invoke_from_sig_object+0x12b) [0x2b52ab70df2b]
+/usr/local/lib/libparrot.so.6.8.0(Parrot_ext_call+0x188) [0x2b52ab6f1c48]
+/usr/local/lib/libparrot.so.6.8.0(+0x1f50bd) [0x2b52ab7480bd]
+/usr/local/lib/libparrot.so.6.8.0(+0x1f4d0f) [0x2b52ab747d0f]
+/usr/local/lib/libparrot.so.6.8.0(Parrot_cx_begin_execution+0x125) [0x2b52ab747c35]
+/usr/local/lib/libparrot.so.6.8.0(Parrot_pf_execute_bytecode_program+0x183) [0x2b52ab758dd3]
+/usr/local/lib/libparrot.so.6.8.0(Parrot_api_run_bytecode+0x1a8) [0x2b52ab6e9bc8]
+parrot() [0x40185e]
+/lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0xf5) [0x2b52abc38ec5]
+parrot() [0x401499]
+Attempting to get PIR backtrace.  No guarantees.  Here goes...
+current instr.: 'compile_var' pc 61870 (gen/parrot/stage2/QAST.pir:22095) (gen/parrot/stage2/QAST.nqp:3971)
+called from Sub 'as_post' pc 61273 (gen/parrot/stage2/QAST.pir:21852) (gen/parrot/stage2/QAST.nqp:3922)
+called from Sub 'as_post' pc 53126 (gen/parrot/stage2/QAST.pir:18966) (gen/parrot/stage2/QAST.nqp:3350)
+called from Sub 'handle_arg' pc 9415 (gen/parrot/stage2/QAST.pir:2216) (gen/parrot/stage2/QAST.nqp:1257)
+called from Sub '' pc 29354 (gen/parrot/stage2/QAST.pir:10042) (gen/parrot/stage2/QAST.nqp:1346)
+called from Sub '' pc 16222 (gen/parrot/stage2/QAST.pir:5062) (gen/parrot/stage2/QAST.nqp:366)
+called from Sub 'compile_op' pc 16146 (gen/parrot/stage2/QAST.pir:5027) (gen/parrot/stage2/QAST.nqp:360)
+called from Sub 'as_post' pc 60474 (gen/parrot/stage2/QAST.pir:21573) (gen/parrot/stage2/QAST.nqp:3873)
+called from Sub 'as_post' pc 53061 (gen/parrot/stage2/QAST.pir:18949) (gen/parrot/stage2/QAST.nqp:3346)
+called from Sub 'compile_all_the_stmts' pc 60106 (gen/parrot/stage2/QAST.pir:21426) (gen/parrot/stage2/QAST.nqp:3835)
+called from Sub 'as_post' pc 59660 (gen/parrot/stage2/QAST.pir:21239) (gen/parrot/stage2/QAST.nqp:3808)
+called from Sub 'as_post' pc 53061 (gen/parrot/stage2/QAST.pir:18949) (gen/parrot/stage2/QAST.nqp:3346)
+called from Sub 'compile_all_the_stmts' pc 60106 (gen/parrot/stage2/QAST.pir:21426) (gen/parrot/stage2/QAST.nqp:3835)
+called from Sub '' pc 57730 (gen/parrot/stage2/QAST.pir:20533) (gen/parrot/stage2/QAST.nqp:3601)
+called from Sub '' pc 56500 (gen/parrot/stage2/QAST.pir:20138) (gen/parrot/stage2/QAST.nqp:3590)
+called from Sub 'as_post' pc 55711 (gen/parrot/stage2/QAST.pir:19822) (gen/parrot/stage2/QAST.nqp:3581)
+called from Sub 'as_post' pc 53126 (gen/parrot/stage2/QAST.pir:18966) (gen/parrot/stage2/QAST.nqp:3350)
+called from Sub 'as_post' pc 53324 (gen/parrot/stage2/QAST.pir:19074) (gen/parrot/stage2/QAST.nqp:3377)
+called from Sub 'as_post' pc 53126 (gen/parrot/stage2/QAST.pir:18966) (gen/parrot/stage2/QAST.nqp:3350)
+called from Sub 'post' pc 52646 (gen/parrot/stage2/QAST.pir:18769) (gen/parrot/stage2/QAST.nqp:3308)
+called from Sub 'post' pc 1335 (gen/parrot/stage2/NQPHLL.pir:625) (gen/parrot/stage2/NQPHLL.nqp:98)
+called from Sub 'compile' pc 31904 (gen/parrot/stage2/NQPHLL.pir:12370) (gen/parrot/stage2/NQPHLL.nqp:1412)
+called from Sub 'XML' pc 128399 (gen/mo.pir:43228) (gen/mo.nqp:2420)
+called from Sub '' pc 86 ((file unknown):65) (apps/android-build/main.mo:40)
+called from Sub 'load_manifest' pc 34 ((file unknown):45)
+called from Sub 'parse' pc 98 ((file unknown):92) (apps/android-build/main.mo:72)
+called from Sub 'ParseProject' pc 1392 ((file unknown):592) (/home/zhan/tools/a/work/mo/apps/android-build/config.mo:180)
+called from Sub 'Add' pc 641 ((file unknown):293) (/home/zhan/tools/a/work/mo/apps/android-build/build.mo:23)
+called from Sub '' pc 298 ((file unknown):135) (apps/android-build/main.mo:6)
+called from Sub '' pc 224 ((file unknown):89) (apps/android-build/main.mo:5)
+called from Sub 'eval' pc 27839 (gen/parrot/stage2/NQPHLL.pir:10706) (gen/parrot/stage2/NQPHLL.nqp:1173)
+called from Sub 'evalfiles' pc 30722 (gen/parrot/stage2/NQPHLL.pir:11905) (gen/parrot/stage2/NQPHLL.nqp:1367)
+called from Sub 'command_eval' pc 29225 (gen/parrot/stage2/NQPHLL.pir:11336) (gen/parrot/stage2/NQPHLL.nqp:1270)
+called from Sub 'my_command_line' pc 118207 (gen/mo.pir:39216) (gen/mo.nqp:1723)
+called from Sub 'MAIN' pc 1623 (gen/mo.pir:512) (gen/mo.nqp:1752)
+called from Sub '<mainline>' pc 1602 (gen/mo.pir:500) (gen/mo.nqp:2872)
+called from Sub '' pc 143831 (gen/mo.pir:49016) (gen/mo.nqp:2873)
+apps/android-build/run.bash: line 5: 23328 Aborted                 (core dumped) $RUNNER $@
+make: *** [run-apps] Error 134

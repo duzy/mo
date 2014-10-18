@@ -12,10 +12,6 @@ def join_target_path($sep, @_) {
     join($sep, @paths)
 }
 
-def load_manifest($path) {
-    lang XML in "$path/AndroidManifest.xml"
-}
-
 def Add($path, $variant) {
     unless isdir($path) {
         die("$path is not a directory");
@@ -24,19 +20,8 @@ def Add($path, $variant) {
         die("AndroidManifest.xml is not underneath $path");
     }
 
-    var $name = basename($path);
-    var $manifest = load_manifest($path);
-    if isnull($name) { $name = split('.', $manifest.package).pop() }
-
-    var $localProperties   = config::LoadProperties("$path/local.properties")
-    var $projectProperties = config::LoadProperties("$path/project.properties")
-    check_notnull($localProperties,   "local.properties is not underneath $path");
-    check_notnull($projectProperties, "project.properties is not underneath $path");
-
-    var $sdk = any isdir $localProperties{'sdk.dir'}, "/open/android/android-studio/sdk"
-    check_notnull($sdk,  'SDK missing');
-
-    var $config = config::ParseProject($sdk, $localProperties, $projectProperties)
+    var $config = config::ParseProject($path);
+    var $name = $config.project_name();
 
     var @java_sources = <"$path/src">.findall(def($path, $name){ endswith($name, '.java') });
     var @res_files = <"$path/res">.findall(def($path, $name){ endswith($name, '.xml', '.png', '.jpg', '.xml') });
@@ -47,17 +32,14 @@ def Add($path, $variant) {
         die("no resources found underneath $path/res");
     }
 
-    var $sign_cert = 'cert';
-    var $sign_storepass_filename = any isreg "$path/.android/storepass", "$sysdir/key/storepass"
-    var $sign_keypass_filename   = any isreg "$path/.android/keypass",   "$sysdir/key/keypass"
-    var $sign_keystore           = any isreg "$path/.android/keystore",  "$sysdir/key/keystore"
-    var $sign_storepass = isnull($sign_storepass_filename) ? null : strip(slurp($sign_storepass_filename));
-    var $sign_keypass   = isnull($sign_keypass_filename)   ? null : strip(slurp($sign_keypass_filename));
-
     var $out = "$path/bin/$variant";
     var $target = "$out/$name.apk";
     var $platform_jar  = $config.platform_jar();
     var $platform_aidl = $config.platform_aidl();
+
+    var $sign_keystore  = $config.sign_keystore_filename();
+    var $sign_storepass = $config.sign_storepass();
+    var $sign_keypass   = $config.sign_keypass();
 
 $target: "$out/_.signed"
 {
@@ -79,7 +61,7 @@ $target: "$out/_.signed"
     var $keypass   = isnull($sign_keypass)   ? '' : "-keypass '$sign_keypass'";
     var $keystore  = isnull($sign_keystore)  ? '' : "-keystore '$sign_keystore'";
     var $cmd    = $config.cmd('jarsigner');
-    var $cert   = $sign_cert;
+    var $cert   = $config.sign_cert();
     var $signed = $_.path();
     var $pack   = @_[0].path();
     var $tsa = 1 ? "-tsacert $cert" : '-tsa'

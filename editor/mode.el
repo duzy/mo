@@ -25,7 +25,7 @@
 
 (defvar mo-string-bold-face 'mo-string-bold-face)
 (defface mo-string-bold-face
-  '((t (:inherit 'mo-string-face))) "mo: bold string face"
+  '((t (:inherit 'mo-string-face :weight bold))) "mo: bold string face"
   :group 'mo)
 
 (defvar mo-type-face 'mo-type-face)
@@ -119,7 +119,7 @@
          '(1 mo-constant-face) '(2 mo-string-face) '(3 mo-constant-face))
 
    (list "[^A-Za-z_0-9]\\(<\\)\\(.*?\\)\\(>\\)" ;; FIXME: '(2 mo-light-gray-background-face) is not working
-         '(1 mo-type-bold-face) '(2 mo-light-gray-background-face) '(3 mo-type-bold-face))
+         '(1 mo-string-bold-face) '(2 mo-light-gray-background-face) '(3 mo-string-bold-face))
 
    (cons "\\(?:class\\|template\\)\s+\\([A-Z][A-Za-z_0-9]*\\)" '(1 mo-type-bold-face))
    (cons "\\(?:class\\|template\\)\s+\\([a-z_][A-Za-z_0-9]*\\)" '(1 mo-type-face))

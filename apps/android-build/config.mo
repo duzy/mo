@@ -36,6 +36,10 @@ def BuildTool($sdk, $version, $name) {
         "$sdk/build-tools/17.0.0/$name"
 }
 
+def load_manifest($path) {
+    lang XML in "$path/AndroidManifest.xml"
+}
+
 def check_notnull($v, $err) {
     if isnull($v) { die($err) }
 }
@@ -49,11 +53,51 @@ class config
 
     $.cmds = hash();
 
-    method init($sdk, $projectProperties) {
-        var $platform = $projectProperties{'target'};
+    $.sign_cert = 'cert';
+    $.sign_storepass_filename;
+    $.sign_keypass_filename;
+    $.sign_keystore_filename;
+    $.sign_storepass;
+    $.sign_keypass;
+
+    $.project_name;
+    $.project_manifest;
+
+    $.is_library = 0;
+
+    $.libs = list();
+
+    method parse($path) {
+        var $name = $.project_name = basename($path);
+        var $manifest = $.project_manifest = load_manifest($path);
+        if isnull($name) { $name = split('.', $manifest.package).pop() }
+
+        var $localProperties   = LoadProperties("$path/local.properties");
+        var $projectProperties = LoadProperties("$path/project.properties");
+        check_notnull($localProperties,   "local.properties is not underneath $path");
+        check_notnull($projectProperties, "project.properties is not underneath $path");
+
+        var $sdk = any isdir $localProperties{'sdk.dir'}, "/open/android/android-studio/sdk";
+        check_notnull($sdk,  'SDK missing');
+
+        var $platform = $.platform = $projectProperties{'target'};
         check_notnull($platform,  'Platform target missing');
 
-        $.platform = $platform;
+        var $library = $projectProperties{'android.library'}; # android.library=true
+        $.is_library = isnull($library) ? 0 : $library eq 'true';
+
+say(+$.libs)
+say('android.library.reference.1: '~isnull($projectProperties{'android.library.reference.1'}))
+say('android.library.reference.2: '~isnull($projectProperties{'android.library.reference.2'}))
+
+        var $lib;
+        while !isnull($lib = $projectProperties{'android.library.reference.'~(1+$.libs)}) {
+say($lib);
+            $.libs.push($lib);
+        }
+
+        say($path~' '~join(' ', $.libs));
+
         $.platform_jar  = any isreg "$sdk/platforms/$platform/android.jar";
         $.platform_aidl = any isreg "$sdk/platforms/$platform/framework.aidl";
         check_notnull($.platform_jar,  '$sdk/platforms/$platform/android.jar missing');
@@ -101,15 +145,38 @@ class config
         check_notnull($.cmds<rscc>,            '$sdk/build-tools/.../llvm-rs-cc missing');
         check_notnull($.cmds<zipalign>,        '$sdk/build-tools/.../zipalign missing');
         check_notnull($.cmds<jarsigner>,       'jarsigner missing');
+
+        $.sign_storepass_filename = any isreg "$path/.android/storepass", "$sysdir/key/storepass";
+        $.sign_keypass_filename   = any isreg "$path/.android/keypass",   "$sysdir/key/keypass";
+        $.sign_keystore_filename  = any isreg "$path/.android/keystore",  "$sysdir/key/keystore";
+        $.sign_storepass = isnull($.sign_storepass_filename) ? null : strip(slurp($.sign_storepass_filename));
+        $.sign_keypass   = isnull($.sign_keypass_filename)   ? null : strip(slurp($.sign_keypass_filename));
     }
 
     method platform_jar()  { $.platform_jar }
     method platform_aidl() { $.platform_aidl }
+
     method cmd($name) { $.cmds{$name} }
+
+    method project_name() { $.project_name }
+    method project_manifest() { $.project_manifest }
+
+    method sign_cert()               { $.sign_cert }
+    method sign_storepass_filename() { $.sign_storepass_filename }
+    method sign_keypass_filename()   { $.sign_keypass_filename }
+    method sign_keystore_filename()  { $.sign_keystore_filename }
+    method sign_storepass()          { $.sign_storepass }
+    method sign_keypass()            { $.sign_keypass }
+
+    method is_library() { $.is_library }
 }
 
-def ParseProject($sdk, $localProperties, $projectProperties) {
+def ParseProject($path) {
+    unless isreg("$path/AndroidManifest.xml") {
+        die("AndroidManifest.xml is not underneath $path");
+    }
+
     var $config = new(config);
-    $config.init($sdk, $projectProperties);
+    $config.parse($path);
     $config
 }
