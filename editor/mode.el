@@ -38,6 +38,11 @@
   '((t (:inherit 'mo-type-face :weight bold))) "mo: bold type face"
   :group 'mo)
 
+(defvar mo-light-gray-background-face 'mo-light-gray-background-face)
+(defface mo-light-gray-background-face
+  '((t (:background "LightGray"))) "mo: LightGray background face"
+  :group 'mo)
+
 (defvar mo-variable-name-face 'mo-variable-name-face)
 (defface mo-variable-name-face
   '((t (:inherit 'font-lock-variable-name-face))) "mo: variable face"
@@ -113,6 +118,9 @@
    (list "[\$@%][\.]?[A-Za-z_][A-Za-z_0-9:]*\\(<\\)\\(.*?\\)\\(>\\)"
          '(1 mo-constant-face) '(2 mo-string-face) '(3 mo-constant-face))
 
+   (list "[^A-Za-z_0-9]\\(<\\)\\(.*?\\)\\(>\\)" ;; FIXME: '(2 mo-light-gray-background-face) is not working
+         '(1 mo-type-bold-face) '(2 mo-light-gray-background-face) '(3 mo-type-bold-face))
+
    (cons "\\(?:class\\|template\\)\s+\\([A-Z][A-Za-z_0-9]*\\)" '(1 mo-type-bold-face))
    (cons "\\(?:class\\|template\\)\s+\\([a-z_][A-Za-z_0-9]*\\)" '(1 mo-type-face))
 
@@ -130,10 +138,15 @@
 
 (defvar mo-syntax-table
   (let ((mo-syntax-table (make-syntax-table)))
-    ;;(modify-syntax-entry ?\" "\"" mo-syntax-table)
+    (modify-syntax-entry ?\" "\"" mo-syntax-table) ;; double-quote used as string quote (also prog-mode defaults)
     (modify-syntax-entry ?\' "\"" mo-syntax-table) ;; single-quote used as string quote
-    ;;(modify-syntax-entry ?< "(" mo-syntax-table)
-    ;;(modify-syntax-entry ?> ")" mo-syntax-table)
+    (modify-syntax-entry ?_ "_" mo-syntax-table)   ;; name constituents
+    (modify-syntax-entry ?\\ "\\" mo-syntax-table) ;; name constituents
+    (modify-syntax-entry ?# "<" mo-syntax-table)   ;; '#' starts a comment
+    (modify-syntax-entry ?\n ">" mo-syntax-table)  ;; per-line comments
+    (modify-syntax-entry ?< "(" mo-syntax-table)  ;; treat '<' as open-parenthesis
+    (modify-syntax-entry ?> ")" mo-syntax-table)  ;; treat '>' as close-parenthesis
+    ;;(modify-syntax-entry ?$ "|" mo-syntax-table)
     mo-syntax-table)
   "Syntax table for MO mode. See `Table of Syntax Classes'")
 
