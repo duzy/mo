@@ -520,9 +520,9 @@ class MO::World is HLL::World {
     }
 }
 
-MO::World.add_builtin_code('new', -> $t {
+MO::World.add_builtin_code('new', -> $t, *@pos, *%named {
     my $obj := nqp::create($t);
-    $obj.'~ctor'() if nqp::can($obj, '~ctor');
+    $obj.'~ctor'(|@pos, |%named) if nqp::can($obj, '~ctor');
     $obj;
 });
 MO::World.add_builtin_code('getattr', -> $o, $n { nqp::getattr($o, $o, $n) });

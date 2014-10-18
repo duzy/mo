@@ -29,6 +29,7 @@ class MO::Actions is HLL::Actions {
 
     method term:sym<value>($/)    { make $<value>.made; $/.prune; }
     method term:sym<variable>($/) { make $<variable>.made; $/.prune; }
+    method term:sym<colonpair>($/) { make $<colonpair>.made; $/.prune; }
     method term:sym<name>($/) {
         my @name := nqp::split('::', ~$<name>);
         my $ast := $*W.symbol_ast($/, @name, 0);
@@ -210,6 +211,19 @@ class MO::Actions is HLL::Actions {
         @name.push($name);
 
         make $*W.symbol_ast($/, @name, $panic);
+    }
+
+    method colonpair($/) {
+        my $ast;
+        if $<variable> {
+            $ast := $<variable>.made;
+            $ast.named( nqp::split('::', ~$<variable><name>).pop );
+        } else {
+            $ast := $<circumfix>.made;
+            $ast.named( ~$<name> );
+        }
+        make $ast;
+        $/.prune;
     }
 
     method initializer($/) {
@@ -611,8 +625,10 @@ class MO::Actions is HLL::Actions {
         make $scope;
     }
 
-    method loop_block:sym<{ }>($/) { make pop_newscope($/); }
-    method loop_block:sym<end>($/) { make pop_newscope($/); }
+    # method loop_block:sym<{ }>($/) { make pop_newscope($/); }
+    # method loop_block:sym<end>($/) { make pop_newscope($/); }
+    method loop_block:sym<{ }>($/) { make $<statements>.made; }
+    method loop_block:sym<end>($/) { make $<statements>.made; }
 
     method for_block:sym<{ }>($/) { make pop_newscope($/); }
     method for_block:sym<end>($/) { make pop_newscope($/); }
@@ -871,15 +887,26 @@ class MO::Actions is HLL::Actions {
         make $ast;
     }
 
-    method param($/) {
+    method param:sym<$>($/) {
+        my $scope := $*W.current_scope;
+        make $scope[0].push( $<parvar>.made );
+    }
+
+    method param:sym<:>($/) {
+        my $scope := $*W.current_scope;
+        my $decl := $<parvar>.made;
+        $decl.named(~$<parvar><name>);
+        make $scope[0].push( $decl );
+    }
+
+    method parvar($/) {
         my $name := $<sigil> ~ $<name>;
         my $scope := $*W.current_scope;
         $/.CURSOR.panic('duplicated parameter '~$name)
             if $scope.symbol($name);
 
         my $sym := $scope.symbol($name, :scope<lexical>, :decl<param>);
-        make $scope[0].push( QAST::Var.new( :node($/), :name($name),
-            :decl($sym<decl>), :scope<lexical> ) );
+        make QAST::Var.new(:node($/), :name($name), :decl<param>, :scope<lexical>);
     }
 
     method definition:sym<def>($/) {
@@ -936,6 +963,8 @@ class MO::Actions is HLL::Actions {
         my $ctor := $*W.pop_scope;
         my $class := $ctor.ann('package');
         $ctor.name( ~$<name> ~'::'~$ctor_name );
+        $ctor[0].push(QAST::Var.new(:name<@_>, :scope<lexical>, :decl<param>, :slurpy(1)));
+        $ctor[0].push(QAST::Var.new(:name<%_>, :scope<lexical>, :decl<param>, :slurpy(1), :named(1)));
 
         my $code := $*W.install_package_routine($class, $ctor_name, $ctor);
         $class.HOW.add_method($class, $ctor_name, $code);
@@ -983,6 +1012,11 @@ class MO::Actions is HLL::Actions {
                 QAST::Op.new( :op<who>, QAST::WVal.new( :value($class) ) ),
                 QAST::SVal.new( :value($name) ), $initializer ) );
         }
+    }
+
+    method class_member:sym<{}>($/) {
+        my $ctor := $*W.current_scope;
+        $ctor.push( $<statements>.made );
     }
 
     method definition:sym<lang>($/) {

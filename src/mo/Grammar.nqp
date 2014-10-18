@@ -58,6 +58,7 @@ grammar MO::Grammar is HLL::Grammar {
     token term:sym<value>       { <value> }
     token term:sym<variable>    { <variable> }
     token term:sym<name>        { <name> }
+    token term:sym<colonpair>   { <colonpair> }
 
     token term:sym«.»  {
         | <sym> <name=.ident> [$<query>='?'|<args>]
@@ -337,6 +338,15 @@ grammar MO::Grammar is HLL::Grammar {
         <sigil> <twigil>? [$<name>=[<.ident> ['::'<.ident>]*] || <.panic: 'expects variable name'>]
     }
 
+    token colonpair {
+        ':'
+        [
+        | <name=.ident> <circumfix>?
+        | <circumfix>
+        | <variable>
+        ]
+    }
+
     token initializer { '=' <.ws> <EXPR('f=')> }
 
     rule statements { <.ws> <statement>* }
@@ -361,7 +371,7 @@ grammar MO::Grammar is HLL::Grammar {
     }
 
     rule control:sym<loop> {
-        $<op>=['while'|'until']\s <EXPR> <loop_block=.statements>
+        $<op>=['while'|'until']\s <EXPR> <loop_block>
     }
 
     rule control:sym<for> {
@@ -391,8 +401,10 @@ grammar MO::Grammar is HLL::Grammar {
     rule block { '{' ~ '}' <newscope:''> }
 
     proto rule loop_block { <...> }
-    rule loop_block:sym<{ }> { 'do'? '{' ~ '}' <newscope: 'loop'> }
-    rule loop_block:sym<end> { <![{]> ~ 'end' <newscope: 'loop'> }
+    # rule loop_block:sym<{ }> { 'do'? '{' ~ '}' <newscope: 'loop'> }
+    # rule loop_block:sym<end> { <![{]> ~ 'end' <newscope: 'loop'> }
+    rule loop_block:sym<{ }> { 'do'? '{' ~ '}' <statements> }
+    rule loop_block:sym<end> { <![{]> ~ 'end'  <statements> }
 
     proto rule for_block { <...> }
     rule for_block:sym<{ }> { 'do'? '{' ~ '}' <newscope: 'for', '$_'> }
@@ -496,7 +508,10 @@ grammar MO::Grammar is HLL::Grammar {
     token tsp { ^^'.'<eis> }   # template statement prefix
 
     rule params { <param>+ %% ',' }
-    token param { <sigil> <name=.ident> }
+    proto token param { <...> }
+    token param:sym<$> { <parvar> }
+    token param:sym<:> { <sym><parvar> }
+    token parvar { <sigil> <name=.ident> }
 
     rule definition:sym<def> {
         <sym>\s
@@ -538,21 +553,22 @@ grammar MO::Grammar is HLL::Grammar {
 
     rule definition:sym<class> {
         :my $outerpackage := $*W.get_package;
-        <sym>\s <name=.ident> '{' ~ '}'
-        [
-            {
-                my $name := ~$<name>;
-                my $how := %*HOW{~$<sym>};
-                my $type := $how.new_type(:name($name));
+        <sym>\s <name=.ident>
+        {
+            my $name := ~$<name>;
+            my $how := %*HOW{~$<sym>};
+            my $type := $how.new_type(:name($name));
 
-                $*W.install_package_symbol($outerpackage, $name, $type);
-                $*W.install_package_symbol($*EXPORT, $name, $type) if $*W.is_export_name($name);
+            $*W.install_package_symbol($outerpackage, $name, $type);
+            $*W.install_package_symbol($*EXPORT, $name, $type) if $*W.is_export_name($name);
 
-                my $scope := self.push_scope( ~$<sym>, 'me' );
-                $scope.annotate('package', $type);
-            }
-            <class_member>*
-        ]
+            my $scope := self.push_scope( ~$<sym>, 'me' );
+            $scope.symbol('@_', :scope<lexical>, :decl<param>, :slurpy(1));
+            $scope.symbol('%_', :scope<lexical>, :decl<param>, :slurpy(1), :named(1));
+            $scope.annotate('package', $type);
+        }
+        [ '<' ~ '>' <params>? ]?
+        '{' ~ '}' <class_member>*
     }
 
     proto rule class_member { <...> }
@@ -565,6 +581,10 @@ grammar MO::Grammar is HLL::Grammar {
     rule class_member:sym<$> {
         :my $*IN_DECL; { $*IN_DECL := 'member'; }
         <variable> <initializer>? ';'? { $*IN_DECL := 0; }
+    }
+
+    rule class_member:sym<{}> {
+        '{' ~ '}' <statements>
     }
 
     rule definition:sym<lang> {

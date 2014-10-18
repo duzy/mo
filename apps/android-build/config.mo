@@ -44,7 +44,7 @@ def check_notnull($v, $err) {
     if isnull($v) { die($err) }
 }
 
-class config
+class project <:$path>
 {
     $.platform;
     $.platform_jar;
@@ -67,7 +67,7 @@ class config
 
     $.libs = list();
 
-    method parse($path) {
+    {
         var $name = $.project_name = basename($path);
         var $manifest = $.project_manifest = load_manifest($path);
         if isnull($name) { $name = split('.', $manifest.package).pop() }
@@ -86,12 +86,8 @@ class config
         var $library = $projectProperties{'android.library'}; # android.library=true
         $.is_library = isnull($library) ? 0 : $library eq 'true';
 
-say('android.library.reference.1: isnull: '~isnull($projectProperties{'android.library.reference.1'}))
-say('android.library.reference.2: isnull: '~isnull($projectProperties{'android.library.reference.2'}))
-
         var $lib;
         while !isnull($lib = $projectProperties{'android.library.reference.'~(1+$.libs)}) {
-say($lib);
             $.libs.push($lib);
         }
 
@@ -175,7 +171,5 @@ def ParseProject($path) {
         die("AndroidManifest.xml is not underneath $path");
     }
 
-    var $config = new(config);
-    $config.parse($path);
-    $config
+    new(project, :$path)
 }
