@@ -361,7 +361,7 @@ grammar MO::Grammar is HLL::Grammar {
     }
 
     rule control:sym<loop> {
-        $<op>=['while'|'until']\s <EXPR> <loop_block>
+        $<op>=['while'|'until']\s <EXPR> <loop_block=.statements>
     }
 
     rule control:sym<for> {

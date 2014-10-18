@@ -522,7 +522,7 @@ class MO::Actions is HLL::Actions {
 
     method control:sym<loop>($/) {
         make QAST::Op.new( :node($/), :op(~$<op>), $<EXPR>.made,
-            QAST::Op.new( :op<takeclosure>, $<loop_block>.made ),
+            $<loop_block>.made, #QAST::Op.new( :op<takeclosure>, $<loop_block>.made ),
         );
     }
 

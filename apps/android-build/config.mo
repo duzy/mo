@@ -86,9 +86,8 @@ class config
         var $library = $projectProperties{'android.library'}; # android.library=true
         $.is_library = isnull($library) ? 0 : $library eq 'true';
 
-say(+$.libs)
-say('android.library.reference.1: '~isnull($projectProperties{'android.library.reference.1'}))
-say('android.library.reference.2: '~isnull($projectProperties{'android.library.reference.2'}))
+say('android.library.reference.1: isnull: '~isnull($projectProperties{'android.library.reference.1'}))
+say('android.library.reference.2: isnull: '~isnull($projectProperties{'android.library.reference.2'}))
 
         var $lib;
         while !isnull($lib = $projectProperties{'android.library.reference.'~(1+$.libs)}) {
@@ -96,7 +95,7 @@ say($lib);
             $.libs.push($lib);
         }
 
-        say($path~' '~join(' ', $.libs));
+        say($path~': '~join(' ', $.libs));
 
         $.platform_jar  = any isreg "$sdk/platforms/$platform/android.jar";
         $.platform_aidl = any isreg "$sdk/platforms/$platform/framework.aidl";
