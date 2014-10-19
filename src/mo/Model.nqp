@@ -76,8 +76,12 @@ class MO::Model {
                 }
             }
         } elsif nqp::defined($a) {
-            my $children := $a.children($name);
-            @result := $children if nqp::defined($children);
+            if nqp::can($a, 'children') {
+                my $children := $a.children($name);
+                @result := $children if nqp::defined($children);
+            } else {
+                nqp::die("$name is not Node, but "~$a.HOW.name($a));
+            }
         }
         @result;
     }

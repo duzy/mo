@@ -911,30 +911,9 @@ class MO::Actions is HLL::Actions {
     }
 
     method definition:sym<def>($/) {
-        my $name := ~$<name>;
         my $scope := $*W.pop_scope();
-        $scope.name($name);
         $scope.push( wrap_return_handler($scope, $<def_block>.made) );
-
-        my $package := $*W.get_package($scope.ann('outer'));
-        $*W.install_package_routine($package, $name, $scope);
-
-        my $outer := $scope.ann('outer');
-        $outer.symbol('&' ~ $name, :scope<lexical>, :proto(1), :declared(1) );
-        $outer[0].push( QAST::Op.new( :op<bind>,
-            QAST::Var.new( :name('&' ~ $name), :scope<lexical>, :decl<var> ),
-            $scope
-        ) );
-
-        if $*W.is_export_name($name) {
-            $outer[0].push( QAST::Op.new( :node($/), :op<bindkey>,
-                QAST::Op.new( :op<who>, QAST::WVal.new( :value($*EXPORT) ) ), #QAST::Var.new( :name<EXPORT.WHO>, :scope<lexical> ),
-                QAST::SVal.new( :value($name) ),
-                QAST::Var.new( :name('&' ~ $name), :scope<lexical> ),
-            ) );
-        }
-
-        make QAST::Var.new( :name('&' ~ $name), :scope<lexical> );
+        make QAST::Var.new( :name('&'~$scope.name), :scope<lexical> );
     }
 
     method definition:sym<init>($/) {

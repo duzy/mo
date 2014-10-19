@@ -519,7 +519,27 @@ grammar MO::Grammar is HLL::Grammar {
         | <?keyword> <.panic: 'keyword used as name'>
         | <name=.ident>
         ]
-        '(' ~ ')' [ { self.push_scope( ~$<sym> ) } <params>? ]
+        {
+            my $scope := self.push_scope( ~$<sym> );
+            $scope.name( ~$<name> );
+
+            my $package := $*W.get_package($scope.ann('outer'));
+            $*W.install_package_routine($package, $scope.name, $scope);
+
+            my $outer := $scope.ann('outer');
+            $outer.symbol('&'~$scope.name, :scope<lexical>, :proto(1), :declared(1) );
+            $outer[0].push( QAST::Op.new( :op<bind>,
+                QAST::Var.new( :name('&'~$scope.name), :scope<lexical>, :decl<var> ),
+                $scope
+            ) );
+
+            $outer[0].push( QAST::Op.new( :node($/), :op<bindkey>,
+                QAST::Op.new( :op<who>, QAST::WVal.new( :value($*EXPORT) ) ),
+                QAST::SVal.new( :value($scope.name) ),
+                QAST::Var.new( :name('&'~$scope.name), :scope<lexical> ),
+            ) ) if $*W.is_export_name($scope.name);
+        }
+        '(' ~ ')' <params>?
         [ <def_block> | <.panic: 'expect function body'> ]
     }
 

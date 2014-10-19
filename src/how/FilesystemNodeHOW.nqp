@@ -4,7 +4,8 @@ knowhow MO::FilesystemNodeHOW {
 
     my sub filter_dir_names($os, $path, $pred, $recursive) {
         my @result;
-        my @names := $os.readdir($path);
+        my @names;
+        try { @names := $os.readdir($path); }
         for @names {
             if $_ ne '.' && $_ ne '..' {
                 my $pathname := "$path/$_";

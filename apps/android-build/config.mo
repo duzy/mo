@@ -137,6 +137,7 @@ class project <$path>
         $.cmds<zipalign>          = BuildTool($sdk, $platformVersion, "zipalign");
         $.cmds<jarsigner>         = "jarsigner";
         $.cmds<javac>             = "javac";
+        $.cmds<jar>               = "jar";
 
         if isnull($.cmds<sqlite3>)  { $.cmds<sqlite3>  = Tool($sdk, "sqlite3") }
         if isnull($.cmds<zipalign>) { $.cmds<zipalign> = Tool($sdk, "zipalign") }
@@ -151,6 +152,7 @@ class project <$path>
         check_notnull($.cmds<rscc>,            '$sdk/build-tools/.../llvm-rs-cc missing');
         check_notnull($.cmds<zipalign>,        '$sdk/build-tools/.../zipalign missing');
         check_notnull($.cmds<jarsigner>,       'jarsigner missing');
+        check_notnull($.cmds<jar>,             'jar missing');
 
         $.sign_storepass_filename = any isreg "$path/.android/storepass", "$sysdir/key/storepass";
         $.sign_keypass_filename   = any isreg "$path/.android/keypass",   "$sysdir/key/keypass";
