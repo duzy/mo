@@ -1,0 +1,21 @@
+test:test/some
+build: test/some, test:test/some, 0, test/some
+test:test/less
+build: test/less, test:test/less, 0, test/less
+test:test
+test:test/more1
+test:test/more2
+build: test/more2, test:test/more2, 0, test/more1
+build: test/more2, test:test/more2, 1, test/more2
+build: test/more2, test:test/more2, 2, test
+---------------------
+test:1
+test:2
+test:3
+---------------------
+def: test:1, test:test:1
+def: test:2, test:test:2
+def: test:3, test:test:3
+def: 1, test:1
+def: 2, test:2
+def: 3, test:3

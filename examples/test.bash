@@ -51,6 +51,7 @@ for mo in \
     proto-run \
     many-run \
     class-test \
+    shared-lexical-for-rules \
     ; do
     echo -n "test: $SRCDIR/$mo.mo.."
     ( run $SRCDIR/$mo.mo ) > $SRCDIR/$mo.out

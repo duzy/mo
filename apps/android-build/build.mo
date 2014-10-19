@@ -193,10 +193,11 @@ find $out/sources -type f -name '*.java' >> $outfile
     var $assets = isdir("$path/assets") ? "-A '$path/assets'" : '';
     var $am  = @_[0].path();
     var $cmd = $project.cmd('aapt');
+    var $out = $_.parent_path();
     if $project.is_library() {
         lang shell :escape
 --------------------------------
-echo "$name: Generating R.java.."
+echo "$name: Generating R.java.. $path"
 mkdir -p "$out/sources" || exit -1
 $cmd package -f -m -M $am \
     -J "$out/sources" \
@@ -209,7 +210,7 @@ $cmd package -f -m -M $am \
     } else {
         lang shell :escape
 --------------------------------
-echo "$name: Generating R.java.."
+echo "$name: Generating R.java.. $path"
 mkdir -p "$out/sources" || exit -1
 $cmd package -f -m -x -M $am \
     -J "$out/sources" \
