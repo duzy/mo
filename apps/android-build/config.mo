@@ -40,11 +40,19 @@ def load_manifest($path) {
     lang XML in "$path/AndroidManifest.xml"
 }
 
+def search_library($path, $lib) {
+    if startswith($lib, '/', '~') {
+        $lib
+    } else {
+        "$path/$lib"
+    }
+}
+
 def check_notnull($v, $err) {
     if isnull($v) { die($err) }
 }
 
-class project <:$path>
+class project <$path>
 {
     $.platform;
     $.platform_jar;
@@ -60,17 +68,20 @@ class project <:$path>
     $.sign_storepass;
     $.sign_keypass;
 
-    $.project_name;
-    $.project_manifest;
+    $.project_path = $path;
+    $.project_name = basename($path);
+    $.project_manifest = load_manifest($path);
 
     $.is_library = 0;
 
     $.libs = list();
 
+    $.prerequisites = list();
+
     {
-        var $name = $.project_name = basename($path);
-        var $manifest = $.project_manifest = load_manifest($path);
-        if isnull($name) { $name = split('.', $manifest.package).pop() }
+        var $name = $.project_name;
+        var $manifest = $.project_manifest;
+        if isnull($name) { $name = $.project_name = split('.', $manifest.package).pop() }
 
         var $localProperties   = LoadProperties("$path/local.properties");
         var $projectProperties = LoadProperties("$path/project.properties");
@@ -87,11 +98,11 @@ class project <:$path>
         $.is_library = isnull($library) ? 0 : $library eq 'true';
 
         var $lib;
+        var $lib_path;
         while !isnull($lib = $projectProperties{'android.library.reference.'~(1+$.libs)}) {
-            $.libs.push($lib);
+            $.libs.push($lib_path = search_library($path, $lib));
+            $.prerequisites.push(new(project, $lib_path));
         }
-
-        say($path~': '~join(' ', $.libs));
 
         $.platform_jar  = any isreg "$sdk/platforms/$platform/android.jar";
         $.platform_aidl = any isreg "$sdk/platforms/$platform/framework.aidl";
@@ -148,13 +159,10 @@ class project <:$path>
         $.sign_keypass   = isnull($.sign_keypass_filename)   ? null : strip(slurp($.sign_keypass_filename));
     }
 
-    method platform_jar()  { $.platform_jar }
-    method platform_aidl() { $.platform_aidl }
-
     method cmd($name) { $.cmds{$name} }
 
-    method project_name() { $.project_name }
-    method project_manifest() { $.project_manifest }
+    method platform_jar()  { $.platform_jar }
+    method platform_aidl() { $.platform_aidl }
 
     method sign_cert()               { $.sign_cert }
     method sign_storepass_filename() { $.sign_storepass_filename }
@@ -163,7 +171,18 @@ class project <:$path>
     method sign_storepass()          { $.sign_storepass }
     method sign_keypass()            { $.sign_keypass }
 
+    method path() { $.project_path }
+    method name() { $.project_name }
+    method manifest() { $.project_manifest }
+
     method is_library() { $.is_library }
+
+    method libs() { $.libs }
+    method prerequisites() { $.prerequisites }
+
+    method assets()    { <"$.project_path/assets">.findall(def($path, $name){ !endswith($name, '~') }) }
+    method resources() { <"$.project_path/res">.findall(def($path, $name){ endswith($name, '.xml', '.png', '.jpg', '.xml') }) }
+    method sources()   { <"$.project_path/src">.findall(def($path, $name){ endswith($name, '.java') }) }
 }
 
 def ParseProject($path) {
@@ -171,5 +190,5 @@ def ParseProject($path) {
         die("AndroidManifest.xml is not underneath $path");
     }
 
-    new(project, :$path)
+    new(project, $path)
 }

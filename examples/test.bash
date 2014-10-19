@@ -50,6 +50,7 @@ for mo in \
     proto-template \
     proto-run \
     many-run \
+    class-test \
     ; do
     echo -n "test: $SRCDIR/$mo.mo.."
     ( run $SRCDIR/$mo.mo ) > $SRCDIR/$mo.out

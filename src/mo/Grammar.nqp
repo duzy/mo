@@ -552,12 +552,12 @@ grammar MO::Grammar is HLL::Grammar {
     }
 
     rule definition:sym<class> {
-        :my $outerpackage := $*W.get_package;
         <sym>\s <name=.ident>
         {
             my $name := ~$<name>;
             my $how := %*HOW{~$<sym>};
             my $type := $how.new_type(:name($name));
+            my $outerpackage := $*W.get_package;
 
             $*W.install_package_symbol($outerpackage, $name, $type);
             $*W.install_package_symbol($*EXPORT, $name, $type) if $*W.is_export_name($name);
@@ -565,6 +565,7 @@ grammar MO::Grammar is HLL::Grammar {
             my $scope := self.push_scope( ~$<sym>, 'me' );
             $scope.symbol('@_', :scope<lexical>, :decl<param>, :slurpy(1));
             $scope.symbol('%_', :scope<lexical>, :decl<param>, :slurpy(1), :named(1));
+            $scope.annotate('class-name', $name);
             $scope.annotate('package', $type);
         }
         [ '<' ~ '>' <params>? ]?
@@ -584,7 +585,7 @@ grammar MO::Grammar is HLL::Grammar {
     }
 
     rule class_member:sym<{}> {
-        '{' ~ '}' <statements>
+        '{' ~ '}' <newscope: 'ctor-block'>
     }
 
     rule definition:sym<lang> {

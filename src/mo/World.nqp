@@ -361,14 +361,23 @@ class MO::World is HLL::World {
         my $root_code_ref_idx;
         my $routine := nqp::create($code_type);
 
+        my $file := nqp::getlexdyn('$?FILES');
+
         # Install stub that will dynamically compile the code if
         # we ever try to run it during compilation. (similar approach as Perl6)
         my $compiled_trunk;
         my $compiler_thunk := {
             my $wrapper := QAST::Block.new(QAST::Stmts.new(), $code_ast);
             $wrapper.annotate('DYNAMIC_COMPILE_WRAPPER', 1);
+            # $wrapper[0].push(QAST::Op.new( :op<bind>,
+            #     QAST::Var.new( :scope<lexical>, :name<MODEL>, :decl<var> ),
+            #     QAST::WVal.new( :value(MO::Model.get) ),
+            # ));
 
             self.add_visible_symbols($wrapper, $code_ast);
+
+            # restore $?FILES for correct backtrace (e.g. on panics)
+            my $?FILES := $file;
 
             # Compile the code in a new unit.
             my $compunit := QAST::CompUnit.new(
@@ -582,6 +591,7 @@ MO::World.add_builtin_code('isexecutable', -> $s { nqp::fileexecutable($s) });
 
 MO::World.add_builtin_code('isnull', -> $a { nqp::isnull($a) });
 MO::World.add_builtin_code('defined', -> $a { nqp::defined($a) });
+MO::World.add_builtin_code('addr', -> $a { nqp::where($a) });
 
 MO::World.add_builtin_code('list', -> { nqp::list() });
 MO::World.add_builtin_code('hash', -> { nqp::hash() });

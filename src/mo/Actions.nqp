@@ -328,7 +328,7 @@ class MO::Actions is HLL::Actions {
 
     method select:sym<name>($/) {
         my $name := QAST::SVal.new( :value(~$<name>) );
-        #say('select:sym<name>: '~$/);
+        # say('select:sym<name>: '~$/);
         make QAST::Op.new( :node($/), :op<callmethod>, :name<select_name>,
             QAST::Var.new( :scope<lexical>, :name<MODEL> ), $name );
     }
@@ -708,12 +708,11 @@ class MO::Actions is HLL::Actions {
                         QAST::SVal.new( :value($name) ) ),
                 );
             } else {
-                $scope.symbol( $name, :scope<lexical> );
+                $scope.symbol( $name, :scope<lexical>, :decl<var> );
+                my $decl := QAST::Var.new( :name($name), :scope<lexical>, :decl<var> );
                 my $initialize := nqp::defined($initializer)
-                    ?? QAST::Op.new( :node($/), :op<bind>,
-                           QAST::Var.new( :name($name), :scope<lexical>, :decl<var> ),
-                           $initializer )
-                    !! QAST::Stmts.new();
+                    ?? QAST::Op.new( :node($/), :op<bind>, $decl, $initializer )
+                    !! $decl ;
                 make QAST::Stmts.new( $initialize,
                     QAST::Var.new( :node($/), :name($name), :scope<lexical> ),
                 );
@@ -851,7 +850,9 @@ class MO::Actions is HLL::Actions {
     }
 
     method template_atom:sym<\\>($/) {
-        make QAST::SVal.new( :node($/), :value(~$<char>) );
+        my $s := ~$<char>;
+        $s := "\\\n" if $s eq "\n";
+        make QAST::SVal.new( :node($/), :value($s) );
     }
 
     method template_atom:sym<.>($/) {
@@ -1015,8 +1016,11 @@ class MO::Actions is HLL::Actions {
     }
 
     method class_member:sym<{}>($/) {
-        my $ctor := $*W.current_scope;
-        $ctor.push( $<statements>.made );
+        my $scope := pop_newscope($/);
+        my $ctor := $scope.ann('outer');
+        my $class := $ctor.ann('package');
+        $scope.name( QAST::Node.unique($ctor.ann('class-name')~'::~ctor') );
+        $ctor.push( QAST::Op.new( :op<call>, $scope ) );
     }
 
     method definition:sym<lang>($/) {

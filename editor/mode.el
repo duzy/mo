@@ -144,8 +144,8 @@
     (modify-syntax-entry ?\\ "\\" mo-syntax-table) ;; name constituents
     (modify-syntax-entry ?# "<" mo-syntax-table)   ;; '#' starts a comment
     (modify-syntax-entry ?\n ">" mo-syntax-table)  ;; per-line comments
-    (modify-syntax-entry ?< "(" mo-syntax-table)  ;; treat '<' as open-parenthesis
-    (modify-syntax-entry ?> ")" mo-syntax-table)  ;; treat '>' as close-parenthesis
+    ;;(modify-syntax-entry ?< "(" mo-syntax-table)  ;; treat '<' as open-parenthesis
+    ;;(modify-syntax-entry ?> ")" mo-syntax-table)  ;; treat '>' as close-parenthesis
     ;;(modify-syntax-entry ?$ "|" mo-syntax-table)
     mo-syntax-table)
   "Syntax table for MO mode. See `Table of Syntax Classes'")

@@ -75,7 +75,7 @@ class MO::Model {
                     @result.push($_) for $children;
                 }
             }
-        } else {
+        } elsif nqp::defined($a) {
             my $children := $a.children($name);
             @result := $children if nqp::defined($children);
         }
