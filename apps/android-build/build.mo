@@ -32,11 +32,14 @@ def add_project($project, $variant) {
     #}
 
     for $project.prerequisites() {
-        var $jar = add_project($_, $variant);
-        @libs.push($jar.name());
+#        var $jar = add_project($_, $variant);
+#        @libs.push($jar.name());
+#say($_.path()~', '~$jar.name());
+        @libs.push($_.path()~"/bin/$variant/"~$_.name()~'.jar');
+#say('lib: '~@libs[+@libs-1]);
     }
 
-say("$name: $target; "~join(', ', @libs));
+say("add_project: $name: $target; "~join(', ', @libs));
 
     if $project.is_library() {
         $target: "$out/classes.purged"
@@ -124,7 +127,7 @@ $cmd add -k $pack $dex > /dev/null
 ----------------------------end
         }
 
-        "$out/classes.dex": "$out/classes.list" @libs
+        "$out/classes.dex": "$out/classes.list"
         {
             var $is_windows = 0;
             var $os_options = $is_windows ? '' : '-JXms16M -JXmx1536M';
@@ -194,6 +197,7 @@ find $out/sources -type f -name '*.java' >> $outfile
     var $am  = @_[0].path();
     var $cmd = $project.cmd('aapt');
     var $out = $_.parent_path();
+say('build: '~$project.name()~', '~$_.name());
     if $project.is_library() {
         lang shell :escape
 --------------------------------
@@ -226,6 +230,14 @@ $cmd package -f -m -x -M $am \
 <"$target">
 }
 
+def add_project_prerequisites($project, $variant) {
+    say('add_project_prerequisites: '~$project.name()~', '~+$project.prerequisites());
+    for $project.prerequisites() { # $_ is a prerequisite project
+        add_project_prerequisites($_, $variant);
+        add_project($_, $variant);
+    }
+}
+
 def Add($path, $variant) {
     unless isdir($path) {
         die("$path is not a directory");
@@ -235,5 +247,6 @@ def Add($path, $variant) {
     }
 
     var $project = config::ParseProject($path);
+    add_project_prerequisites($project, $variant);
     add_project($project, $variant)
 }
