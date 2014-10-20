@@ -1,8 +1,8 @@
 # -*- makefile-gmake -*-
-PARROT := $(shell which parrot)
 BASH := $(shell which bash)
-NQP := $(shell which nqp-p) --module-path=gen/parrot
 CAT := $(shell which cat)
+PARROT := $(shell which parrot)
+NQP := $(shell which nqp-p) --module-path=gen/parrot
 
 COMMON_PBC := gen/parrot/common.pbc
 COMMON_PIR := gen/parrot/common.pir
@@ -35,7 +35,10 @@ XML_SOURCES := \
 
 MODULELOADER_PBC := gen/parrot/mo/ModuleLoader.pbc
 MODULELOADER_PIR := gen/parrot/mo/ModuleLoader.pir
-MODULELOADER_NQP := src/mo/ModuleLoader.nqp
+MODULELOADER_NQP := gen/parrot/mo/ModuleLoader.nqp
+MODULELOADER_SOURCES := \
+  src/mo/parrot/VMCall.nqp \
+  src/mo/ModuleLoader.nqp \
 
 MO_PBC := gen/parrot/mo.pbc
 MO_PIR := gen/parrot/mo.pir
@@ -47,9 +50,9 @@ MO_SOURCES := \
   src/mo/Model.nqp \
   src/mo/World.nqp \
   \
+  src/mo/parrot/Ops.nqp \
+  src/mo/parrot/VMCall.nqp \
   src/mo/ModuleLoader.nqp \
-
-MO_SOURCES += src/mo/parrot/Ops.nqp
 
 $(MO_PBC): $(MO_PIR) $(MODULELOADER_PBC)
 	@mkdir -p $(@D)
@@ -74,6 +77,11 @@ $(MODULELOADER_PBC): $(MODULELOADER_PIR)
 $(MODULELOADER_PIR): $(MODULELOADER_NQP)
 	@mkdir -p $(@D)
 	$(NQP) --target=pir --output="$@" $<
+	@[ -f $@ ]
+
+$(MODULELOADER_NQP): $(MODULELOADER_SOURCES)
+	@mkdir -p $(@D)
+	$(CAT) $^ > "$@"
 	@[ -f $@ ]
 
 $(XML_PBC): $(XML_PIR)

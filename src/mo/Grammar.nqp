@@ -80,10 +80,10 @@ grammar MO::Grammar is HLL::Grammar {
     # Operators - mostly stolen from NQP's Rubyish example
     token infix:sym<**> { <sym>  <O('%exponentiation, :op<pow_n>')> }
 
-    token prefix:sym<+> { <sym>  <O('%unary, :op<numify>')> }
-    token prefix:sym<~> { <sym>  <O('%unary, :op<stringify>')> }
-    token prefix:sym<-> { <sym><![>]>  <O('%unary, :op<neg_n>')> }
-    token prefix:sym<!> { <sym>  <O('%unary, :op<not_i>')> }
+    token prefix:sym<+> { <sym> <O('%unary, :op<numify>')> }
+    token prefix:sym<~> { <sym> <O('%unary, :op<stringify>')> }
+    token prefix:sym<-> { <sym><![>]> <O('%unary, :op<neg_n>')> }
+    token prefix:sym<!> { <sym> <O('%unary, :op<falsey>')> } #{ <sym> <O('%unary, :op<not_i>')> }
 
     token infix:sym<*>  { <sym> <O('%multiplicative, :op<mul_n>')> }
     token infix:sym</>  { <sym> <O('%multiplicative, :op<div_n>')> }

@@ -2,17 +2,21 @@
 
 SRCDIR="$(dirname $BASH_SOURCE)"
 
+function mo-cmd() {
+    local D="gen/parrot"
+    echo "parrot -I$D -L$D $D/mo.pbc"
+}
+
 function run() {
     local PROVE="prove $2 --failures --nocolor --exec "
-    local RUNNER="parrot -Igen -Lgen gen/mo.pbc"
+    local RUNNER="$(mo-cmd)"
     local NAME=$(dirname $1)/$1
     if [ -f "$1.xml" -a -f "$1.mo" ] ; then
         $PROVE "$RUNNER $1.xml" "$1.mo"
     elif [ -f "$1.mo" ] ; then
         $PROVE "$RUNNER $(dirname $1)/test.xml" "$1.mo"
     fi
-    #parrot -Igen -Lgen gen/xml.pbc --target=pir $(dirname $1)/test.xml > $1.pir
-    parrot -Igen -Lgen gen/mo.pbc --target=pir $(dirname $1)/test.xml $1.mo > $1.pir
+    $RUNNER --target=pir $(dirname $1)/test.xml $1.mo > $1.pir
 }
 
 #run $SRCDIR/hello.xml $SRCDIR/hello.mo
