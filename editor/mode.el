@@ -104,7 +104,7 @@
     "isreg" "isdir" "isdev" "islink" "isreadable" "iswritable" "isexecutable" "isnull" "defined"
     "list" "hash" "elems" "splice" "slice" "split" "join" "concat" "chars" "index" "rindex"
     "endswith" "startswith" "substr" "strip" "addprefix" "addsuffix" "addinfix"
-    "load" "init" "getattr" "setattr" "me" "null"))
+    "load" "init" "getattr" "setattr" "me" "null" "islist"))
 
 (defun mo-ppre (re) (format "\\<\\(%s\\)\\>[^_]" (regexp-opt re)))
 (defun mo-idre () nil)

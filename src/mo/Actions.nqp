@@ -36,6 +36,7 @@ class MO::Actions is HLL::Actions {
         unless $ast {
             $ast := self.'select:sym<name>'($/);
             $ast.push( QAST::Var.new( :name<$_>, :scope<lexical> ) );
+            $ast.push( QAST::IVal.new( :value(1) ) );
         }
         make $ast;
         $/.prune;

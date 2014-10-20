@@ -33,27 +33,34 @@ function check() {
     fi
 }
 
-for mo in \
-    get-package-name \
-    get-permissions \
-    get-activities \
-    get-intent-filters \
-    use-namespace \
-    ; do
-    echo -n "test: $SRCDIR/$mo.mo.."
-    ( run $SRCDIR/AndroidManifest.xml $SRCDIR/$mo.mo ) > $SRCDIR/$mo.out
-    check $SRCDIR/$mo.txt $SRCDIR/$mo.out
-done
+function run-android-examples() {
+    for mo in \
+        get-package-name \
+        get-permissions \
+        get-activities \
+        get-intent-filters \
+        use-namespace \
+        ; do
+        echo -n "test: $SRCDIR/$mo.mo.."
+        ( run $SRCDIR/AndroidManifest.xml $SRCDIR/$mo.mo ) > $SRCDIR/$mo.out
+        check $SRCDIR/$mo.txt $SRCDIR/$mo.out
+    done
+}
 
-for mo in \
-    proto-simple \
-    proto-template \
-    proto-run \
-    many-run \
-    class-test \
-    shared-lexical-for-rules \
-    ; do
-    echo -n "test: $SRCDIR/$mo.mo.."
-    ( run $SRCDIR/$mo.mo ) > $SRCDIR/$mo.out
-    check $SRCDIR/$mo.txt $SRCDIR/$mo.out
-done
+function run-normal-examples() {
+    for mo in \
+        proto-simple \
+        proto-template \
+        proto-run \
+        many-run \
+        class-test \
+        shared-lexical-for-rules \
+        ; do
+        echo -n "test: $SRCDIR/$mo.mo.."
+        ( run $SRCDIR/$mo.mo ) > $SRCDIR/$mo.out
+        check $SRCDIR/$mo.txt $SRCDIR/$mo.out
+    done
+}
+
+run-android-examples
+run-normal-examples

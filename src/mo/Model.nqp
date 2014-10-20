@@ -66,7 +66,7 @@ class MO::Model {
         }
     }
 
-    method select_name($name, $a) { # ->child, parent->child
+    method select_name($name, $a, $must = 0) { # ->child, parent->child
         my @result;
         if nqp::islist($a) {
             for $a {
@@ -82,6 +82,9 @@ class MO::Model {
             } else {
                 nqp::die("$name is not Node, but "~$a.HOW.name($a));
             }
+        }
+        if $must && +@result < 1 {
+            nqp::die("$name is undefined");
         }
         @result;
     }

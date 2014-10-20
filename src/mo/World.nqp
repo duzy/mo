@@ -201,7 +201,7 @@ class MO::World is HLL::World {
                     $who, QAST::SVal.new( :value($final_name) ) );
             }
 
-            @name.push($final_name); # restore the @name for correct panic.
+            @name.push($final_name) if $panic; # restore the @name for correct panic.
         }
 
         if $panic {
@@ -588,6 +588,9 @@ MO::World.add_builtin_code('islink', -> $s {
 MO::World.add_builtin_code('isreadable', -> $s { nqp::filereadable($s) });
 MO::World.add_builtin_code('iswritable', -> $s { nqp::filewritable($s) });
 MO::World.add_builtin_code('isexecutable', -> $s { nqp::fileexecutable($s) });
+
+MO::World.add_builtin_code('islist', -> $a { nqp::islist($a) });
+MO::World.add_builtin_code('isstr', -> $a { nqp::isstr($a) });
 
 MO::World.add_builtin_code('isnull', -> $a { nqp::isnull($a) });
 MO::World.add_builtin_code('defined', -> $a { nqp::defined($a) });

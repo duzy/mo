@@ -162,8 +162,7 @@ class MO::ModuleLoader {
             } elsif %chosen<sources> {
                 for %chosen<sources> {
                     if nqp::defined(%modules_loaded{$_}) {
-                        #@module_ctx.push( $_ ) for %modules_loaded{$_};
-                        @module_ctx := nqp::clone(%modules_loaded{$_});
+                        @module_ctx.push( $_ ) for %modules_loaded{$_};
                     } else {
                         @modules_loading.push($_);
                         my $module_name := compute_module_name($_);

@@ -1,5 +1,5 @@
 # -*- nqp -*-
-plan(76);
+plan(28); #plan(76);
 
 my $f := MO::FilesystemNodeHOW.open('t/xml/c/filesystem.t');
 ok($f.name eq 't/xml/c/filesystem.t', "\$f.name eq 't/xml/c/filesystem.t'");
@@ -45,12 +45,15 @@ if $d.get('EXISTS') {
         ok($c2.get('ISREG') == 1, "\$c2.get('ISREG') == 1");
         ok($c2.get('ISDEV') == 0, "\$c2.get('ISDEV') == 0");
     }   
+
+if 0 {
     my $cache1 := nqp::getattr($d, $d, '/t1.txt');
     my $cache2 := nqp::getattr($d, $d, '/t2.txt');
     ok(nqp::defined($cache1), "\$cache1 defined");
     ok(nqp::defined($cache2), "\$cache2 defined");
     ok(nqp::where($c1) == nqp::where($cache1), 'where($c1) == where($cache1)');
     ok(nqp::where($c2) == nqp::where($cache2), 'where($c2) == where($cache2)');
+}
 
     $c1 := $d.children('more/t1.txt');
     $c2 := $d.children('more/t2.txt');
@@ -74,6 +77,8 @@ if $d.get('EXISTS') {
         ok($c2.get('ISREG') == 1, "\$c2.get('ISREG') == 1");
         ok($c2.get('ISDEV') == 0, "\$c2.get('ISDEV') == 0");
     }
+
+if 0 {
     my $cache3 := nqp::getattr($d, $d, '/more');
     ok(nqp::defined($cache3), "\$cache3 defined");
     ok($cache3.get('EXISTS'), "\$cache3.get('EXISTS')");
@@ -81,8 +86,8 @@ if $d.get('EXISTS') {
     ok($cache3.get('ISREG') == 0, "\$cache3.get('ISREG') == 0");
     ok($cache3.get('ISDEV') == 0, "\$cache3.get('ISDEV') == 0");
     ok($cache3.get('FILESIZE') > 0, "\$cache3.get('FILESIZE') > 0");
-    $cache1 := nqp::getattr($cache3, $cache3, '/t1.txt');
-    $cache2 := nqp::getattr($cache3, $cache3, '/t2.txt');
+    my $cache1 := nqp::getattr($cache3, $cache3, '/t1.txt');
+    my $cache2 := nqp::getattr($cache3, $cache3, '/t2.txt');
     ok(nqp::defined($cache1), "\$cache1 defined");
     ok($cache1.name eq $d.name~'/more/'~$cache1.get('NAME'), "\$cache1.name eq "~$d.name~'/more/'~$cache1.get('NAME'));
     ok($cache1.get('EXISTS'), "\$cache1.get('EXISTS')");
@@ -101,4 +106,5 @@ if $d.get('EXISTS') {
     ok($cache2.get('ISDEV') == 0, "\$cache2.get('ISDEV') == 0");
     ok(nqp::where($c1) == nqp::where($cache1), 'where($c1) == where($cache1)');
     ok(nqp::where($c2) == nqp::where($cache2), 'where($c2) == where($cache2)');
+}
 }

@@ -10,9 +10,9 @@ ok - many::c init: $b::B = many::b
 ok - a.load from c.mo
 ok - b.load from c.mo
 ok - many::c c.mo
+ok - c.load from run.mo
 ok - a.load from run.mo
 ok - b.load from run.mo
-ok - c.load from run.mo
 ok - many-run
 ok - many::a
 ok - many::b

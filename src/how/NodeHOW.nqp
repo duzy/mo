@@ -2,21 +2,22 @@ knowhow MO::NodeHOW {
     my $type;
 
     # ''                tag (e.g. XML tag name, <name/>)
-    # '?'               node class (what kind of node?)
-    # '.*'              all attributes in represented order
+    # '$.^'               node parent
+    # '$.?'             node class (what kind of node?)
+    # '$.*'             all attributes in represented order
+    # '$.name'          an attribute ( <tag name="value"/>)
     # '*'               all children (e.g. XML subtags and texts)
-    # '.name'           an attribute ( <tag name="value"/>)
     # 'name'            a named child
     #
 
     sub method_name($node) { nqp::getattr($node, $type, '') }
-    sub method_type($node) { nqp::getattr($node, $type, '?') }
+    sub method_type($node) { nqp::getattr($node, $type, '$.?') }
     sub method_text($node) { nqp::join('', nqp::getattr($node, $type, '*')) }
-    sub method_attributes($node) { nqp::getattr($node, $type, '.*') }
-    sub method_get($node, $name) { nqp::getattr($node, $type, '.'~$name) }
+    sub method_attributes($node) { nqp::getattr($node, $type, '$.*') }
+    sub method_get($node, $name) { nqp::getattr($node, $type, '$.'~$name) }
     sub method_set($node, $name, $value) { MO::NodeHOW.node_bindattr($node, $name, $value) }
     sub method_count($node, $name = nqp::null()) { +$node.children($name) }
-    sub method_parent($node) { nqp::getattr($node, $type, '^') }
+    sub method_parent($node) { nqp::getattr($node, $type, '$.^') }
     sub method_children($node, $name = nqp::null()) {
         nqp::getattr($node, $type, nqp::isnull($name) ?? '*' !! $name)
     }
@@ -58,7 +59,7 @@ knowhow MO::NodeHOW {
 
     method node_new(:$kind = 'data') {
         my $node := nqp::create($type);
-        nqp::bindattr($node, $type, '?', $kind);
+        nqp::bindattr($node, $type, '$.?', $kind);
         $node;
     }
 
@@ -76,17 +77,17 @@ knowhow MO::NodeHOW {
         }
         nqp::push($named, $node);
         nqp::push($all, $node);
-        nqp::bindattr($node, $type, '^', $o);
+        nqp::bindattr($node, $type, '$.^', $o);
     }
 
     ## Add attribute
     method node_bindattr($o, $n, $v) {
-        my $all := nqp::getattr($o, $type, '.*');
+        my $all := nqp::getattr($o, $type, '$.*');
         if nqp::isnull($all) {
-            nqp::bindattr($o, $type, '.*', ($all := nqp::list()));
+            nqp::bindattr($o, $type, '$.*', ($all := nqp::list()));
         }
-        nqp::bindattr($o, $type, '.' ~ $n, $v);
-        $all.push(nqp::list($n, $v));
+        nqp::bindattr($o, $type, '$.'~$n, $v);
+        nqp::push($all, nqp::list($n, $v));
     }
 
     ## Concat text string
