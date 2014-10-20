@@ -1,0 +1,123 @@
+# -*- makefile-gmake -*-
+#
+#  git clone https://github.com/MoarVM/MoarVM.git
+#  
+MOAR := ~/tools/perl6/MoarVM/moar
+BASH := $(shell which bash)
+CAT := $(shell which cat)
+NQP := ~/tools/perl6/MoarVM/install/bin/nqp-m --module-path=gen/moar
+
+COMMON_MBC := gen/moar/common.moarvm
+COMMON_NQP := gen/moar/common.nqp
+COMMON_SOURCES := \
+  src/core/Variable.nqp \
+  src/core/Routine.nqp \
+  src/how/NodeHOW.nqp \
+  src/how/Node.nqp \
+  src/how/FilesystemNodeHOW.nqp \
+  src/how/FilesystemNode.nqp \
+  src/how/AttributeHOW.nqp \
+  src/how/ClassHOW.nqp \
+  src/how/TemplateHOW.nqp \
+
+JSON_MBC := gen/moar/json.moarvm
+JSON_NQP := gen/moar/json.nqp
+JSON_SOURCES := \
+  src/json/Grammar.nqp \
+
+XML_MBC := gen/moar/xml.moarvm
+XML_NQP := gen/moar/xml.nqp
+XML_SOURCES := \
+  src/xml/Grammar.nqp \
+  src/xml/Actions.nqp \
+  src/xml/Compiler.nqp \
+  src/xml/World.nqp \
+
+MODULELOADER_MBC := gen/moar/mo/ModuleLoader.moarvm
+MODULELOADER_NQP := gen/moar/mo/ModuleLoader.nqp
+MODULELOADER_SOURCES := \
+  src/mo/moar/VMCall.nqp \
+  src/mo/ModuleLoader.nqp \
+
+MO_MBC := gen/moar/mo.moarvm
+MO_NQP := gen/moar/mo.nqp
+MO_SOURCES := \
+  src/mo/Grammar.nqp \
+  src/mo/Actions.nqp \
+  src/mo/Compiler.nqp \
+  src/mo/Model.nqp \
+  src/mo/World.nqp \
+  \
+  src/mo/moar/VMCall.nqp \
+  src/mo/ModuleLoader.nqp \
+
+MO_SOURCES += src/mo/parrot/Ops.nqp
+
+$(MO_MBC): $(MO_NQP) $(XML_MBC) $(JSON_MBC) $(MODULELOADER_MBC)
+	@mkdir -p $(@D)
+	$(NQP) --combine --target=mbc --output="$@" $<
+	@[ -f $@ ]
+
+$(MO_NQP): $(MO_SOURCES)
+	@mkdir -p $(@D)
+	$(CAT) $^ > "$@"
+	@[ -f $@ ]
+
+$(MODULELOADER_MBC): $(MODULELOADER_NQP)
+	@mkdir -p $(@D)
+	$(NQP) --target=mbc --output="$@" "$<"
+	@[ -f $@ ]
+
+$(MODULELOADER_NQP): $(MODULELOADER_SOURCES)
+	@mkdir -p $(@D)
+	$(CAT) $^ > "$@"
+	@[ -f $@ ]
+
+$(XML_MBC): $(XML_NQP) $(COMMON_MBC)
+	@mkdir -p $(@D)
+	$(NQP) --combine --target=mbc --output="$@" $<
+	@[ -f $@ ]
+
+$(XML_NQP): $(XML_SOURCES)
+	@mkdir -p $(@D)
+	$(CAT) $^ > "$@"
+	@[ -f $@ ]
+
+$(JSON_MBC): $(JSON_NQP)
+	@mkdir -p $(@D)
+	$(NQP) --combine --target=mbc --output="$@" $^
+	@[ -f $@ ]
+
+$(JSON_NQP): $(JSON_SOURCES)
+	@mkdir -p $(@D)
+	$(CAT) $^ > "$@"
+	@[ -f $@ ]
+
+$(COMMON_MBC): $(COMMON_NQP)
+	@mkdir -p $(@D)
+	$(NQP) --combine --target=mbc --output="$@" "$^"
+	@[ -f $@ ]
+
+$(COMMON_NQP): $(COMMON_SOURCES)
+	@mkdir -p $(@D)
+	$(CAT) $^ > "$@"
+	@[ -f $@ ]
+
+test: test-xml test-json test-mo
+
+test-xml: t/xml/run.bash $(XML_MBC)
+	@$(BASH) $<
+
+test-json: ; @echo "JSON..."
+
+test-mo: t/mo/run.bash $(MO_MBC)
+	@$(BASH) $<
+
+test-examples: examples/test.bash $(MO_MBC)
+	@$(BASH) $<
+
+run-examples: examples/run.bash $(MO_MBC)
+	@$(BASH) $<
+
+run-apps: apps/android-build/run.bash $(MO_MBC)
+	@$(BASH) $<

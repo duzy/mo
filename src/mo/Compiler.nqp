@@ -1,4 +1,4 @@
-use HLL;
+#use HLL;
 
 class MO::Compiler is HLL::Compiler {
     method my_command_line(@args, *%adverbs) {

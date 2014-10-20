@@ -38,7 +38,7 @@ class MO::ModuleLoader {
 
     sub read_dir_sources($path) {
         my @sources;
-        my @names := pir::new__PS('OS').readdir($path);
+        my @names := VMCall::readdir($path);
         for @names {
             if $_ ne '.' && $_ ne '..' && $_ ~~ / .*\.mo$ / {
                 @sources.push(pathconcat($path, $_));

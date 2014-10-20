@@ -2,16 +2,16 @@ knowhow MO::FilesystemNodeHOW {
     my %cache;
     my $type;
 
-    my sub filter_dir_names($os, $path, $pred, $recursive) {
+    my sub filter_dir_names($path, $pred, $recursive) {
         my @result;
         my @names;
-        try { @names := $os.readdir($path); }
+        try { @names := VMCall::readdir($path); }
         for @names {
             if $_ ne '.' && $_ ne '..' {
                 my $pathname := "$path/$_";
                 @result.push($pathname) if $pred($path, $_);
                 if $recursive && nqp::stat($pathname, nqp::const::STAT_ISDIR) {
-                    @result.push($_) for filter_dir_names($os, $pathname, $pred, $recursive);
+                    @result.push($_) for filter_dir_names($pathname, $pred, $recursive);
                 }
             }
         }
@@ -20,8 +20,7 @@ knowhow MO::FilesystemNodeHOW {
 
     my sub node_find($node, $pred, $recursive) {
         my $base := $node.name(); #$node.get('PATH');
-        my $os := pir::new__PS('OS');
-        filter_dir_names($os, $base, $pred, $recursive)
+        filter_dir_names($base, $pred, $recursive)
     }
 
     my sub method_set($node, $name, $value) { nqp::die('filesystem nodes are readonly') }
