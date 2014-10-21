@@ -231,11 +231,11 @@ $cmd package -f -m -x -M $am \
 }
 
 def add_project_prerequisites($project, $variant) {
-    # say('add_project_prerequisites: '~$project.name()~', '~+$project.prerequisites());
-    say('add_project_prerequisites: '~addr($project));
+    say('add_project_prerequisites: '~$project.name()~', '~+$project.prerequisites());
+    # say('add_project_prerequisites: '~addr($project));
     for $project.prerequisites() { # $_ is a prerequisite project
         add_project_prerequisites($_, $variant);
-        add_project($_, $variant);
+        #add_project($_, $variant);
     }
 }
 

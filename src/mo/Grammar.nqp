@@ -439,14 +439,18 @@ grammar MO::Grammar is HLL::Grammar {
         ';'? { $*IN_DECL := 0; }
     }
 
-    rule declaration:sym<rule> {
-        #<targets=.quote>+ ':' [<prerequisites=.quote>\s*]*
-        <targets=.EXPR>+ ':' <prerequisites=.EXPR>*
+    rule declaration:sym<rule> { <build_rule_declaration> }
+
+    rule build_rule_declaration {
+        <targets=.EXPR>+ $<colon>=':' <prerequisites=.EXPR>*
+        {
+            my $scope := $*W.current_scope;
+            unless nqp::defined($scope.ann('package')) {
+                $<colon>.CURSOR.panic("rule declared in non-package scope");
+            }
+        }
         '{' ~ '}'
-        [
-            { self.push_scope( ~$<sym>, [ '$_', '@_' ] ) }
-            <statements>
-        ]
+        [ { self.push_scope( ~$<sym>, [ '$_', '@_' ] ) } <statements> ]
     }
 
     proto rule definition { <...> }
@@ -597,6 +601,10 @@ grammar MO::Grammar is HLL::Grammar {
         <sym>\s <name=.ident>
         '(' ~ ')' [ { self.push_scope( 'method', 'me' ) } <params> ]?
         '{' ~ '}' <statements>
+    }
+
+    rule class_member:sym<rule> {
+        <build_rule_declaration>
     }
 
     rule class_member:sym<$> {

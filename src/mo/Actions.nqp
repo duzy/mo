@@ -777,7 +777,9 @@ class MO::Actions is HLL::Actions {
         make $stmts;
     }
 
-    method declaration:sym<rule>($/) {
+    method declaration:sym<rule>($/) { make $<build_rule_declaration>.made }
+
+    method build_rule_declaration($/) {
         my $stmts := QAST::Stmts.new( :node($/) );
         my $target := QAST::Var.new(:scope<lexical>, :name(QAST::Node.unique('rule_target')));
         my $how := QAST::WVal.new( :value(MO::FilesystemNodeHOW) );
@@ -964,6 +966,10 @@ class MO::Actions is HLL::Actions {
 
         my $code := $*W.install_package_routine($class, $scope.name, $scope);
         $class.HOW.add_method($class, $scope.name, $code);
+    }
+
+    method class_member:sym<rule>($/) {
+        make $<build_rule_declaration>.made;
     }
 
     method class_member:sym<$>($/) {
