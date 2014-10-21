@@ -12,4 +12,12 @@ class VMCall {
         }
         @names
     }
+
+    our sub readall($filename, :$encoding = 'utf8') {
+        my $fh := nqp::open($filename, 'r');
+        nqp::setencoding($fh, $encoding);
+        my $source := nqp::readallfh($fh);
+        nqp::closefh($fh);
+        $source
+    }
 }

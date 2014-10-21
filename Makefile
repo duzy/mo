@@ -1,2 +1,2 @@
-vm := $(or $(VM),parrot,moar)
+export vm := $(or $(VM),parrot,moar)
 include Make.$(vm)

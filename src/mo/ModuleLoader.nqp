@@ -21,7 +21,8 @@ class MO::ModuleLoader {
         my int $i := nqp::isstr($file) ?? nqp::rindex($file, '/') !! -1;
         if 0 <= $i {
             my $s := nqp::substr($file, 0, $i+1);
-            $s := nqp::cwd ~ '/' ~ $s if $s[0] ne '/';
+            # $s := nqp::cwd ~ '/' ~ $s if $s[0] ne '/';
+            $s := nqp::cwd ~ '/' ~ $s if nqp::substr($s, 0, 1) ne '/';
             for @prefixes {
                 if $s eq $_ || $s eq "$_/" {
                     $s := ''; last;
@@ -56,7 +57,8 @@ class MO::ModuleLoader {
         my %res;
 
         for @prefixes -> $prefix {
-            $prefix := "$prefix/" unless $prefix[nqp::chars($prefix)-1] eq '/'; #$prefix ~~ / \/$ /;
+            # $prefix := "$prefix/" unless $prefix[nqp::chars($prefix)-1] eq '/'; #$prefix ~~ / \/$ /;
+            $prefix := "$prefix/" unless nqp::substr($prefix, nqp::chars($prefix)-1, 1) eq '/'; #$prefix ~~ / \/$ /;
             my $have_pir  := nqp::stat("$prefix$pir_path",  nqp::const::STAT_EXISTS);
             my $have_pbc  := nqp::stat("$prefix$pbc_path",  nqp::const::STAT_EXISTS);
             my $have_mo   := nqp::stat("$prefix$mo_path",   nqp::const::STAT_EXISTS);
@@ -86,21 +88,7 @@ class MO::ModuleLoader {
         %res;
     }
 
-    method load_source($filename) {
-#?if parrot
-        my $fh := nqp::open("$filename", 'r');
-        $fh.encoding('utf8');
-        my $source := $fh.readall();
-        $fh.close();
-#?endif
-#?if !parrot
-        # my $fh := nqp::open("$filename", 'r');
-        # nqp::setencoding($fh, 'utf8');
-        # my $source := nqp::readallfh($fh);
-        # nqp::closefh($fh);
-#?endif
-        $source;
-    }
+    method load_source($filename) { VMCall::readall($filename, :encoding<utf8>) }
 
     my method eval_source_file($file, @params) {
         @params := nqp::clone(@params);

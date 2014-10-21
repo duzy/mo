@@ -1,12 +1,8 @@
 #!/bin/bash
 
-SRCDIR="$(dirname $BASH_SOURCE)"
+. scripts/common.bash
 
-function run() {
-    local LIBDIR="gen"
-    local RUNNER="parrot -I$LIBDIR -L$LIBDIR $LIBDIR/mo.pbc"
-    $RUNNER $@
-}
+SRCDIR="$(dirname $BASH_SOURCE)"
 
 function check() {
     local txt="$1"

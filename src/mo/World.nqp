@@ -460,7 +460,7 @@ class MO::World is HLL::World {
         # %!fixupPackages := nqp::hash();
     }
 
-    method add_fixup_package($package, :$name = QAST::Node.unique('temp_pkg')) {
+    method add_fixup_package($package, $name = QAST::Node.unique('temp_pkg')) {
         my $pkg_var_name := %!fixupPackages{nqp::where($package)};
         unless $pkg_var_name {
             %!fixupPackages{nqp::where($package)} := $pkg_var_name := $name;

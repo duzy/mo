@@ -1,11 +1,8 @@
 #!/bin/bash
 
-SRCDIR="$(dirname $BASH_SOURCE)"
+. scripts/common.bash
 
-function mo-cmd() {
-    local D="gen/parrot"
-    echo "parrot -I$D -L$D $D/mo.pbc"
-}
+SRCDIR="$(dirname $BASH_SOURCE)"
 
 function run() {
     local PROVE="prove $2 --failures --nocolor --exec "

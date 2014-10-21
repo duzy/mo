@@ -1,12 +1,8 @@
 #!/bin/bash
 
-SRCDIR="$(dirname $BASH_SOURCE)"
+. scripts/common.bash
 
-function run() {
-    local LIBDIR="gen"
-    local RUNNER="parrot -I$LIBDIR -L$LIBDIR $LIBDIR/mo.pbc"
-    $RUNNER $@
-}
+SRCDIR="$(dirname $BASH_SOURCE)"
 
 #run $SRCDIR/AndroidManifest.xml $SRCDIR/get-package-name.mo
 #run $SRCDIR/AndroidManifest.xml $SRCDIR/get-permissions.mo
@@ -19,5 +15,4 @@ function run() {
 #run $SRCDIR/many-run.mo
 
 run $SRCDIR/a.mo test
-
-parrot -Igen -Lgen gen/mo.pbc --target=pir $SRCDIR/a.mo > $SRCDIR/a.pir
+run --target=pir $SRCDIR/a.mo > $SRCDIR/a.pir

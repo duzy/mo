@@ -94,11 +94,13 @@ knowhow MO::FilesystemNodeHOW {
         if nqp::defined(@depends) {
             for @depends {
                 my int $made := method_make($_);
-                if $_.exists() {
+                if $made < 0 {
+                    $missing := $missing + $made;
+                } elsif $_.exists() {
                     $made := 1 if $made == 0 && newer_than($_, $node);
                     $updated := $updated + $made;
                 } else {
-                    $missing := $missing + 1;
+                    $missing := $missing - 1;
                     nqp::say('target '~$_.name()~' was not made');
                 }
             }
@@ -114,7 +116,7 @@ knowhow MO::FilesystemNodeHOW {
             }
         }
 
-        0 < $missing ?? $missing !! $updated;
+        $missing == 0 ?? $updated !! $missing
     }
     my sub method_install_build_code($node, $code) {
         my $prevcode := nqp::getattr($node, $type, '&build');
