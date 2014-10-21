@@ -165,7 +165,6 @@ class MO::World is HLL::World {
                     QAST::WVal.new( :value($class) ) );
             } elsif self.is_export_name($first) {
                 return QAST::Var.new( :node($/), :scope<associative>,
-                    # QAST::Var.new( :name<EXPORT.WHO>, :scope<lexical> ),
                     QAST::Op.new( :op<who>, QAST::WVal.new( :value($*EXPORT) ) ),
                     QAST::SVal.new( :value($first) ) );
             } else {

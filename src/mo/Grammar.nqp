@@ -439,7 +439,10 @@ grammar MO::Grammar is HLL::Grammar {
         ';'? { $*IN_DECL := 0; }
     }
 
-    rule declaration:sym<rule> { <build_rule_declaration> }
+    rule declaration:sym<rule> {
+        :my $*IN_DECL; { $*IN_DECL := 'rule'; }
+        <build_rule_declaration> { $*IN_DECL := 0; }
+    }
 
     rule build_rule_declaration {
         <targets=.EXPR>+ $<colon>=':' <prerequisites=.EXPR>*
@@ -449,8 +452,13 @@ grammar MO::Grammar is HLL::Grammar {
                 $<colon>.CURSOR.panic("rule declared in non-package scope");
             }
         }
-        '{' ~ '}'
-        [ { self.push_scope( ~$<sym>, [ '$_', '@_' ] ) } <statements> ]
+        '{' ~ '}' [
+         {
+            my @params := [ '$_', '@_' ];
+            @params.unshift('me') if $*IN_DECL eq 'member-rule';
+
+            my $scope := self.push_scope( ~$<sym>, @params );
+         } <statements> ]
     }
 
     proto rule definition { <...> }
@@ -603,17 +611,18 @@ grammar MO::Grammar is HLL::Grammar {
         '{' ~ '}' <statements>
     }
 
-    rule class_member:sym<rule> {
-        <build_rule_declaration>
+    rule class_member:sym<{}> {
+        '{' ~ '}' <newscope: 'ctor-block'>
     }
 
     rule class_member:sym<$> {
         :my $*IN_DECL; { $*IN_DECL := 'member'; }
-        <variable> <initializer>? ';'? { $*IN_DECL := 0; }
+        <variable> <!before ':'> <initializer>? ';'? { $*IN_DECL := 0; }
     }
 
-    rule class_member:sym<{}> {
-        '{' ~ '}' <newscope: 'ctor-block'>
+    rule class_member:sym<rule> {
+        :my $*IN_DECL; { $*IN_DECL := 'member-rule'; }
+        <build_rule_declaration> { $*IN_DECL := 0; }
     }
 
     rule definition:sym<lang> {

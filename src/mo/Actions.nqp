@@ -416,18 +416,10 @@ class MO::Actions is HLL::Actions {
                 QAST::Var.new( :scope<lexical>, :decl<var>, :name<GLOBAL> ),
                 QAST::Op.new( :op<getcurhllsym>, QAST::SVal.new( :value<GLOBAL> ) ),
             ),
-            # QAST::Op.new( :op<bind>,
-            #     QAST::Var.new( :scope<lexical>, :decl<var>, :name<GLOBAL.WHO> ),
-            #     QAST::Op.new( :op<who>, QAST::Var.new( :scope<lexical>, :name<GLOBAL> ) ),
-            # ),
             QAST::Op.new( :op<bind>,
                 QAST::Var.new( :scope<lexical>, :decl<var>, :name<EXPORT> ),
                 QAST::Op.new( :op<getcurhllsym>, QAST::SVal.new( :value<EXPORT> ) ),
             ),
-            # QAST::Op.new( :op<bind>,
-            #     QAST::Var.new( :scope<lexical>, :decl<var>, :name<EXPORT.WHO> ),
-            #     QAST::Op.new( :op<who>, QAST::Var.new( :scope<lexical>, :name<EXPORT> ) ),
-            # ),
             QAST::Op.new( :op<bind>,
                 QAST::Var.new( :name<$_>, :scope<lexical>, :decl<var> ),
                 QAST::Op.new( :op<callmethod>, :name<root>, QAST::Var.new( :scope<lexical>, :name<MODEL> ) ),
@@ -679,7 +671,7 @@ class MO::Actions is HLL::Actions {
             }
         } elsif $*W.is_export_name($final_name) {
             ($*EXPORT.WHO){$name} := nqp::null(); # bind the key immediately to avoid undefined symbol
-            $who := QAST::Op.new( :op<who>, QAST::WVal.new( :value($*EXPORT) ) ); #QAST::Var.new( :name<EXPORT.WHO>, :scope<lexical> );
+            $who := QAST::Op.new( :op<who>, QAST::WVal.new( :value($*EXPORT) ) );
         }
 
         my $initializer := $<initializer> ?? $<initializer>.made
@@ -783,9 +775,11 @@ class MO::Actions is HLL::Actions {
         my $stmts := QAST::Stmts.new( :node($/) );
         my $target := QAST::Var.new(:scope<lexical>, :name(QAST::Node.unique('rule_target')));
         my $how := QAST::WVal.new( :value(MO::FilesystemNodeHOW) );
+
         my $build := $*W.pop_scope;
         $build.name( QAST::Node.unique('rule') );
         $build.push( $<statements>.made );
+
         $stmts.push( QAST::Var.new(:scope<lexical>, :decl<var>, :name($target.name)) );
         $stmts.push( $build );
         for $<targets> {
@@ -969,7 +963,13 @@ class MO::Actions is HLL::Actions {
     }
 
     method class_member:sym<rule>($/) {
-        make $<build_rule_declaration>.made;
+        my $stmts := $<build_rule_declaration>.made;
+
+        my $ctor := $*W.current_scope;
+        my $class := $ctor.ann('package');
+        $/.CURSOR.panic('looking for package scope') unless nqp::defined($class);
+
+        $ctor.push( $stmts );
     }
 
     method class_member:sym<$>($/) {
