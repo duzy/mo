@@ -12,24 +12,30 @@ class foobar
     {
         @.depends.push('foo');
         @.depends.push('bar');
-        say('foobar');
+        say('foobar.~ctor');
     }
 
-    $.target : @.depends
+    method normal($v) {
+        say("normal: $v");
+    }
+
+    method make: $.target : @.depends
     {
-        say('build: '~$_.name());
+        say('build: me:'~isnull(me)~', '~$_.name());
     }
 
     'foo' :
     {
-        say('build: '~+@.depends)
+        say('build: '~$_.name()~', '~+@.depends);
+        me.normal(1);
     }
 
     'bar' :
     {
-        say('build: '~+@.depends)
+        say('build: '~$_.name()~', '~+@.depends);
+        me.normal(2);
     }
 }
 
 var $t = new(foobar);
-<'foobar'>.make();
+$t.make();

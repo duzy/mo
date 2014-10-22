@@ -86,14 +86,14 @@ knowhow MO::FilesystemNodeHOW {
         nqp::bindattr($node, $type, '@depends', @depends);
         $dep
     }
-    my sub method_make($node) {
+    my sub method_make($node, $context?) {
         my int $updated := 0;
         my int $missing := 0;
 
         my @depends := method_depends($node);
         if nqp::defined(@depends) {
             for @depends {
-                my int $made := method_make($_);
+                my int $made := method_make($_, $context);
                 if $made < 0 {
                     $missing := $missing + $made;
                 } elsif $_.exists() {
@@ -109,7 +109,7 @@ knowhow MO::FilesystemNodeHOW {
         my $build := nqp::getattr($node, $type, '&build');
         if $missing == 0 && nqp::isinvokable($build) {
             if !method_exists($node) || 0 < $updated {
-                my $status := $build($node, @depends);
+                my $status := $build($context, $node, @depends);
                 if method_exists($node) {
                     $updated := $updated + 1;
                 }

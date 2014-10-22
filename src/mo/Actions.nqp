@@ -769,30 +769,32 @@ class MO::Actions is HLL::Actions {
         make $stmts;
     }
 
-    method declaration:sym<rule>($/) { make $<build_rule_declaration>.made }
-
-    method build_rule_declaration($/) {
-        my $stmts := QAST::Stmts.new( :node($/) );
-        my $target := QAST::Var.new(:scope<lexical>, :name(QAST::Node.unique('rule_target')));
-        my $how := QAST::WVal.new( :value(MO::FilesystemNodeHOW) );
-
+    method declaration:sym<rule>($/) {
         my $build := $*W.pop_scope;
         $build.name( QAST::Node.unique('rule') );
         $build.push( $<statements>.made );
 
+        my $stmts := self.build_rule_init($/, $build);
+        $stmts.push( $build ); # push the build code
+        make $stmts;
+    }
+
+    method build_rule_init($/, $block) {
+        my $stmts := QAST::Stmts.new( :node($/) );
+        my $target := QAST::Var.new(:scope<lexical>, :name(QAST::Node.unique('rule_target')));
+        my $how := QAST::WVal.new( :value(MO::FilesystemNodeHOW) );
+
         $stmts.push( QAST::Var.new(:scope<lexical>, :decl<var>, :name($target.name)) );
-        $stmts.push( $build );
         for $<targets> {
             $stmts.push( QAST::Op.new( :op<bind>, $target,
                 QAST::Op.new( :op<callmethod>, :name<get>,  $how, $_.made ) ) );
             $stmts.push( QAST::Op.new( :op<callmethod>, :name<install_build_code>, $target,
-                QAST::BVal.new( :value( $build ) ) ) );
+                QAST::BVal.new( :value( $block ) ) ) );
             for $<prerequisites> {
-                my $pre := $_.made;
-                $stmts.push(QAST::Op.new( :op<if>, QAST::Op.new( :op<isstr>, $pre ),
-                    QAST::Op.new( :op<callmethod>, :name<depend>, $target, $pre ),
-                    QAST::Op.new( :op<if>, QAST::Op.new( :op<islist>, $pre ),
-                        QAST::Op.new( :op<for>, $pre, QAST::Block.new(
+                $stmts.push(QAST::Op.new( :op<if>, QAST::Op.new( :op<isstr>, $_.made ),
+                    QAST::Op.new( :op<callmethod>, :name<depend>, $target, $_.made ),
+                    QAST::Op.new( :op<if>, QAST::Op.new( :op<islist>, $_.made ),
+                        QAST::Op.new( :op<for>, $_.made, QAST::Block.new(
                             QAST::Var.new( :name<pre>, :scope<local>, :decl<param> ),
                             QAST::Op.new( :op<if>, QAST::Op.new( :op<isstr>, QAST::Var.new( :name<pre>, :scope<local> ) ),
                                 QAST::Op.new( :op<callmethod>, :name<depend>, $target, QAST::Var.new( :name<pre>, :scope<local> ) ),
@@ -804,7 +806,7 @@ class MO::Actions is HLL::Actions {
                 ));
             }
         }
-        make $stmts;
+        $stmts
     }
 
     method definition:sym<template>($/) {
@@ -952,24 +954,43 @@ class MO::Actions is HLL::Actions {
 
     method class_member:sym<method>($/) {
         my $scope := $*W.pop_scope;
-        my $ctor := $scope.ann('outer');
-        my $class := $ctor.ann('package');
-        $scope.push( $<statements>.made );
-        $scope.name( ~$<name> );
-        $ctor[0].push($scope);
+        my $meth := $<colon> ?? $*W.pop_scope !! $scope;
+        my $ctor := $meth.ann('outer');
+        $meth.name( $ctor.ann('class-name')~'::'~$<name> );
+        $ctor.push( $meth );
 
-        my $code := $*W.install_package_routine($class, $scope.name, $scope);
-        $class.HOW.add_method($class, $scope.name, $code);
+        my $class := $ctor.ann('package');
+
+        if $<colon> {
+            my $build := $scope;
+            $build.name( $meth.name~':rule' );
+            $build.push( $<statements>.made );
+
+            my $how := QAST::WVal.new( :value(MO::FilesystemNodeHOW) );
+            $meth.push( $build );
+            for $<targets> {
+                $meth.push( QAST::Op.new( :op<callmethod>, :name<make>,
+                    QAST::Op.new( :op<callmethod>, :name<get>,  $how, $_.made ),
+                    QAST::Var.new( :name<me>, :scope<lexical> ),
+                ) );
+            }
+
+            $ctor.push( self.build_rule_init($/, $build) );
+        } else {
+            $meth.push( $<statements>.made );
+        }
+
+        my $code := $*W.install_package_routine($class, $meth.name, $meth);
+        $class.HOW.add_method($class, ~$<name>, $code);
     }
 
-    method class_member:sym<rule>($/) {
-        my $stmts := $<build_rule_declaration>.made;
-
-        my $ctor := $*W.current_scope;
-        my $class := $ctor.ann('package');
-        $/.CURSOR.panic('looking for package scope') unless nqp::defined($class);
-
-        $ctor.push( $stmts );
+    method class_member:sym<:>($/) {
+        my $build := $*W.pop_scope;
+        my $ctor := $build.ann('outer');
+        $build.name( QAST::Node.unique($ctor.ann('class-name')~'::rule') );
+        $build.push( $<statements>.made );
+        $ctor.push( self.build_rule_init($/, $build) );
+        $ctor.push( $build );
     }
 
     method class_member:sym<$>($/) {

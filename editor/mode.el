@@ -124,6 +124,8 @@
    (cons "\\(?:class\\|template\\)\s+\\([A-Z][A-Za-z_0-9]*\\)" '(1 mo-type-bold-face))
    (cons "\\(?:class\\|template\\)\s+\\([a-z_][A-Za-z_0-9]*\\)" '(1 mo-type-face))
 
+   (cons "method\s+\\([A-Za-z_][A-Za-z_0-9]*\\)\s*:" '(1 mo-function-name-face))
+
    (cons "lang\s+\\([a-z_][A-Za-z_0-9]*\\)" '(1 mo-reference-bold-face))
 
    (cons (mo-ppre mo-keyword-list) '(1 mo-keyword-face))

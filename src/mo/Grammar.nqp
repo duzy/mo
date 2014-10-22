@@ -441,10 +441,6 @@ grammar MO::Grammar is HLL::Grammar {
 
     rule declaration:sym<rule> {
         :my $*IN_DECL; { $*IN_DECL := 'rule'; }
-        <build_rule_declaration> { $*IN_DECL := 0; }
-    }
-
-    rule build_rule_declaration {
         <targets=.EXPR>+ $<colon>=':' <prerequisites=.EXPR>*
         {
             my $scope := $*W.current_scope;
@@ -453,12 +449,9 @@ grammar MO::Grammar is HLL::Grammar {
             }
         }
         '{' ~ '}' [
-         {
-            my @params := [ '$_', '@_' ];
-            @params.unshift('me') if $*IN_DECL eq 'member-rule';
-
-            my $scope := self.push_scope( ~$<sym>, @params );
-         } <statements> ]
+        {
+            my $scope := self.push_scope( ~$<sym>, [ 'me', '$_', '@_' ] );
+        } <statements> ] { $*IN_DECL := 0; }
     }
 
     proto rule definition { <...> }
@@ -606,8 +599,12 @@ grammar MO::Grammar is HLL::Grammar {
 
     proto rule class_member { <...> }
     rule class_member:sym<method> {
-        <sym>\s <name=.ident>
-        '(' ~ ')' [ { self.push_scope( 'method', 'me' ) } <params> ]?
+        <sym>\s <name=.ident> { self.push_scope( 'method', 'me' ) }
+        [
+        | '(' ~ ')' <params>?
+        | ':' <targets=.EXPR>+ $<colon>=':' <prerequisites=.EXPR>*
+          { self.push_scope( 'member-rule', ['me', '$_', '@_'] ) }
+        ]
         '{' ~ '}' <statements>
     }
 
@@ -620,9 +617,11 @@ grammar MO::Grammar is HLL::Grammar {
         <variable> <!before ':'> <initializer>? ';'? { $*IN_DECL := 0; }
     }
 
-    rule class_member:sym<rule> {
-        :my $*IN_DECL; { $*IN_DECL := 'member-rule'; }
-        <build_rule_declaration> { $*IN_DECL := 0; }
+    rule class_member:sym<:> {
+        $<name>=<?>
+        <targets=.EXPR>+ $<colon>=':' <prerequisites=.EXPR>*
+        { self.push_scope( 'member-rule', ['me', '$_', '@_'] ) }
+        '{' ~ '}' <statements>
     }
 
     rule definition:sym<lang> {
