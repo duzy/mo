@@ -1,5 +1,3 @@
-say('1..40');
-
 "foo" : "bar"
 {
     say('ok - 7. build foo');

@@ -1,0 +1,40 @@
+ok - 1. build bar
+ok - 2. $_.name() is bar
+ok - 3. $_.path() is /home/zhan/tools/a/work/mo/bar
+ok - 4. (test -f bar) != 0
+ok - 5. (touch bar) == 0
+ok - 6. (test -f bar) == 0
+ok - 7. build foo
+ok - 8. $_.name() is foo
+ok - 9. $_.path() is /home/zhan/tools/a/work/mo/foo
+ok - 10. (test -f foo) != 0
+ok - 11. (touch foo) == 0
+ok - 12. (test -f foo) == 0
+ok - 13. +@_ == 1 
+ok - 14. @_[0].name() is bar
+ok - 15. @_[0].path() is /home/zhan/tools/a/work/mo/bar
+ok - 16. build foo
+ok - 17. $_.name() is foo
+ok - 18. $_.path() is /home/zhan/tools/a/work/mo/foo
+ok - 19. (test -f foo) != 0
+ok - 20. (touch foo) == 0
+ok - 21. (test -f foo) == 0
+ok - 22. normal
+ok - 23. build bar
+ok - 24. $_.name() is bar
+ok - 25. $_.path() is /home/zhan/tools/a/work/mo/bar
+ok - 26. (test -f bar) != 0
+ok - 27. (touch bar) == 0
+ok - 28. (test -f bar) == 0
+ok - 29. normal
+ok - 30. build foobar
+ok - 31. $_.name() is foobar
+ok - 32. $_.path() is /home/zhan/tools/a/work/mo/foobar
+ok - 33. (test -f foobar) != 0
+ok - 34. (touch foobar) == 0
+ok - 35. (test -f foobar) == 0
+ok - 36. +@_ == 2
+ok - 37. @_[0].name() is foo
+ok - 38. @_[1].name() is bar
+ok - 39. (test -f foo) == 0
+ok - 40. (test -f bar) == 0

@@ -324,7 +324,7 @@ grammar MO::Grammar is HLL::Grammar {
 
             $*UNIT := self.push_scope('unit');
             $*UNIT.symbol('@ARGS', :scope<lexical>, :decl<param>);
-            $*UNIT.symbol('$_', :scope<lexical>, :decl<var>);
+            $*UNIT.symbol('$_',    :scope<lexical>, :decl<var>);
             $*UNIT.symbol('~init', :scope<lexical>);
             $*UNIT.symbol('~load', :scope<lexical>);
             $*UNIT.annotate('package', $*GLOBALish);

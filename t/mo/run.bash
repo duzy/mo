@@ -61,6 +61,7 @@ run $SRCDIR/41-io-system
 run $SRCDIR/44-filesystem-make
 run $SRCDIR/44-filesystem-make-rule
 run $SRCDIR/44-filesystem-make-rule-2
+run $SRCDIR/45-rules
 run $SRCDIR/50-funs
 run $SRCDIR/50-fun-returns
 run $SRCDIR/50-fun-lexical

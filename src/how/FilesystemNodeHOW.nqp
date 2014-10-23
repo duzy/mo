@@ -69,23 +69,23 @@ knowhow MO::FilesystemNodeHOW {
     my sub method_path($node)        { pathabs(nqp::getattr($node, $type, '')) }
     my sub method_lastname($node)    { pathname(nqp::getattr($node, $type, '')) }
     my sub method_depends($node)     { nqp::getattr($node, $type, '@depends') }
-    my sub method_depend($node, $path) {
-        nqp::die('"$node.depend()" needs a path string') unless nqp::isstr($path);
-
-        my @depends := method_depends($node);
-        my $dep;
-        if nqp::isstr($path) {
-            $dep := MO::FilesystemNodeHOW.get(:path($path));
-        } elsif nqp::can($node, 'make') {
-            $dep := $path;
-        } else {
-            nqp::die("unsupported dependency $path");
-        }
-        @depends := nqp::list() unless nqp::defined(@depends);
-        @depends.push($dep);
-        nqp::bindattr($node, $type, '@depends', @depends);
-        $dep
-    }
+    # my sub method_depend($node, $path) {
+    #     nqp::die('"$node.depend()" needs a path string') unless nqp::isstr($path);
+    #
+    #     my @depends := method_depends($node);
+    #     my $dep;
+    #     if nqp::isstr($path) {
+    #         $dep := MO::FilesystemNodeHOW.get(:path($path));
+    #     } elsif nqp::can($node, 'make') {
+    #         $dep := $path;
+    #     } else {
+    #         nqp::die("unsupported dependency $path");
+    #     }
+    #     @depends := nqp::list() unless nqp::defined(@depends);
+    #     @depends.push($dep);
+    #     nqp::bindattr($node, $type, '@depends', @depends);
+    #     $dep
+    # }
     my sub method_make($node, $context?) {
         my int $updated := 0;
         my int $missing := 0;
@@ -154,7 +154,7 @@ knowhow MO::FilesystemNodeHOW {
         %methods<parent_name>           := &method_parent_name;
         %methods<path>                  := &method_path;
         %methods<lastname>              := &method_lastname;
-        %methods<depend>                := &method_depend;
+        # %methods<depend>                := &method_depend;
         %methods<depends>               := &method_depends;
         %methods<make>                  := &method_make;
         %methods<install_build_code>    := &method_install_build_code;
@@ -231,10 +231,17 @@ knowhow MO::FilesystemNodeHOW {
         $node;
     }
 
-    method get(:$path) {
-        my $abspath := pathabs($path);
-        my $node := %cache{$abspath};
-        %cache{$abspath} := $node := self.open(:$path) unless nqp::defined($node);
-        $node
+    # method get(:$path) {
+    #     my $abspath := pathabs($path);
+    #     my $node := %cache{$abspath};
+    #     %cache{$abspath} := $node := self.open(:$path) unless nqp::defined($node);
+    #     $node
+    # }
+
+    method add_depends($node, @targets) {
+        my @depends := method_depends($node);
+        @depends := nqp::list() unless nqp::defined(@depends);
+        @depends.push($_) for @targets;
+        nqp::bindattr($node, $type, '@depends', @depends)
     }
 }

@@ -43,6 +43,8 @@ function run-android-examples() {
     done
 }
 
+#        shared-lexical-for-rules
+
 function run-normal-examples() {
     for mo in \
         proto-simple \
@@ -50,7 +52,7 @@ function run-normal-examples() {
         proto-run \
         many-run \
         class-test \
-        shared-lexical-for-rules \
+        rules \
         ; do
         echo -n "test: $SRCDIR/$mo.mo.."
         ( run $SRCDIR/$mo.mo ) > $SRCDIR/$mo.out

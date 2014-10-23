@@ -131,8 +131,9 @@ class MO::Actions is HLL::Actions {
     }
 
     method circumfix:sym«< >»($/) {
-        make QAST::Op.new( :op<callmethod>, :name<get>,
-            QAST::WVal.new( :value(MO::FilesystemNodeHOW) ), $<EXPR>.made );
+        my $name := '~rules';
+        my $rulehash := $*W.symbol_ast($/, [$name], 0) // self.declare_unit_rules($name);
+        make QAST::Op.new( :op<callmethod>, :name<get>, $rulehash, $<EXPR>.made );
         #$/.prune;
     }
 
@@ -774,12 +775,40 @@ class MO::Actions is HLL::Actions {
         $build.name( QAST::Node.unique('rule') );
         $build.push( $<statements>.made );
 
-        my $stmts := self.build_rule_init($/, $build);
+        my $name := '~rules';
+        my $rulehash := $*W.symbol_ast($/, [$name], 0) // self.declare_unit_rules($name);
+
+        my $stmts := self.build_rule_init($/, $build, $rulehash);
         $stmts.push( $build ); # push the build code
         make $stmts;
     }
 
-    method build_rule_init($/, $block) {
+    method declare_unit_rules($name) {
+        unless $*UNIT.symbol($name) {
+            $*UNIT.symbol($name, :scope<lexical>);
+            $*UNIT[0].push( QAST::Op.new( :op<bind>,
+                QAST::Var.new( :name($name), :scope<lexical>, :decl<var> ),
+                QAST::Op.new( :op<callmethod>, :name<new_hash>,
+                    QAST::WVal.new( :value(MO::RuleHashHOW) ),
+                    QAST::SVal.new( :value('') ) ),
+            ) );
+        }
+        QAST::Var.new( :name($name), :scope<lexical> );
+    }
+
+    method build_rule_init($/, $block, $rulehash) {
+        my $stmts := QAST::Stmts.new( :node($/) );
+        my $targets := QAST::Op.new( :op<list> );
+        my $prerequisites := QAST::Op.new( :op<list> );
+        for $<targets> { $targets.push($_.made) }
+        for $<prerequisites> { $prerequisites.push($_.made) }
+        $stmts.push( QAST::Op.new( :op<callmethod>, :name<link>,
+            $rulehash, $targets, $prerequisites,
+            QAST::BVal.new( :value( $block ) ) ) );
+        $stmts
+    }
+
+    method build_rule_init_deprecated($/, $block) {
         my $stmts := QAST::Stmts.new( :node($/) );
         my $target := QAST::Var.new(:scope<lexical>, :name(QAST::Node.unique('rule_target')));
         my $how := QAST::WVal.new( :value(MO::FilesystemNodeHOW) );
@@ -957,7 +986,6 @@ class MO::Actions is HLL::Actions {
         my $meth := $<colon> ?? $*W.pop_scope !! $scope;
         my $ctor := $meth.ann('outer');
         $meth.name( $ctor.ann('class-name')~'::'~$<name> );
-        $ctor.push( $meth );
 
         my $class := $ctor.ann('package');
 
@@ -966,19 +994,27 @@ class MO::Actions is HLL::Actions {
             $build.name( $meth.name~':rule' );
             $build.push( $<statements>.made );
 
-            my $how := QAST::WVal.new( :value(MO::FilesystemNodeHOW) );
+            my $rulehash := self.class_rule_hash($class, $ctor);
+
             $meth.push( $build );
+            $meth.push( QAST::Op.new( :op<bind>,
+                QAST::Var.new( :name<rules>, :scope<local>, :decl<var> ),
+                $rulehash,
+            ) );
             for $<targets> {
                 $meth.push( QAST::Op.new( :op<callmethod>, :name<make>,
-                    QAST::Op.new( :op<callmethod>, :name<get>,  $how, $_.made ),
+                    QAST::Op.new( :op<callmethod>, :name<get>,
+                        QAST::Var.new( :name<rules>, :scope<local> ), $_.made ),
                     QAST::Var.new( :name<me>, :scope<lexical> ),
                 ) );
             }
 
-            $ctor.push( self.build_rule_init($/, $build) );
+            $ctor.push( self.build_rule_init($/, $build, $rulehash) );
         } else {
             $meth.push( $<statements>.made );
         }
+
+        $ctor.push( $meth );
 
         my $code := $*W.install_package_routine($class, $meth.name, $meth);
         $class.HOW.add_method($class, ~$<name>, $code);
@@ -987,9 +1023,12 @@ class MO::Actions is HLL::Actions {
     method class_member:sym<:>($/) {
         my $build := $*W.pop_scope;
         my $ctor := $build.ann('outer');
+        my $class := $ctor.ann('package');
         $build.name( QAST::Node.unique($ctor.ann('class-name')~'::rule') );
         $build.push( $<statements>.made );
-        $ctor.push( self.build_rule_init($/, $build) );
+
+        my $rulehash := self.class_rule_hash($class, $ctor);
+        $ctor.push( self.build_rule_init($/, $build, $rulehash) );
         $ctor.push( $build );
     }
 
@@ -1028,6 +1067,37 @@ class MO::Actions is HLL::Actions {
         my $class := $ctor.ann('package');
         $scope.name( QAST::Node.unique($ctor.ann('class-name')~'::~ctor') );
         $ctor.push( QAST::Op.new( :op<call>, $scope ) );
+    }
+
+    method class_rule_hash($class, $ctor) {
+        my $rulehash := $ctor.ann('~rule');
+        unless nqp::defined($rulehash) {
+            my $name := '~rules';
+            my %lit_args;
+            my %obj_args;
+            %lit_args<name> := $name;
+
+            my $attr := (%*HOW<attribute>).new(|%lit_args, |%obj_args);
+            $class.HOW.add_attribute($class, $attr);
+
+            my $how := QAST::WVal.new( :value(MO::RuleHashHOW) );
+
+            $ctor[0].push( QAST::Op.new( :op<bindattr>,
+                QAST::Var.new( :name<me>, :scope<lexical> ),
+                QAST::WVal.new( :value($class) ),
+                QAST::SVal.new( :value($name) ),
+                QAST::Op.new( :op<callmethod>, :name<new_hash>,
+                    QAST::WVal.new( :value(MO::RuleHashHOW) ),
+                    QAST::SVal.new( :value($class.HOW.name($class)) ) ) ) );
+
+            $rulehash := QAST::Op.new( :op<getattr>,
+                QAST::Var.new( :name<me>, :scope<lexical> ),
+                QAST::WVal.new( :value($class) ),
+                QAST::SVal.new( :value($name) ) );
+
+            $ctor.annotate('~rule', $rulehash);
+        }
+        $rulehash
     }
 
     method definition:sym<lang>($/) {
