@@ -52,7 +52,7 @@ def check_notnull($v, $err) {
     if isnull($v) { die($err) }
 }
 
-class project <$path>
+class project <$path, $variant>
 {
     $.platform;
     $.platform_jar;
@@ -101,7 +101,7 @@ class project <$path>
         var $lib_path;
         while !isnull($lib = $projectProperties{'android.library.reference.'~(1+$.libs)}) {
             $.libs.push($lib_path = search_library($path, $lib));
-            $.prerequisites.push(new(project, $lib_path));
+            $.prerequisites.push(new(project, $lib_path, $variant));
         }
 
         $.platform_jar  = any isreg "$sdk/platforms/$platform/android.jar";
@@ -185,12 +185,58 @@ class project <$path>
     method assets()    { <"$.project_path/assets">.findall(def($path, $name){ !endswith($name, '~') }) }
     method resources() { <"$.project_path/res">.findall(def($path, $name){ endswith($name, '.xml', '.png', '.jpg', '.xml') }) }
     method sources()   { <"$.project_path/src">.findall(def($path, $name){ endswith($name, '.java') }) }
+
+    ######## rules ########
+
+    $.out = "$path/bin/$variant";
+    $.target = "$.out/$.project_name." ~ ($.is_library ? 'jar' : 'apk');
+    {
+        # say($.out);
+    }
+
+    method make: $.target : ($.is_library ? "$.out/classes.purged" : "$.out/_.signed")
+    {
+        say('make: '~$_.name());
+    }
+
+    "$.out/_.signed" : "$.out/_.pack"
+    {
+        say("build: $.out/_.signed");
+    }
+
+    "$.out/_.pack" : "$path/AndroidManifest.xml" "$.out/classes.dex"
+    {
+        say("build: $.out/_.pack");
+    }
+
+    "$.out/classes.dex" : "$.out/classes.list"
+    {
+        say("build: $.out/classes.dex");
+    }
+
+    "$.out/classes.purged" : "$.out/classes.list"
+    {
+        # say('build: '~$_.name());
+        say("build: $.out/classes.purged");
+    }
+
+    "$.out/classes.list" : "$.out/sources.list" "$.out/classpath"
+    {
+        say("$.out/classes.list");
+    }
+
+    "$.out/sources.list" : "$.out/sources/R.java.d" me.sources()
+    {
+        say("$.out/sources.list");
+    }
 }
 
-def ParseProject($path) {
+def ParseProject($path, $variant) {
     unless isreg("$path/AndroidManifest.xml") {
         die("AndroidManifest.xml is not underneath $path");
     }
 
-    new(project, $path)
+    new(project, $path, $variant)
 }
+
+say('...');
