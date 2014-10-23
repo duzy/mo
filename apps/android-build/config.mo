@@ -48,6 +48,12 @@ def search_library($path, $lib) {
     }
 }
 
+def join_target_path($sep, @_) {
+    var @paths = list(); 
+    for @_ { @paths.push($_.path()) }
+    join($sep, @paths)
+}
+
 def check_notnull($v, $err) {
     if isnull($v) { die($err) }
 }
@@ -68,20 +74,22 @@ class project <$path, $variant>
     $.sign_storepass;
     $.sign_keypass;
 
-    $.project_path = $path;
-    $.project_name = basename($path);
-    $.project_manifest = load_manifest($path);
+    $.path = $path;
+    $.name = basename($path);
+    $.manifest = load_manifest($path);
 
     $.is_library = 0;
 
     $.libs = list();
+    $.lib_projects = hash();
 
-    $.prerequisites = list();
+    $.out = "$path/bin/$variant";
+    $.target;
 
     {
-        var $name = $.project_name;
-        var $manifest = $.project_manifest;
-        if isnull($name) { $name = $.project_name = split('.', $manifest.package).pop() }
+        var $name = $.name;
+        var $manifest = $.manifest;
+        if isnull($name) { $name = $.name = split('.', $manifest.package).pop() }
 
         var $localProperties   = LoadProperties("$path/local.properties");
         var $projectProperties = LoadProperties("$path/project.properties");
@@ -96,12 +104,16 @@ class project <$path, $variant>
 
         var $library = $projectProperties{'android.library'}; # android.library=true
         $.is_library = isnull($library) ? 0 : $library eq 'true';
+        $.target = "$.out/$.name." ~ ($.is_library ? 'jar' : 'apk');
 
+        var $pre;
         var $lib;
         var $lib_path;
         while !isnull($lib = $projectProperties{'android.library.reference.'~(1+$.libs)}) {
-            $.libs.push($lib_path = search_library($path, $lib));
-            $.prerequisites.push(new(project, $lib_path, $variant));
+            $lib_path = search_library($path, $lib);
+            $pre = new(project, $lib_path, $variant);
+            $.libs.push($lib = "$lib_path/bin/$variant/"~$pre.name()~'.jar');
+            $.lib_projects{$lib} = $pre;
         }
 
         $.platform_jar  = any isreg "$sdk/platforms/$platform/android.jar";
@@ -173,66 +185,207 @@ class project <$path, $variant>
     method sign_storepass()          { $.sign_storepass }
     method sign_keypass()            { $.sign_keypass }
 
-    method path() { $.project_path }
-    method name() { $.project_name }
-    method manifest() { $.project_manifest }
+    method path() { $.path }
+    method name() { $.name }
+    method manifest() { $.manifest }
 
     method is_library() { $.is_library }
 
     method libs() { $.libs }
-    method prerequisites() { $.prerequisites }
+    #method prerequisites() { $.prerequisites }
 
-    method assets()    { <"$.project_path/assets">.findall(def($path, $name){ !endswith($name, '~') }) }
-    method resources() { <"$.project_path/res">.findall(def($path, $name){ endswith($name, '.xml', '.png', '.jpg', '.xml') }) }
-    method sources()   { <"$.project_path/src">.findall(def($path, $name){ endswith($name, '.java') }) }
+    method assets()    { <"$.path/assets">.findall(def($path, $name){ !endswith($name, '~') }) }
+    method resources() { <"$.path/res">.findall(def($path, $name){ endswith($name, '.xml', '.png', '.jpg', '.xml') }) }
+    method sources()   { <"$.path/src">.findall(def($path, $name){ endswith($name, '.java') }) }
 
-    ######## rules ########
-
-    $.out = "$path/bin/$variant";
-    $.target = "$.out/$.project_name." ~ ($.is_library ? 'jar' : 'apk');
-    {
-        # say($.out);
-    }
+    ############################## rules ##############################
 
     method make: $.target : ($.is_library ? "$.out/classes.purged" : "$.out/_.signed")
     {
-        say('make: '~$_.name());
+        var $dir = $_.parent_path();
+        var $target = $_.name();
+        var $depend = @_[0].path();
+        var $cmd = me.cmd($.is_library ? 'jar' : 'zipalign');
+        if $.is_library lang shell :escape
+-------------------------------
+echo "$.name: Generating library ($target).."
+mkdir -p $dir || exit -1
+$cmd cf $target -C "$.out/classes" .
+#$cmd cvfm $target manifest -C "$.out/classes" .
+----------------------------end
+        else lang shell :escape
+-------------------------------
+echo "$.name: Generating APK ($target).."
+mkdir -p "$dir" || exit -1
+$cmd -f 4 "$depend" "$target"
+----------------------------end
+        end
     }
 
     "$.out/_.signed" : "$.out/_.pack"
     {
-        say("build: $.out/_.signed");
+        var $storepass = isnull($.sign_storepass)          ? '' : "-storepass '$.sign_storepass'";
+        var $keypass   = isnull($.sign_keypass)            ? '' : "-keypass '$.sign_keypass'";
+        var $keystore  = isnull($.sign_keystore_filename)  ? '' : "-keystore '$.sign_keystore_filename'";
+        var $cmd    = me.cmd('jarsigner');
+        var $cert   = $.sign_cert;
+        var $signed = $_.path();
+        var $pack   = @_[0].path();
+        var $tsa = 1 ? "-tsacert $cert" : '-tsa';
+        lang shell :escape
+-------------------------------
+echo "$.name: Signing package.."
+cp -f $pack $signed || exit -1
+$cmd -sigalg MD5withRSA -digestalg SHA1 $keystore $keypass $storepass \
+    $signed $cert
+----------------------------end
     }
 
-    "$.out/_.pack" : "$path/AndroidManifest.xml" "$.out/classes.dex"
+    "$.out/_.pack" : "$.path/AndroidManifest.xml" "$.out/classes.dex"
     {
-        say("build: $.out/_.pack");
+        var $dir  = $_.parent_path();
+        var $pack = $_.path();
+        var $am   = @_[0].path();
+        var $dex  = @_[1].path();
+        var $libs   = "-I $.platform_jar";
+        var $reses  = "-S '$.path/res'";
+        var $assets = "-A '$.path/assets'";
+        var $debug  = $variant eq 'debug' ? '--debug-mode' : '';
+        var $cmd = me.cmd('aapt');
+        unless isdir($assets) { $assets = '' }
+        lang shell :escape
+--------------------------------
+echo "$.name: Packing resources.."
+mkdir -p $dir || exit -1
+$cmd package -f -F $pack -M $am $libs $reses $assets \
+    $debug --auto-add-overlay
+
+echo "$.name: Packing natives.. (TODO)"
+
+echo "$.name: Packing classes.."
+$cmd add -k $pack $dex > /dev/null
+----------------------------end
     }
 
     "$.out/classes.dex" : "$.out/classes.list"
     {
-        say("build: $.out/classes.dex");
+        var $is_windows = 0;
+        var $os_options = $is_windows ? '' : '-JXms16M -JXmx1536M';
+        var $apk = $.target;
+        var $dex = $_.path();
+        var $libs = '';
+        var $input = "$.out/classes";
+        var $debug  = $variant eq 'debug' ? '--debug' : '';
+        var $cmd = me.cmd('dx');
+        lang shell :escape
+-------------------------------
+echo "$.name: Generating dex file.."
+rm -f $apk "$.out/_.signed" "$.out/_.unsigned" "$.out/_.pack"
+$cmd $os_options --dex $debug --output $dex $libs $input
+----------------------------end
     }
 
     "$.out/classes.purged" : "$.out/classes.list"
     {
-        # say('build: '~$_.name());
-        say("build: $.out/classes.purged");
+        var $purged = $_.path();
+        lang shell :escape
+-------------------------------
+echo "$.name: Purging duplicated classes.."
+# find "$.out/classes" -type f \\( -name 'R.class' -or -name 'R\$*.class' \\) -delete
+find "$.out/classes" -type f \\( -name 'R.class' -or -name 'R\$*.class' \\) -print > $purged
+for f in \$(cat $purged) ; do rm -f \$f ; done
+----------------------------end
     }
 
     "$.out/classes.list" : "$.out/sources.list" "$.out/classpath"
     {
-        say("$.out/classes.list");
+        var $debug  = $variant eq 'debug' ? '-g' : '';
+        var $cmd = me.cmd('javac');
+        lang shell :escape
+--------------------------------
+echo "$.name: Generating classes.."
+rm -f $.out/classes.{dex,jar}
+[[ -d $.out/classes ]] || mkdir -p "$.out/classes" || exit -1
+$cmd -d "$.out/classes" $debug -Xlint:unchecked -encoding "UTF-8" \
+    -Xlint:-options -source 1.5 -target 1.5 \
+    -sourcepath "$.out/sources" "\@$.out/classpath" "\@$.out/sources.list"
+find "$.out/classes" -type f -name '*.class' > "$.out/classes.list"
+----------------------------end
     }
 
-    "$.out/sources.list" : "$.out/sources/R.java.d" #me.sources()
+    "$.out/sources.list" : "$.out/sources/R.java.d" me.sources()
     {
-        say("$.out/sources.list: ");
+        var $d = @_.shift(); # remove R.java.d
+        var $sources = join_target_path(' ', @_);
+        var $outfile = $_.path();
+        lang shell :escape
+-------------------------------
+echo "$.name: Generating source list.."
+mkdir -p \$(dirname $outfile) || exit -1
+(
+    for s in $sources ; do echo \$s ; done
+    find "$.out/sources" -type f -name '*.java'
+) > $outfile
+----------------------------end
     }
 
-    "$.out/sources/R.java.d" : "$path/AndroidManifest.xml" "$path/res" #$project.resources() @libs
+    "$.out/sources/R.java.d" : "$.path/AndroidManifest.xml" "$.path/res" me.resources() $.libs
     {
-        say("$.out/sources/R.java.d");
+        #say("build: $.out/sources/R.java.d, "~+@_~', '~$.path~', '~+me.resources());
+        #for @_ { say('R.java.d: '~$_.name()); }
+
+        var $libs   = "-I $.platform_jar";
+        var $reses  = isdir("$.path/res") ? "-S '$.path/res'" : '';
+        var $assets = isdir("$.path/assets") ? "-A '$.path/assets'" : '';
+        var $am  = @_[0].path();
+        var $cmd = me.cmd('aapt');
+        if $.is_library lang shell :escape
+--------------------------------
+echo "$.name: Generating R.java ($.path).."
+mkdir -p "$.out/sources" || exit -1
+$cmd package -f -m -M $am \
+    -J "$.out/sources" \
+    -P "$.out/sources/R.public" \
+    -G "$.out/sources/R.proguard" \
+	--output-text-symbols "$.out/sources" \
+    --generate-dependencies --auto-add-overlay \
+    $libs $reses $assets
+----------------------------end
+        else lang shell :escape
+--------------------------------
+echo "$.name: Generating R.java ($.path).."
+mkdir -p "$.out/sources" || exit -1
+$cmd package -f -m -x -M $am \
+    -J "$.out/sources" \
+    -P "$.out/sources/R.public" \
+    -G "$.out/sources/R.proguard" \
+	--output-text-symbols "$.out/sources" \
+    --generate-dependencies --non-constant-id --auto-add-overlay \
+    $libs $reses $assets
+----------------------------end
+        end
+    }
+
+    "$.out/classpath":
+    {
+        var $dir = $_.parent_path();
+        var $classpath = $_.path();
+        lang shell :escape
+-------------------------------
+echo "$.name: Generating classpath.."
+mkdir -p $dir || exit -1
+( echo '-bootclasspath "$.platform_jar"' ) > $classpath
+----------------------------end
+    }
+
+    $.libs:
+    {
+        var $lib = $_.name();
+        var $project = $.lib_projects{$lib};
+        if defined($project) {
+            say("$.name: Building "~$project.name()~" ($lib)");
+            $project.make();
+        }
     }
 }
 
@@ -243,5 +396,3 @@ def ParseProject($path, $variant) {
 
     new(project, $path, $variant)
 }
-
-say('...');
