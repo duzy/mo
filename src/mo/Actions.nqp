@@ -131,8 +131,16 @@ class MO::Actions is HLL::Actions {
     }
 
     method circumfix:sym«< >»($/) {
+        my $scope := $*W.get_package_scope;
+        my $package := $scope.ann('package');
+
+        my $rulehash;
         my $name := '~rules';
-        my $rulehash := $*W.symbol_ast($/, [$name], 0) // self.declare_unit_rules($name);
+        if nqp::istype($package.HOW, MO::ClassHOW) {
+            $rulehash := self.class_rule_hash($package, $scope);
+        } else {
+            $rulehash := $*W.symbol_ast($/, [$name], 0) // self.declare_unit_rules($name);
+        }
         make QAST::Op.new( :op<callmethod>, :name<get>, $rulehash, $<EXPR>.made );
         #$/.prune;
     }

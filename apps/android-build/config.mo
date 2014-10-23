@@ -225,9 +225,14 @@ class project <$path, $variant>
         say("$.out/classes.list");
     }
 
-    "$.out/sources.list" : "$.out/sources/R.java.d" me.sources()
+    "$.out/sources.list" : "$.out/sources/R.java.d" #me.sources()
     {
-        say("$.out/sources.list");
+        say("$.out/sources.list: ");
+    }
+
+    "$.out/sources/R.java.d" : "$path/AndroidManifest.xml" "$path/res" #$project.resources() @libs
+    {
+        say("$.out/sources/R.java.d");
     }
 }
 
