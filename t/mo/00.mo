@@ -64,7 +64,7 @@ class foobar
         say(((system('test -f foo') != 0) ? 'ok' : 'xx')~' - 19. (test -f foo) != 0');
         say(((system('touch foo || exit 1') == 0) ? 'ok' : 'xx')~' - 20. (touch foo) == 0');
         say(((system('test -f foo') == 0) ? 'ok' : 'xx')~' - 21. (test -f foo) == 0');
-        me.normal(22);
+        say((<'foo'>.exists() ? 'ok' : 'xx')~' - 22. <\'foo\'>.exists()');
     }
 
     'bar' :
@@ -81,6 +81,7 @@ class foobar
 
 var $t = new(foobar);
 system('rm -f foo bar foobar');
+
 $t.make();
 
 system('rm -f foo bar foobar');

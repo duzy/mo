@@ -19,7 +19,7 @@ ok - 18. $_.path() is /home/zhan/tools/a/work/mo/foo
 ok - 19. (test -f foo) != 0
 ok - 20. (touch foo) == 0
 ok - 21. (test -f foo) == 0
-ok - 22. normal
+ok - 22. <'foo'>.exists()
 ok - 23. build bar
 ok - 24. $_.name() is bar
 ok - 25. $_.path() is /home/zhan/tools/a/work/mo/bar

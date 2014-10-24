@@ -68,60 +68,10 @@ knowhow MO::FilesystemNodeHOW {
     my sub method_parent_name($node) { pathname(method_parent_path($node)) }
     my sub method_path($node)        { pathabs(nqp::getattr($node, $type, '')) }
     my sub method_lastname($node)    { pathname(nqp::getattr($node, $type, '')) }
-    my sub method_depends($node)     { nqp::getattr($node, $type, '@depends') }
-    # my sub method_depend($node, $path) {
-    #     nqp::die('"$node.depend()" needs a path string') unless nqp::isstr($path);
-    #
-    #     my @depends := method_depends($node);
-    #     my $dep;
-    #     if nqp::isstr($path) {
-    #         $dep := MO::FilesystemNodeHOW.get(:path($path));
-    #     } elsif nqp::can($node, 'make') {
-    #         $dep := $path;
-    #     } else {
-    #         nqp::die("unsupported dependency $path");
-    #     }
-    #     @depends := nqp::list() unless nqp::defined(@depends);
-    #     @depends.push($dep);
-    #     nqp::bindattr($node, $type, '@depends', @depends);
-    #     $dep
-    # }
-    my sub method_make($node, $context?) {
-        my int $updated := 0;
-        my int $missing := 0;
-
-        my @depends := method_depends($node);
-        if nqp::defined(@depends) {
-            for @depends {
-                my int $made := method_make($_, $context);
-                if $made < 0 {
-                    $missing := $missing + $made;
-                } elsif $_.exists() {
-                    $made := 1 if $made == 0 && newer_than($_, $node);
-                    $updated := $updated + $made;
-                } else {
-                    $missing := $missing - 1;
-                    nqp::say('target '~$_.name()~' was not made');
-                }
-            }
-        }
-
-        my $build := nqp::getattr($node, $type, '&build');
-        if $missing == 0 && nqp::isinvokable($build) {
-            if !method_exists($node) || 0 < $updated {
-                my $status := $build($context, $node, @depends);
-                if method_exists($node) {
-                    $updated := $updated + 1;
-                }
-            }
-        }
-
-        $missing == 0 ?? $updated !! $missing
-    }
-    my sub method_install_build_code($node, $code) {
-        my $prevcode := nqp::getattr($node, $type, '&build');
-        nqp::bindattr($node, $type, '&build', $code);
-        $prevcode;
+    my sub method_newer_than($node1, $node2) {
+        my int $t1 := method_exists($node1) ?? method_modifytime($node1) !! 0;
+        my int $t2 := method_exists($node2) ?? method_modifytime($node2) !! 0;
+        $t1 > $t2;
     }
 
     method methods() {
@@ -154,10 +104,7 @@ knowhow MO::FilesystemNodeHOW {
         %methods<parent_name>           := &method_parent_name;
         %methods<path>                  := &method_path;
         %methods<lastname>              := &method_lastname;
-        # %methods<depend>                := &method_depend;
-        %methods<depends>               := &method_depends;
-        %methods<make>                  := &method_make;
-        %methods<install_build_code>    := &method_install_build_code;
+        %methods<method_newer_than>     := &method_newer_than;
         %methods;
     }
 
@@ -171,12 +118,6 @@ knowhow MO::FilesystemNodeHOW {
             nqp::setmethcacheauth($type, 1);
         }
         $type;
-    }
-
-    sub newer_than($node1, $node2) {
-        my int $t1 := method_exists($node1) ?? method_modifytime($node1) !! 0;
-        my int $t2 := method_exists($node2) ?? method_modifytime($node2) !! 0;
-        $t1 > $t2;
     }
 
     sub pathparent($path) {
@@ -231,17 +172,12 @@ knowhow MO::FilesystemNodeHOW {
         $node;
     }
 
-    # method get(:$path) {
-    #     my $abspath := pathabs($path);
-    #     my $node := %cache{$abspath};
-    #     %cache{$abspath} := $node := self.open(:$path) unless nqp::defined($node);
-    #     $node
-    # }
-
     method add_depends($node, @targets) {
-        my @depends := method_depends($node);
-        @depends := nqp::list() unless nqp::defined(@depends);
+        my @depends := nqp::getattr($node, $type, '@depends');
+        unless nqp::defined(@depends) {
+            @depends := nqp::list();
+            nqp::bindattr($node, $type, '@depends', @depends);
+        }
         @depends.push($_) for @targets;
-        nqp::bindattr($node, $type, '@depends', @depends)
     }
 }

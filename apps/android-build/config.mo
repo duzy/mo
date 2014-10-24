@@ -58,6 +58,11 @@ def notnull($v, $err) {
     if isnull($v) { die($err) }
 }
 
+class native <$path>
+{
+    
+}
+
 class project <$path, $variant>
 {
     $.platform;

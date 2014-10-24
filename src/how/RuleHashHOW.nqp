@@ -1,13 +1,80 @@
+class MO::RuleTarget {
+    has $!code;
+    has $!node;
+    has @!prerequisites;
+
+    method new($name) {
+        my $o := nqp::create(MO::RuleTarget);
+        $o.BUILD(:$name);
+        $o
+    }
+
+    method BUILD(:$name) {
+        $!node := MO::FilesystemNodeHOW.open(:path($name));
+    }
+
+    method name() { $!node.name }
+    method path() { $!node.path }
+    method exists() { $!node.exists }
+
+    method node() { $!node }
+    method prerequisites() { @!prerequisites }
+
+    method bind($code, @prerequisites) {
+        $!code := $code;
+        @!prerequisites := @prerequisites;
+    }
+
+    method make($context?) {
+        my int $updated := 0;
+        my int $missing := 0;
+
+        my @depends;
+        if nqp::defined(@!prerequisites) {
+            for @!prerequisites {
+                my $pre := $_.node;
+                @depends.push($pre);
+
+                my int $made := $_.make($context);
+                if $made < 0 {
+                    $missing := $missing + $made;
+                } elsif $pre.exists() {
+                    $made := 1 if $made == 0 && $pre.newer_than($!node);
+                    $updated := $updated + $made;
+                } else {
+                    $missing := $missing - 1;
+                    nqp::say('target '~$pre.name~' was not made');
+                }
+            }
+        }
+
+        if $missing == 0 && nqp::isinvokable($!code) {
+            if !$!node.exists() || 0 < $updated {
+                my $status := $!code($context, $!node, @depends);
+                if $!node.exists() {
+                    $updated := $updated + 1;
+                }
+            }
+        }
+
+        $missing == 0 ?? $updated !! $missing
+    }
+}
+
 knowhow MO::RuleHashHOW {
     my $type;
 
-    sub method_get($o, $name) {
-        my $node := nqp::getattr($o, $type, $name);
-        unless nqp::defined($node) {
-            $node := MO::FilesystemNodeHOW.open(:path($name));
-            nqp::bindattr($o, $type, $name, $node);
+    sub target($o, $name) {
+        my $target := nqp::getattr($o, $type, $name);
+        unless nqp::defined($target) {
+            $target := MO::RuleTarget.new($name);
+            nqp::bindattr($o, $type, $name, $target);
         }
-        $node
+        $target
+    }
+
+    sub method_rule($o, $name) {
+        target($o, $name);
     }
 
     sub method_link($o, $targets, $prerequisites, $build) {
@@ -15,12 +82,10 @@ knowhow MO::RuleHashHOW {
         $prerequisites := flatten_str_list($prerequisites);
 
         my @prerequisites;
-        @prerequisites.push(method_get($o, $_)) for $prerequisites;
+        @prerequisites.push(target($o, $_)) for $prerequisites;
 
         for $targets {
-            my $t := method_get($o, $_);
-            $t.install_build_code($build);
-            MO::FilesystemNodeHOW.add_depends($t, @prerequisites);
+            target($o, $_).bind($build, @prerequisites);
         }
     }
 
@@ -40,8 +105,8 @@ knowhow MO::RuleHashHOW {
 
     method methods() {
         my %methods;
-        %methods<get>        := &method_get;
-        %methods<link>       := &method_link;
+        %methods<rule> := &method_rule;
+        %methods<link> := &method_link;
         %methods;
     }
 

@@ -141,7 +141,7 @@ class MO::Actions is HLL::Actions {
         } else {
             $rulehash := $*W.symbol_ast($/, [$name], 0) // self.declare_unit_rules($name);
         }
-        make QAST::Op.new( :op<callmethod>, :name<get>, $rulehash, $<EXPR>.made );
+        make QAST::Op.new( :op<callmethod>, :name<rule>, $rulehash, $<EXPR>.made );
         #$/.prune;
     }
 
@@ -1011,7 +1011,7 @@ class MO::Actions is HLL::Actions {
             ) );
             for $<targets> {
                 $meth.push( QAST::Op.new( :op<callmethod>, :name<make>,
-                    QAST::Op.new( :op<callmethod>, :name<get>,
+                    QAST::Op.new( :op<callmethod>, :name<rule>,
                         QAST::Var.new( :name<rules>, :scope<local> ), $_.made ),
                     QAST::Var.new( :name<me>, :scope<lexical> ),
                 ) );
