@@ -11,5 +11,9 @@ public class HelloActivity extends Activity
     {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
+
+        int foo_icon = com.example.foo.R.drawable.ic_launcher;
+        int foo_main = com.example.foo.R.layout.main;
+        int foo_name = com.example.foo.R.string.app_name;
     }
 }

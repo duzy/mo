@@ -11,6 +11,7 @@ NQP := $(MOARDIR)/install/bin/nqp-m --module-path=gen/moar
 COMMON_MBC := gen/moar/common.moarvm
 COMMON_NQP := gen/moar/common.nqp
 COMMON_SOURCES := \
+  src/mo/moar/VMCall.nqp \
   src/core/Variable.nqp \
   src/core/Routine.nqp \
   src/how/NodeHOW.nqp \
@@ -50,7 +51,6 @@ MO_SOURCES := \
   src/mo/Compiler.nqp \
   \
   src/mo/moar/Ops.nqp \
-  src/mo/moar/VMCall.nqp \
   src/mo/ModuleLoader.nqp \
 
 $(MO_MBC): $(MO_NQP) $(XML_MBC) $(JSON_MBC) $(MODULELOADER_MBC)

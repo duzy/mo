@@ -8,6 +8,7 @@ COMMON_PBC := gen/parrot/common.pbc
 COMMON_PIR := gen/parrot/common.pir
 COMMON_NQP := gen/parrot/common.nqp
 COMMON_SOURCES := \
+  src/mo/parrot/VMCall.nqp \
   src/core/Variable.nqp \
   src/core/Routine.nqp \
   src/how/NodeHOW.nqp \
@@ -50,7 +51,6 @@ MO_SOURCES := \
   src/mo/World.nqp \
   \
   src/mo/parrot/Ops.nqp \
-  src/mo/parrot/VMCall.nqp \
   src/mo/ModuleLoader.nqp \
 
 $(MO_PBC): $(MO_PIR) $(MODULELOADER_PBC)

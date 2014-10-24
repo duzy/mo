@@ -35,14 +35,13 @@ class MO::RuleTarget {
         if nqp::defined(@!prerequisites) {
             for @!prerequisites {
                 my $pre := $_.node;
-                @depends.push($pre);
-
                 my int $made := $_.make($context);
                 if $made < 0 {
                     $missing := $missing + $made;
                 } elsif $pre.exists() {
                     $made := 1 if $made == 0 && $pre.newer_than($!node);
                     $updated := $updated + $made;
+                    @depends.push($pre);
                 } else {
                     $missing := $missing - 1;
                     nqp::say('target '~$pre.name~' was not made');
@@ -50,12 +49,14 @@ class MO::RuleTarget {
             }
         }
 
-        if $missing == 0 && nqp::isinvokable($!code) {
-            if !$!node.exists() || 0 < $updated {
-                my $status := $!code($context, $!node, @depends);
-                if $!node.exists() {
-                    $updated := $updated + 1;
+        if $missing == 0 {
+            if nqp::isinvokable($!code) {
+                if !$!node.exists() || 0 < $updated {
+                    my $status := $!code($context, $!node, @depends);
+                    if $!node.exists() { $updated := $updated + 1 }
                 }
+            } elsif !$!node.exists() {
+                nqp::say("don't know how to build "~$!node.name);
             }
         }
 
