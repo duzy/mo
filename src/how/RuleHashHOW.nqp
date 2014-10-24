@@ -16,6 +16,8 @@ class MO::RuleTarget {
     method name() { $!node.name }
     method path() { $!node.path }
     method exists() { $!node.exists }
+    method find($pred) { $!node.find($pred) }
+    method findall($pred) { $!node.findall($pred) }
 
     method node() { $!node }
     method prerequisites() { @!prerequisites }

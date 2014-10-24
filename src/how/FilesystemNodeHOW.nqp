@@ -104,7 +104,7 @@ knowhow MO::FilesystemNodeHOW {
         %methods<parent_name>           := &method_parent_name;
         %methods<path>                  := &method_path;
         %methods<lastname>              := &method_lastname;
-        %methods<method_newer_than>     := &method_newer_than;
+        %methods<newer_than>            := &method_newer_than;
         %methods;
     }
 
