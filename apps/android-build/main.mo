@@ -1,7 +1,7 @@
-use build
+use config
 
 var $variant = 'debug';
 
 for slice(@ARGS, 1) {
-    build::Add($_, $variant).make();
+    config::ParseProject($_, $variant).make();
 }

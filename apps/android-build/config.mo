@@ -54,7 +54,7 @@ def join_target_path($sep, @_) {
     join($sep, @paths)
 }
 
-def check_notnull($v, $err) {
+def notnull($v, $err) {
     if isnull($v) { die($err) }
 }
 
@@ -93,14 +93,14 @@ class project <$path, $variant>
 
         var $localProperties   = LoadProperties("$path/local.properties");
         var $projectProperties = LoadProperties("$path/project.properties");
-        check_notnull($localProperties,   "local.properties is not underneath $path");
-        check_notnull($projectProperties, "project.properties is not underneath $path");
+        notnull($localProperties,   "local.properties is not underneath $path");
+        notnull($projectProperties, "project.properties is not underneath $path");
 
         var $sdk = any isdir $localProperties{'sdk.dir'}, "/open/android/android-studio/sdk";
-        check_notnull($sdk,  'SDK missing');
+        notnull($sdk,  'SDK missing');
 
         var $platform = $.platform = $projectProperties{'target'};
-        check_notnull($platform,  'Platform target missing');
+        notnull($platform,  'Platform target missing');
 
         var $library = $projectProperties{'android.library'}; # android.library=true
         $.is_library = isnull($library) ? 0 : $library eq 'true';
@@ -118,14 +118,14 @@ class project <$path, $variant>
 
         $.platform_jar  = any isreg "$sdk/platforms/$platform/android.jar";
         $.platform_aidl = any isreg "$sdk/platforms/$platform/framework.aidl";
-        check_notnull($.platform_jar,  '$sdk/platforms/$platform/android.jar missing');
-        check_notnull($.platform_aidl, '$sdk/platforms/$platform/framework.aidl missing');
+        notnull($.platform_jar,  '$sdk/platforms/$platform/android.jar missing');
+        notnull($.platform_aidl, '$sdk/platforms/$platform/framework.aidl missing');
 
         $.platform_properties = LoadProperties("$sdk/platforms/$platform/source.properties");
-        check_notnull($.platform_properties,  '$sdk/platforms/$platform/source.properties missing');
+        notnull($.platform_properties,  '$sdk/platforms/$platform/source.properties missing');
 
         var $platformVersion = $.platform_properties{'Platform.Version'};
-        check_notnull($platformVersion,  'Platform.Version missing');
+        notnull($platformVersion,  'Platform.Version missing');
 
         $.cmds<android>           = Tool($sdk, 'android');
         $.cmds<draw9patch>        = Tool($sdk, 'draw9patch');
@@ -154,17 +154,17 @@ class project <$path, $variant>
         if isnull($.cmds<sqlite3>)  { $.cmds<sqlite3>  = Tool($sdk, "sqlite3") }
         if isnull($.cmds<zipalign>) { $.cmds<zipalign> = Tool($sdk, "zipalign") }
 
-        check_notnull($.cmds<android>,         '$sdk/tools/android missing');
-        check_notnull($.cmds<lint>,            '$sdk/tools/lint missing');
-        check_notnull($.cmds<adb>,             '$sdk/platform-tools/adb missing');
-        check_notnull($.cmds<sqlite3>,         '$sdk/platform-tools/sqlite3 missing');
-        check_notnull($.cmds<aapt>,            '$sdk/build-tools/.../aapt missing');
-        check_notnull($.cmds<aidl>,            '$sdk/build-tools/.../aidl missing');
-        check_notnull($.cmds<dx>,              '$sdk/build-tools/.../dx missing');
-        check_notnull($.cmds<rscc>,            '$sdk/build-tools/.../llvm-rs-cc missing');
-        check_notnull($.cmds<zipalign>,        '$sdk/build-tools/.../zipalign missing');
-        check_notnull($.cmds<jarsigner>,       'jarsigner missing');
-        check_notnull($.cmds<jar>,             'jar missing');
+        notnull($.cmds<android>,         '$sdk/tools/android missing');
+        notnull($.cmds<lint>,            '$sdk/tools/lint missing');
+        notnull($.cmds<adb>,             '$sdk/platform-tools/adb missing');
+        notnull($.cmds<sqlite3>,         '$sdk/platform-tools/sqlite3 missing');
+        notnull($.cmds<aapt>,            '$sdk/build-tools/.../aapt missing');
+        notnull($.cmds<aidl>,            '$sdk/build-tools/.../aidl missing');
+        notnull($.cmds<dx>,              '$sdk/build-tools/.../dx missing');
+        notnull($.cmds<rscc>,            '$sdk/build-tools/.../llvm-rs-cc missing');
+        notnull($.cmds<zipalign>,        '$sdk/build-tools/.../zipalign missing');
+        notnull($.cmds<jarsigner>,       'jarsigner missing');
+        notnull($.cmds<jar>,             'jar missing');
 
         $.sign_storepass_filename = any isreg "$path/.android/storepass", "$sysdir/key/storepass";
         $.sign_keypass_filename   = any isreg "$path/.android/keypass",   "$sysdir/key/keypass";
@@ -173,26 +173,8 @@ class project <$path, $variant>
         $.sign_keypass   = isnull($.sign_keypass_filename)   ? null : strip(slurp($.sign_keypass_filename));
     }
 
-    method cmd($name) { $.cmds{$name} }
-
-    method platform_jar()  { $.platform_jar }
-    method platform_aidl() { $.platform_aidl }
-
-    method sign_cert()               { $.sign_cert }
-    method sign_storepass_filename() { $.sign_storepass_filename }
-    method sign_keypass_filename()   { $.sign_keypass_filename }
-    method sign_keystore_filename()  { $.sign_keystore_filename }
-    method sign_storepass()          { $.sign_storepass }
-    method sign_keypass()            { $.sign_keypass }
-
-    method path() { $.path }
-    method name() { $.name }
-    method manifest() { $.manifest }
-
-    method is_library() { $.is_library }
-
-    method libs() { $.libs }
-    #method prerequisites() { $.prerequisites }
+    method path()      { $.path }
+    method name()      { $.name }
 
     method assets()    { <"$.path/assets">.findall(def($path, $name){ !endswith($name, '~') }) }
     method resources() { <"$.path/res">.findall(def($path, $name){ endswith($name, '.xml', '.png', '.jpg', '.xml') }) }
@@ -202,10 +184,10 @@ class project <$path, $variant>
 
     method make: $.target : ($.is_library ? "$.out/classes.purged" : "$.out/_.signed")
     {
-        var $dir = $_.parent_path();
+        var $dir    = $_.parent_path();
         var $target = $_.name();
         var $depend = @_[0].path();
-        var $cmd = me.cmd($.is_library ? 'jar' : 'zipalign');
+        var $cmd    = $.cmds{$.is_library ? 'jar' : 'zipalign'};
         if $.is_library lang shell :escape
 -------------------------------
 echo "$.name: Generating library ($target).."
@@ -227,11 +209,11 @@ $cmd -f 4 "$depend" "$target"
         var $storepass = isnull($.sign_storepass)          ? '' : "-storepass '$.sign_storepass'";
         var $keypass   = isnull($.sign_keypass)            ? '' : "-keypass '$.sign_keypass'";
         var $keystore  = isnull($.sign_keystore_filename)  ? '' : "-keystore '$.sign_keystore_filename'";
-        var $cmd    = me.cmd('jarsigner');
-        var $cert   = $.sign_cert;
-        var $signed = $_.path();
-        var $pack   = @_[0].path();
-        var $tsa = 1 ? "-tsacert $cert" : '-tsa';
+        var $cmd       = $.cmds<jarsigner>;
+        var $cert      = $.sign_cert;
+        var $signed    = $_.path();
+        var $pack      = @_[0].path();
+        var $tsa       = 1 ? "-tsacert $cert" : '-tsa';
         lang shell :escape
 -------------------------------
 echo "$.name: Signing package.."
@@ -243,15 +225,15 @@ $cmd -sigalg MD5withRSA -digestalg SHA1 $keystore $keypass $storepass \
 
     "$.out/_.pack" : "$.path/AndroidManifest.xml" "$.out/classes.dex"
     {
-        var $dir  = $_.parent_path();
-        var $pack = $_.path();
-        var $am   = @_[0].path();
-        var $dex  = @_[1].path();
+        var $dir    = $_.parent_path();
+        var $pack   = $_.path();
+        var $am     = @_[0].path();
+        var $dex    = @_[1].path();
         var $libs   = "-I $.platform_jar";
         var $reses  = "-S '$.path/res'";
         var $assets = "-A '$.path/assets'";
         var $debug  = $variant eq 'debug' ? '--debug-mode' : '';
-        var $cmd = me.cmd('aapt');
+        var $cmd    = $.cmds<aapt>;
         unless isdir($assets) { $assets = '' }
         lang shell :escape
 --------------------------------
@@ -271,12 +253,12 @@ $cmd add -k $pack $dex > /dev/null
     {
         var $is_windows = 0;
         var $os_options = $is_windows ? '' : '-JXms16M -JXmx1536M';
-        var $apk = $.target;
-        var $dex = $_.path();
-        var $libs = '';
-        var $input = "$.out/classes";
-        var $debug  = $variant eq 'debug' ? '--debug' : '';
-        var $cmd = me.cmd('dx');
+        var $apk        = $.target;
+        var $dex        = $_.path();
+        var $libs       = '';
+        var $input      = "$.out/classes";
+        var $debug      = $variant eq 'debug' ? '--debug' : '';
+        var $cmd        = $.cmds<dx>;
         lang shell :escape
 -------------------------------
 echo "$.name: Generating dex file.."
@@ -299,8 +281,8 @@ for f in \$(cat $purged) ; do rm -f \$f ; done
 
     "$.out/classes.list" : "$.out/sources.list" "$.out/classpath"
     {
-        var $debug  = $variant eq 'debug' ? '-g' : '';
-        var $cmd = me.cmd('javac');
+        var $debug = $variant eq 'debug' ? '-g' : '';
+        var $cmd   = $.cmds<javac>;
         lang shell :escape
 --------------------------------
 echo "$.name: Generating classes.."
@@ -338,7 +320,7 @@ mkdir -p \$(dirname $outfile) || exit -1
         var $reses  = isdir("$.path/res") ? "-S '$.path/res'" : '';
         var $assets = isdir("$.path/assets") ? "-A '$.path/assets'" : '';
         var $am  = @_[0].path();
-        var $cmd = me.cmd('aapt');
+        var $cmd = $.cmds<aapt>;
         if $.is_library lang shell :escape
 --------------------------------
 echo "$.name: Generating R.java ($.path).."
@@ -390,6 +372,9 @@ mkdir -p $dir || exit -1
 }
 
 def ParseProject($path, $variant) {
+    unless isdir($path) {
+        die("$path is not a directory");
+    }
     unless isreg("$path/AndroidManifest.xml") {
         die("AndroidManifest.xml is not underneath $path");
     }

@@ -14,7 +14,14 @@ function mo-cmd-moar() {
 
 function mo-cmd() {
     local D="gen/$vm"
-    mo-cmd-$vm $D
+    if true; then
+        mo-cmd-$vm $D $@
+    else
+        echo '--------------------------------------------------------------'
+        echo "gdb -i=mi --args $(mo-cmd-$vm $D) $@"
+        echo '--------------------------------------------------------------'
+        # gdb --args $(mo-cmd-$vm $D) $@
+    fi
 }
 
 function run() {
