@@ -95,7 +95,7 @@
 ;; font-lock-warning-face
 
 (defvar mo-keyword-list
-  '("if" "else" "elsif" "unless" "for" "any" "while" "until" "yield" "str" "def" "end"
+  '("if" "else" "elsif" "unless" "for" "with" "any" "while" "until" "yield" "str" "def" "end"
     "le" "ge" "lt" "gt" "eq" "ne" "cmp" "not" "and" "or" "use" "var" "return" "as"
     "template" "lang" "class" "method" "in"))
 
