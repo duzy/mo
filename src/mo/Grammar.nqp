@@ -74,6 +74,7 @@ grammar MO::Grammar is HLL::Grammar {
     token term:sym<str>    {:s
         <sym>\s $<name>=[<.ident>['::'<.ident>]*] ['with' <EXPR>]?
     }
+    token term:sym<map>    {:s <sym>\s <pred=.map_pred> <list=.EXPR> }
     token term:sym<any>    { <?before <sym>><any=.control> }
     token term:sym<many>   { <?before <sym>><many=.control> }
 

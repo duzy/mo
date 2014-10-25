@@ -605,6 +605,8 @@ MO::World.add_builtin_code('isnull', -> $a { nqp::isnull($a) });
 MO::World.add_builtin_code('defined', -> $a { nqp::defined($a) });
 MO::World.add_builtin_code('addr', -> $a { nqp::where($a) });
 
+#MO::World.add_builtin_code('list', -> *@a { nqp::list(|@a) });
+#MO::World.add_builtin_code('hash', -> *@a { nqp::hash(|@a) });
 MO::World.add_builtin_code('list', -> { nqp::list() });
 MO::World.add_builtin_code('hash', -> { nqp::hash() });
 
