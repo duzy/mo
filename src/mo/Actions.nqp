@@ -117,6 +117,7 @@ class MO::Actions is HLL::Actions {
         $/.prune;
     }
 
+    method term:sym<map>($/) { make QAST::Op.new( :op<map>, $<pred>.made, expr_list_ast($<list>.made) ); }
     method term:sym<any>($/) { make $<any>.made; }
     method term:sym<many>($/) { make $<many>.made; }
 
@@ -556,7 +557,23 @@ class MO::Actions is HLL::Actions {
         }
     }
 
+    method control:sym<with>($/) {
+        make QAST::Op.new( :node($/), :op<call>, $<with_block>.made, $<EXPR>.made );
+    }
+
     method control:sym<any>($/) {
+        my $op := QAST::Op.new( :op<any>, $<pred>.made, expr_list_ast($<list>.made) );
+        $op.push( $<block>.made ) if $<block>;
+        make $op;
+    }
+
+    method control:sym<many>($/) {
+        my $op := QAST::Op.new( :op<many>, $<pred>.made, expr_list_ast($<list>.made) );
+        $op.push( $<block>.made ) if $<block>;
+        make $op;
+    }
+
+    method deprecated_control:sym<any>($/) {
         my $result := QAST::Var.new( :scope<lexical>, :decl<var>, :name(QAST::Node.unique('map_ret')) );
         my $stmts := QAST::Stmts.new(
             QAST::Op.new(:op<bindlex>,
@@ -581,7 +598,7 @@ class MO::Actions is HLL::Actions {
         );
     }
 
-    method control:sym<many>($/) {
+    method deprecated_control:sym<many>($/) {
         my $result := QAST::Var.new( :scope<lexical>, :decl<var>, :name(QAST::Node.unique('map_ret')) );
         my $stmts := QAST::Stmts.new(
             QAST::Op.new( :op<callmethod>, :name<push>,
@@ -603,10 +620,6 @@ class MO::Actions is HLL::Actions {
             )),
             QAST::Var.new( :scope<lexical>, :name($result.name) ),
         );
-    }
-
-    method control:sym<with>($/) {
-        make QAST::Op.new( :node($/), :op<call>, $<with_block>.made, $<EXPR>.made );
     }
 
     method else:sym< >($/) { make $<statements>.made; }

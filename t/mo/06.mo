@@ -81,6 +81,7 @@ class foobar
 
 var $t = new(foobar);
 system('rm -f foo bar foobar');
+
 $t.make();
 
 system('rm -f foo bar foobar');

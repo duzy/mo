@@ -95,9 +95,9 @@
 ;; font-lock-warning-face
 
 (defvar mo-keyword-list
-  '("if" "else" "elsif" "unless" "for" "with" "any" "while" "until" "yield" "str" "def" "end"
+  '("if" "else" "elsif" "unless" "for" "with" "while" "until" "yield" "str" "def" "end"
     "le" "ge" "lt" "gt" "eq" "ne" "cmp" "not" "and" "or" "use" "var" "return" "as"
-    "template" "lang" "class" "method" "in"))
+    "template" "lang" "class" "method" "in" "any" "many" "map"))
 
 (defvar mo-builtin-list
   '("new" "print" "say" "die" "exit" "open" "slurp" "shell" "system" "cwd" "basename" "dirname"
