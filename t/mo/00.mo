@@ -1,10 +1,31 @@
-say('1..1');
+## attributes of the current node
+.name
 
-var $v = map { "map.$_" } "foo", "bar", "foobar"
-if isnull($v) {
-   say('xx - 1. $v is null');
-} elsif join(',', $v) eq 'map.foo,map.bar,map.foobar' {
-   say('ok - 1. $v eq '~join(',', $v));
-} else {
-   say('xx - 1. $v eq '~join(',', $v));
-}
+## Node
+->child
+->child.name
+->child[0]
+->child[0].name
+->child[0, 1, 2]
+->child[0, 1, 2]->{ 1 }
+->child[0, 1, 2]->{ 0 }
+->child[0, 1, 2]->child
+->child->child
+->child->{ .name eq 'child-1' }
+
+->*[1, 3]
+->*[1, 3, 'child-1']
+
+## FilesystemNode
+-><t/mo/test>
+-><t/mo>['test']
+-><t/mo>['test1', 'test2']
+-><t/mo>[0, 1, 2, 3]
+-><t/mo>[ "test/many/*.txt" ]
+-><t/mo>[ "test/many/*.txt" ]->{ .ISREG }
+-><.>->{ .ISREG }
+-><.>['test/text.txt']->{ .ISREG }
+-><.>['test/many/1.txt', "test/many/2.txt"]
+-><.>['test/many/1.txt', "test/many/2.txt"]->{ .ISREG }
+
+# TODO: remove "->child do { ... }", check map, any, many instead
