@@ -43,39 +43,15 @@ class MO::Actions is HLL::Actions {
     }
 
     method term:sym«.»($/) {
-        my $node := QAST::Var.new( :name<$_>, :scope<lexical> );
-        my $ast;
-        if $<query> {
-            $ast := QAST::Op.new( :op<can>, $node, QAST::SVal.new(:value(~$<name>)) );
-        } elsif $<args> {
-            $ast := $<args>.made;
-            $ast.op('callmethod');
-            $ast.name(~$<name>);
-            $ast.unshift($node);
-        } elsif $<selector> {
-            $ast := $<selector>.made;
-            $ast.push($node);
-        } else {
-            $/.CURSOR.panic('confused');
-        }
+        my $ast := $<post_dot>.made;
+        $ast.unshift( QAST::Var.new( :name<$_>, :scope<lexical> ) );
         make $ast;
         $/.prune;
     }
 
     method term:sym«->»($/) {
-        my $sel := $<selector>;
-        my $ast := $sel.made;
-        $ast.push( QAST::Var.new( :name<$_>, :scope<lexical> ) );
-
-        ## Chain all selectors
-        $sel := $sel<selector>;
-        while $sel {
-            my $nxt := $sel.made;
-            $nxt.push($ast);
-            $ast := $nxt;
-            $sel := $sel<selector>;
-        }
-
+        my $ast := $<post_arrow>.made;
+        $ast.unshift( QAST::Var.new( :name<$_>, :scope<lexical> ) );
         make $ast;
         $/.prune;
     }
@@ -152,12 +128,23 @@ class MO::Actions is HLL::Actions {
     }
 
     method postcircumfix:sym<[ ]>($/) {
-        make QAST::Var.new( :scope('positional'), $<EXPR>.made );
+        my $expr := $<EXPR>.made;
+        if nqp::istype($expr, QAST::Op) && $expr.op eq 'list' {
+            make QAST::Op.new( :op<poses>, $expr );
+        } else {
+            make QAST::Var.new( :scope('positional'), $expr );
+        }
         #$/.prune;
     }
 
     method postcircumfix:sym<{ }>($/) {
-        make QAST::Var.new( :scope('associative'), $<EXPR>.made );
+        # make QAST::Var.new( :scope('associative'), $<EXPR>.made );
+        my $expr := $<EXPR>.made;
+        if nqp::istype($expr, QAST::Op) && $expr.op eq 'list' {
+            make QAST::Op.new( :op<asses>, $expr );
+        } else {
+            make QAST::Var.new( :scope('associative'), $expr );
+        }
         #$/.prune;
     }
 
@@ -166,28 +153,8 @@ class MO::Actions is HLL::Actions {
         #$/.prune;
     }
 
-    method postfix:sym«.»($/) {
-        my $ast;
-        if $<query> {
-            $ast := QAST::Op.new( :op<can>, QAST::SVal.new(:value(~$<name>)) );
-        } elsif $<args> {
-            $ast := $<args>.made;
-            $ast.op('callmethod');
-            $ast.name(~$<name>);
-        } else {
-            $ast := QAST::Op.new( :node($/), :op<dot_name>,
-                QAST::Var.new( :scope<lexical>, :name<MODEL> ),
-                QAST::SVal.new( :value(~$<name>) ) );
-        }
-        make $ast;
-    }
-
-    method postfix:sym«->»($/) {
-        #say('postfix:sym«->»: '~$/);
-        make QAST::Op.new( :node($/), :op<select_name>,
-            QAST::Var.new( :scope<lexical>, :name<MODEL> ),
-            QAST::SVal.new( :value(~$<name>) ) );
-    }
+    method postfix:sym«.»($/)  { make $<post_dot>.made }
+    method postfix:sym«->»($/) { make $<post_arrow>.made }
 
     method value:sym<quote>($/) { make $<quote>.made; }
     method value:sym<number>($/) { make $<number>.made; }
@@ -266,6 +233,34 @@ class MO::Actions is HLL::Actions {
         make $ast;
     }
 
+    method post_dot($/) {
+        my $ast;
+        if $<query> {
+            $ast := QAST::Op.new( :op<can>, QAST::SVal.new(:value(~$<name>)) );
+        } elsif $<args> {
+            $ast := $<args>.made;
+            $ast.op('callmethod');
+            $ast.name(~$<name>);
+        } else {
+            $ast := QAST::Op.new( :node($/), :op<get>,  QAST::SVal.new(:value('$.'~$<name>)) );
+        }
+        make $ast;
+    }
+
+    method post_arrow($/) { make $<select>.made }
+
+    method select:sym<name>($/) {
+        make QAST::Op.new( :node($/), :op<select>,
+            QAST::Var.new( :scope<lexical>, :name<MODEL> ),
+            QAST::SVal.new( :value(~$<name>) ) );
+    }
+
+    method select:sym<{ }>($/) {
+        make QAST::Op.new( :node($/), :op<filter>,
+            QAST::Var.new( :scope<lexical>, :name<MODEL> ),
+            QAST::Op.new( :op<takeclosure>, pop_newscope($/) ) );
+    }
+
     method newscope($/) {
         make $<statements>.made;
     }
@@ -278,94 +273,94 @@ class MO::Actions is HLL::Actions {
         }
     }
 
-    method selector:sym«:»($/) {
-        my $namespace := QAST::SVal.new( :value(~$<namespace>) );
-        my $meth := 'select_namespace';
-        $meth := $meth ~ '_query' if $<query>;
-        make QAST::Op.new( :node($/), :op<callmethod>, :name($meth),
-            QAST::Var.new( :scope<lexical>, :name<MODEL> ), $namespace );
-    }
+    # method selector:sym«:»($/) {
+    #     my $namespace := QAST::SVal.new( :value(~$<namespace>) );
+    #     my $meth := 'select_namespace';
+    #     $meth := $meth ~ '_query' if $<query>;
+    #     make QAST::Op.new( :node($/), :op<callmethod>, :name($meth),
+    #         QAST::Var.new( :scope<lexical>, :name<MODEL> ), $namespace );
+    # }
 
-    method selector:sym«.»($/) {
-        my $name := QAST::SVal.new( :value(~$<name>) );
-        make QAST::Op.new( :node($/), :op<callmethod>, :name<dot>,
-            QAST::Var.new( :scope<lexical>, :name<MODEL> ), $name );
-    }
+    # method selector:sym«.»($/) {
+    #     my $name := QAST::SVal.new( :value(~$<name>) );
+    #     make QAST::Op.new( :node($/), :op<callmethod>, :name<dot>,
+    #         QAST::Var.new( :scope<lexical>, :name<MODEL> ), $name );
+    # }
 
-    method selector:sym«..»($/) {
-        make QAST::Op.new( :node($/), :op<callmethod>, :name<dotdot>,
-            QAST::Var.new( :scope<lexical>, :name<MODEL> ) );
-    }
+    # method selector:sym«..»($/) {
+    #     make QAST::Op.new( :node($/), :op<callmethod>, :name<dotdot>,
+    #         QAST::Var.new( :scope<lexical>, :name<MODEL> ) );
+    # }
 
-    method selector:sym«->»($/) {
-        make $<select>.made;
-    }
+    # method selector:sym«->»($/) {
+    #     make $<select>.made;
+    # }
 
-    method selector:sym<[ ]>($/) {
-        my $expr := $<EXPR>.made;
-        my $ast := QAST::Op.new( :node($/), :op<callmethod>,
-            QAST::Var.new( :scope<lexical>, :name<MODEL> ), $expr );
-        if nqp::istype($expr, QAST::Op) && $expr.op eq 'list' {
-            my $countAll := +$expr.list;
-            my $countIVal := 0;
-            my $countSVal := 0;
-            for $expr.list {
-                $countIVal := $countIVal + 1 if nqp::istype($_, QAST::IVal);
-                $countSVal := $countSVal + 1 if nqp::istype($_, QAST::SVal);
-            }
+    # method selector:sym<[ ]>($/) {
+    #     my $expr := $<EXPR>.made;
+    #     my $ast := QAST::Op.new( :node($/), :op<callmethod>,
+    #         QAST::Var.new( :scope<lexical>, :name<MODEL> ), $expr );
+    #     if nqp::istype($expr, QAST::Op) && $expr.op eq 'list' {
+    #         my $countAll := +$expr.list;
+    #         my $countIVal := 0;
+    #         my $countSVal := 0;
+    #         for $expr.list {
+    #             $countIVal := $countIVal + 1 if nqp::istype($_, QAST::IVal);
+    #             $countSVal := $countSVal + 1 if nqp::istype($_, QAST::SVal);
+    #         }
 
-            if $countIVal == $countAll {
-                $ast.name('keyed_list_i');
-            } elsif $countSVal == $countAll {
-                $ast.name('keyed_list_s');
-            } else {
-                $ast.name('keyed_list');
-            }
-        } elsif nqp::istype($expr, QAST::IVal) {
-            $ast.name('keyed_i');
-        } elsif nqp::istype($expr, QAST::SVal) {
-            $ast.name('keyed_s');
-        } else {
-            $ast.name('keyed');
-        }
-        make $ast;
-    }
+    #         if $countIVal == $countAll {
+    #             $ast.name('keyed_list_i');
+    #         } elsif $countSVal == $countAll {
+    #             $ast.name('keyed_list_s');
+    #         } else {
+    #             $ast.name('keyed_list');
+    #         }
+    #     } elsif nqp::istype($expr, QAST::IVal) {
+    #         $ast.name('keyed_i');
+    #     } elsif nqp::istype($expr, QAST::SVal) {
+    #         $ast.name('keyed_s');
+    #     } else {
+    #         $ast.name('keyed');
+    #     }
+    #     make $ast;
+    # }
 
-    method selector:sym<{ }>($/) {
-        make QAST::Op.new( :node($/), :op<callmethod>, :name<filter>,
-            QAST::Var.new( :scope<lexical>, :name<MODEL> ),
-            QAST::Op.new( :op<takeclosure>, pop_newscope($/) ) );
-    }
+    # method selector:sym<{ }>($/) {
+    #     make QAST::Op.new( :node($/), :op<callmethod>, :name<filter>,
+    #         QAST::Var.new( :scope<lexical>, :name<MODEL> ),
+    #         QAST::Op.new( :op<takeclosure>, pop_newscope($/) ) );
+    # }
 
-    method select:sym<name>($/) {
-        my $name := QAST::SVal.new( :value(~$<name>) );
-        # say('select:sym<name>: '~$/);
-        make QAST::Op.new( :node($/), :op<callmethod>, :name<select_name>,
-            QAST::Var.new( :scope<lexical>, :name<MODEL> ), $name );
-    }
+    # method select:sym<name>($/) {
+    #     my $name := QAST::SVal.new( :value(~$<name>) );
+    #     # say('select:sym<name>: '~$/);
+    #     make QAST::Op.new( :node($/), :op<callmethod>, :name<select_name>,
+    #         QAST::Var.new( :scope<lexical>, :name<MODEL> ), $name );
+    # }
 
-    method select:sym<quote>($/) {
-        my $name := $<quote>.made;
-        #say('select:sym<quote>: '~$/);
-        make QAST::Op.new( :node($/), :op<callmethod>, :name<select_name>,
-            QAST::Var.new( :scope<lexical>, :name<MODEL> ), $name );
-    }
+    # method select:sym<quote>($/) {
+    #     my $name := $<quote>.made;
+    #     #say('select:sym<quote>: '~$/);
+    #     make QAST::Op.new( :node($/), :op<callmethod>, :name<select_name>,
+    #         QAST::Var.new( :scope<lexical>, :name<MODEL> ), $name );
+    # }
 
-    method select:sym<path>($/) {
-        my $path := $<quote> ?? $<quote>.made !! QAST::SVal.new( :value(~$<path>) );
-        make QAST::Op.new( :node($/), :op<callmethod>, :name<select_path>,
-            QAST::Var.new( :scope<lexical>, :name<MODEL> ), $path );
-    }
+    # method select:sym<path>($/) {
+    #     my $path := $<quote> ?? $<quote>.made !! QAST::SVal.new( :value(~$<path>) );
+    #     make QAST::Op.new( :node($/), :op<callmethod>, :name<select_path>,
+    #         QAST::Var.new( :scope<lexical>, :name<MODEL> ), $path );
+    # }
 
-    method select:sym<me>($/) {
-        make QAST::Op.new( :node($/), :op<callmethod>, :name<select_me>,
-            QAST::Var.new( :scope<lexical>, :name<MODEL> ) );
-    }
+    # method select:sym<me>($/) {
+    #     make QAST::Op.new( :node($/), :op<callmethod>, :name<select_me>,
+    #         QAST::Var.new( :scope<lexical>, :name<MODEL> ) );
+    # }
 
-    method select:sym<*>($/) {
-        make QAST::Op.new( :node($/), :op<callmethod>, :name<select_all>,
-            QAST::Var.new( :scope<lexical>, :name<MODEL> ) );
-    }
+    # method select:sym<*>($/) {
+    #     make QAST::Op.new( :node($/), :op<callmethod>, :name<select_all>,
+    #         QAST::Var.new( :scope<lexical>, :name<MODEL> ) );
+    # }
 
     method xml($/) {
         # my $data := $<data>.made;

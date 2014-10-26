@@ -60,11 +60,8 @@ grammar MO::Grammar is HLL::Grammar {
     token term:sym<name>        { <name> }
     token term:sym<colonpair>   { <colonpair> }
 
-    token term:sym«.»  {
-        | <sym> <name=.ident> [$<query>='?'|<args>]
-        | <?before <sym>> <selector>
-    }
-    token term:sym«->» { <?before <sym>> <selector> }
+    token term:sym«.»  { <post_dot> }
+    token term:sym«->» { <post_arrow> }
 
     token term:sym<def>  {:s
         <sym> '(' ~ ')' [ { self.push_scope( ~$<sym> ) } <params>? ]
@@ -142,13 +139,8 @@ grammar MO::Grammar is HLL::Grammar {
     token postcircumfix:sym<{ }> { '{' ~ '}' <EXPR> <O('%methodop')> }
     token postcircumfix:sym<ang> { <?[<]> <quote_EXPR: ':q'> <O('%methodop')> }
 
-    token postfix:sym«.»  {
-        <sym> <name=.ident> [$<query>='?'|<args>]?
-        <O('%methodop')>
-    }
-    token postfix:sym«->» {
-        <sym> <name=.ident> <O('%methodop')>
-    }
+    token postfix:sym«.»  { <post_dot> <O('%methodop')> }
+    token postfix:sym«->» { <post_arrow> <O('%methodop')> }
 
     proto token value           { <...> }
     token value:sym<quote>      { <quote> }
@@ -165,6 +157,13 @@ grammar MO::Grammar is HLL::Grammar {
     token number { $<sign>=[<[+\-]>?] [ <dec_number> | <integer> ] }
 
     token name { <!keyword> <.ident> ['::'<.ident>]* }
+
+    token post_dot { '.'$<name>=['*'|[<ns=.ident>':']?<ident>] [$<query>='?'|<args>]? }
+    token post_arrow { '->'<select> }
+
+    proto token select     { <...> }
+    token select:sym<name> { $<name>=['*'|[<ns=.ident>':']?<ident>] }
+    token select:sym<{ }>  { :s '{' ~ '}' <newscope: 'selector', '$_'> }
 
     token args { '(' ~ ')' <arglist> }
     token arglist {
@@ -267,23 +266,23 @@ grammar MO::Grammar is HLL::Grammar {
         self.statements;
     }
 
-    proto token selector { <...> }
-    token selector:sym<[ ]> {:s '[' ~ ']' <EXPR> <selector>? } #[<EXPR>+ %% ',']
-    token selector:sym<{ }> {:s '{' ~ '}' <newscope: 'selector', '$_', 1> <selector>? }
-    token selector:sym«:»  { <sym>
-        [<?before '??'>$<namespace>='?'|<namespace=.ident>]?
-        [<selector>|$<query>='?']?
-    }
-    token selector:sym«..» { <sym> }
-    token selector:sym«.»  {:s <sym> $<name>=[[<.ident>':']?<.ident>] }
-    token selector:sym«->» {:s <sym> [ <select> | <.panic: 'confused selector'> ] <selector>? }
+    # proto token selector { <...> }
+    # token selector:sym<[ ]> {:s '[' ~ ']' <EXPR> <selector>? } #[<EXPR>+ %% ',']
+    # token selector:sym<{ }> {:s '{' ~ '}' <newscope: 'selector', '$_', 1> <selector>? }
+    # token selector:sym«:»  { <sym>
+    #     [<?before '??'>$<namespace>='?'|<namespace=.ident>]?
+    #     [<selector>|$<query>='?']?
+    # }
+    # token selector:sym«..» { <sym> }
+    # token selector:sym«.»  {:s <sym> $<name>=[[<.ident>':']?<.ident>] }
+    # token selector:sym«->» {:s <sym> [ <select> | <.panic: 'confused selector'> ] <selector>? }
 
-    proto token select          { <...> }
-    token select:sym<name>      { <name=.ident> }
-    token select:sym<quote>     { <quote> }
-    token select:sym<path>      { '<' ~ '>' [ <quote> | $<path>=[[<![>]>.]+] ] }
-    token select:sym<me>        { <?before '['|'{'|':'|'.'> }
-    token select:sym<*>         { <sym> }
+    # proto token select          { <...> }
+    # token select:sym<name>      { <name=.ident> }
+    # token select:sym<quote>     { <quote> }
+    # token select:sym<path>      { '<' ~ '>' [ <quote> | $<path>=[[<![>]>.]+] ] }
+    # token select:sym<me>        { <?before '['|'{'|':'|'.'> }
+    # token select:sym<*>         { <sym> }
 
     token xml  { <data=.LANG('XML','TOP')> }
     token json { <.panic: 'JSON parser not implemented yet'> }

@@ -1,31 +1,24 @@
 ## attributes of the current node
-.name
-
-## Node
-->child
-->child.name
-->child[0]
-->child[0].name
-->child[0, 1, 2]
-->child[0, 1, 2]->{ 1 }
-->child[0, 1, 2]->{ 0 }
-->child[0, 1, 2]->child
-->child->child
-->child->{ .name eq 'child-1' }
-
-->*[1, 3]
-->*[1, 3, 'child-1']
-
-## FilesystemNode
--><t/mo/test>
--><t/mo>['test']
--><t/mo>['test1', 'test2']
--><t/mo>[0, 1, 2, 3]
--><t/mo>[ "test/many/*.txt" ]
--><t/mo>[ "test/many/*.txt" ]->{ .ISREG }
--><.>->{ .ISREG }
--><.>['test/text.txt']->{ .ISREG }
--><.>['test/many/1.txt', "test/many/2.txt"]
--><.>['test/many/1.txt', "test/many/2.txt"]->{ .ISREG }
-
-# TODO: remove "->child do { ... }", check map, any, many instead
+say('dot: .name = '~.name)
+say('select: ->child = '~->child)
+say('select: ->child[0].name = '~->child[0].name)
+#say('select: ->child.name = '~->child.name)
+say('select: ->child[0, 1, 2] = '~->child[0, 1, 2])
+say('select: ->child[0, 1, 2][0].name = '~->child[0, 1, 2][0].name)
+say('select: ->child[0, 1, 2][1].name = '~->child[0, 1, 2][1].name)
+say('select: ->child->{ 1 } = '~->child->{ 1 })
+say('select: ->child->{ 0 } = '~->child->{ 0 })
+say('select: ->child->{ 1 }[0].name = '~->child->{ 1 }[0].name)
+say('select: ->child->{ .name eq \'test-child-1\' }[0].name = '~->child->{ .name eq 'test-child-1' }[0].name)
+say('select: ->* = '~->*)
+say('select: ->*[0] = '~->*[0])
+say('select: ->*[1] = '~->*[1].name)
+say('select: .xmlns:test = '~.xmlns:test)
+say('select: .test:name = '~.test:name)
+say('select: .* = '~.*)
+say('select: $_.xmlns:test = '~$_.xmlns:test)
+say('select: $_.test:name = '~$_.test:name)
+say('select: $_.* = '~$_.*)
+say('select: ->test:child = '~->test:child)
+say('select: ->test:child[0].name = '~->test:child[0].name)
+say('select: ->test:child[0].test:name = '~->test:child[0].test:name)

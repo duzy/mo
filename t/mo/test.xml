@@ -5,5 +5,6 @@
       >
   <child name="test-child-1" okay="ok - test->child[0].okay" />
   <child name="test-child-2" okay="ok - test->child[1].okay" />
+  <test:child name="test-child-3" test:name="test-child-namespace" />
   <end okay="ok - test->end.okay" />
 </test>

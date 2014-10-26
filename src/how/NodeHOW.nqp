@@ -2,7 +2,7 @@ knowhow MO::NodeHOW {
     my $type;
 
     # ''                tag (e.g. XML tag name, <name/>)
-    # '$.^'               node parent
+    # '$.^'             node parent
     # '$.?'             node class (what kind of node?)
     # '$.*'             all attributes in represented order
     # '$.name'          an attribute ( <tag name="value"/>)

@@ -70,18 +70,40 @@ $ops.add_hll_op('mo', 'falsey', -> $qastcomp, $op { # from nqp/src/vm/parrot/NQP
     $ops
 });
 
-$ops.add_hll_op('mo', 'dot_name', -> $qastcomp, $op {
+$ops.add_hll_op('mo', 'get', -> $qastcomp, $op {
     $qastcomp.as_post(
-        QAST::Op.new( :op<callmethod>, :name<dot>,
-            $op[1], $op[2], $op[0] )
+        QAST::Op.new( :op<getattr>, $op[0], $op[0], $op[1] ),
     )
 });
 
-$ops.add_hll_op('mo', 'select_name', -> $qastcomp, $op {
+$ops.add_hll_op('mo', 'select', -> $qastcomp, $op {
     $qastcomp.as_post(
         QAST::Op.new( :op<callmethod>, :name<select_name>,
             $op[1], $op[2], $op[0] )
     )
+});
+
+$ops.add_hll_op('mo', 'filter', -> $qastcomp, $op {
+    $qastcomp.as_post(
+        QAST::Op.new( :op<callmethod>, :name<filter>,
+            $op[1], $op[2], $op[0] )
+    )
+});
+
+$ops.add_hll_op('mo', 'poses', -> $qastcomp, $op {
+    my $list := QAST::Op.new( :op<list> );
+    for $op[1].list {
+        $list.push( QAST::Var.new( :scope('positional'), $op[0], $_ ) );
+    }
+    $qastcomp.as_post( $list );
+});
+
+$ops.add_hll_op('mo', 'asses', -> $qastcomp, $op {
+    my $list := QAST::Op.new( :op<list> );
+    for $op[1].list {
+        $list.push( QAST::Var.new( :scope('associative'), $op[0], $_ ) );
+    }
+    $qastcomp.as_post( $list );
 });
 
 $ops.add_hll_op('mo', 'map', -> $qastcomp, $op {
