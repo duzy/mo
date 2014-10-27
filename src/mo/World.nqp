@@ -49,8 +49,9 @@ class MO::World is HLL::World {
 
         @!models := @models;
 
-        MO::Model.init(@models[0]);
-        self.add_object(MO::Model.get());
+        #MO::Model.init(@models[0]);
+        #self.add_object(MO::Model.get());
+        moop.set_root(@models[0]);
     }
 
     method push_scope($/) {
@@ -581,6 +582,10 @@ MO::World.add_builtin_code('basename', -> $s, $ext? {
 MO::World.add_builtin_code('dirname', -> $s {
     my int $i := nqp::rindex($s, '/');
     nqp::substr($s, 0, $i);
+});
+MO::World.add_builtin_code('glob', -> *@patterns {
+    my @result;
+    @result;
 });
 MO::World.add_builtin_code('isdir', -> $s {
     nqp::stat($s, nqp::const::STAT_EXISTS) && nqp::stat($s, nqp::const::STAT_ISDIR)

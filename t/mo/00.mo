@@ -19,6 +19,28 @@ say('select: .* = '~.*)
 say('select: $_.xmlns:test = '~$_.xmlns:test)
 say('select: $_.test:name = '~$_.test:name)
 say('select: $_.* = '~$_.*)
+say('select: ->test:* = '~->test:*)
 say('select: ->test:child = '~->test:child)
+say('select: ->test:child->{ .name eq \'test-child-1\' } = '~->test:child->{ .name eq 'test-child-1' })
 say('select: ->test:child[0].name = '~->test:child[0].name)
 say('select: ->test:child[0].test:name = '~->test:child[0].test:name)
+#say('select: ->test:{ .name eq \'test-child-1\' } = '~->test:{ .name eq 'test-child-1' })
+#say('select: ->child->test:{ .name eq \'test-child-1\' } = '~->child->test:{ .name eq 'test-child-1' })
+#say('select: ->child->test:{ .name eq \'test-child-1\' } = '~->child->test:{ .name eq 'test-child-1' })
+say('select: child = '~child);
+
+var $l = ('a', 'b', 'c', 'd');
+say('select: $l[0] = '~$l[0]);
+say('select: $l[0, 1, 2] = '~$l[0, 1, 2]);
+say('select: $l->{ 1 } = '~$l->{ 1 });
+say('select: $l->{ 1 } = '~join(', ', $l->{ 1 }));
+
+say('select: glob = '~glob);
+say('glob: * = '~glob('*'));
+
+class a {
+    $.name = 'foo'
+}
+
+#var $a = new(a);
+#say($a.name);

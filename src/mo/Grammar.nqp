@@ -162,8 +162,8 @@ grammar MO::Grammar is HLL::Grammar {
     token post_arrow { '->'<select> }
 
     proto token select     { <...> }
-    token select:sym<name> { $<name>=['*'|[<ns=.ident>':']?<ident>] }
-    token select:sym<{ }>  { :s '{' ~ '}' <newscope: 'selector', '$_'> }
+    token select:sym<name> { $<name>=[[<ns=.ident>?':']? ['*'|<ident>]] }
+    token select:sym<{ }>  { '{' ~ '}' <newscope: 'selector', '$_'> }
 
     token args { '(' ~ ')' <arglist> }
     token arglist {
@@ -352,10 +352,10 @@ grammar MO::Grammar is HLL::Grammar {
     rule statements { <.ws> <statement>* }
 
     proto rule statement                { <...> }
+    rule statement:sym<expr>            { <EXPR> ';'? }
     rule statement:sym<control>         { <control> }
     rule statement:sym<declaration>     { <declaration> }
     rule statement:sym<definition>      { <definition> }
-    rule statement:sym<EXPR>            { <EXPR> ';'? }
 
     rule statement:sym<yield_t> { 'yield' <name=.ident> ';'? }
     rule statement:sym<yield_x> { 'yield' <EXPR> ';'? }

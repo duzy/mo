@@ -30,17 +30,18 @@ ns test {
 }
 
 ## FilesystemNode
-<t/mo/test>
-<t/mo>['test']
-<t/mo>['test1', 'test2']
-<t/mo>[0, 1, 2, 3]
-<t/mo>[ "test/many/*.txt" ]
-<t/mo>[ "test/many/*.txt" ]->{ .ISREG }
-<.>->{ .ISREG }
-<.>['test/text.txt']->{ .ISREG }
-<.>['test/many/1.txt', "test/many/2.txt"]
-<.>['test/many/1.txt', "test/many/2.txt"]->{ .ISREG }
+#<t/mo/test>
+#<t/mo>['test']
+#<t/mo>['test1', 'test2']
+#<t/mo>[0, 1, 2, 3]
+#<t/mo>[ "test/many/*.txt" ]
+#<t/mo>[ "test/many/*.txt" ]->{ .ISREG }
+#<.>->{ .ISREG }
+#<.>['test/text.txt']->{ .ISREG }
+#<.>['test/many/1.txt', "test/many/2.txt"]
+#<.>['test/many/1.txt', "test/many/2.txt"]->{ .ISREG }
 
+glob('*')->{ .ISREG }
 glob("test/many/*.txt")->{ .ISREG }
 glob('test/many/1.txt', "test/many/2.txt")->{ .ISREG }
 

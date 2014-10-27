@@ -35,7 +35,7 @@ class MO::Actions is HLL::Actions {
         my $ast := $*W.symbol_ast($/, @name, 0);
         unless $ast {
             $ast := self.'select:sym<name>'($/);
-            $ast.push( QAST::Var.new( :name<$_>, :scope<lexical> ) );
+            $ast.unshift( QAST::Var.new( :name<$_>, :scope<lexical> ) );
             $ast.push( QAST::IVal.new( :value(1) ) );
         }
         make $ast;
@@ -153,8 +153,8 @@ class MO::Actions is HLL::Actions {
         #$/.prune;
     }
 
-    method postfix:sym«.»($/)  { make $<post_dot>.made }
-    method postfix:sym«->»($/) { make $<post_arrow>.made }
+    method postfix:sym«.»($/)  { make $<post_dot>.made } #; $/.prune }
+    method postfix:sym«->»($/) { make $<post_arrow>.made } #; $/.prune }
 
     method value:sym<quote>($/) { make $<quote>.made; }
     method value:sym<number>($/) { make $<number>.made; }
@@ -251,13 +251,11 @@ class MO::Actions is HLL::Actions {
 
     method select:sym<name>($/) {
         make QAST::Op.new( :node($/), :op<select>,
-            QAST::Var.new( :scope<lexical>, :name<MODEL> ),
             QAST::SVal.new( :value(~$<name>) ) );
     }
 
     method select:sym<{ }>($/) {
         make QAST::Op.new( :node($/), :op<filter>,
-            QAST::Var.new( :scope<lexical>, :name<MODEL> ),
             QAST::Op.new( :op<takeclosure>, pop_newscope($/) ) );
     }
 
@@ -427,7 +425,7 @@ class MO::Actions is HLL::Actions {
             ),
             QAST::Op.new( :op<bind>,
                 QAST::Var.new( :name<$_>, :scope<lexical>, :decl<var> ),
-                QAST::Op.new( :op<callmethod>, :name<root>, QAST::Var.new( :scope<lexical>, :name<MODEL> ) ),
+                QAST::Op.new( :op<root> ),
             ),
 
             QAST::Op.new( :op<call>,
@@ -444,7 +442,7 @@ class MO::Actions is HLL::Actions {
         $scope.unshift( $unitinit );
         $scope.push( $<statements>.made );
 
-        fixup_variables($scope);
+        # fixup_variables($scope);
 
         my $compunit := QAST::CompUnit.new(
             :hll('mo'),
@@ -507,7 +505,7 @@ class MO::Actions is HLL::Actions {
         make $<definition>.made;
     }
 
-    method statement:sym<EXPR>($/) {
+    method statement:sym<expr>($/) {
         make $<EXPR>.made;
     }
 
@@ -517,7 +515,7 @@ class MO::Actions is HLL::Actions {
         if $scope.symbol('$_') {
             $ast.push( QAST::Var.new( :name<$_>, :scope<lexical> ) );
         } else {
-            $ast.push( QAST::Op.new( :op<callmethod>, :name<root>, QAST::Var.new( :scope<lexical>, :name<MODEL> ) ) );
+            $ast.push( QAST::Op.new( :op<root> ) );
         }
         make $ast;
     }

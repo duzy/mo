@@ -2,6 +2,44 @@ use QAST;
 
 class moop
 {
+    my $model;
+
+    method set_root($m) { $model := $m }
+    method root() { $model }
+
+    method select($a, $name, $must = 0) { # ->child, parent->child
+        my @result;
+        if nqp::islist($a) {
+            for $a {
+                my $children := $_.children($name);
+                if nqp::defined($children) {
+                    @result.push($_) for $children;
+                }
+            }
+        } elsif nqp::defined($a) {
+            if nqp::can($a, 'children') {
+                my $children := $a.children($name);
+                @result := $children if nqp::defined($children);
+            } else {
+                nqp::die("$name is not Node, but "~$a.HOW.name($a));
+            }
+        }
+        if $must && +@result < 1 {
+            nqp::die("$name is undefined");
+        }
+        @result;
+    }
+
+    method filter($a, $selector) { # ->{ ... }
+        my @result;
+        if nqp::islist($a) {
+            @result.push($_) if !nqp::isnull($_) && $selector($_) for $a;
+        } else {
+            @result.push($a) if !nqp::isnull($a) && $selector($a);
+        }
+        @result;
+    }
+
     method any($pred, $data, $block?)
     {
         for $data {
@@ -76,17 +114,24 @@ $ops.add_hll_op('mo', 'get', -> $qastcomp, $op {
     )
 });
 
+$ops.add_hll_op('mo', 'root', -> $qastcomp, $op {
+    #$qastcomp.as_post( QAST::WVal.new( :value(moop.root) ) )
+    my $ast := QAST::Op.new( :op<callmethod>, :name<root>,
+        QAST::WVal.new( :value(moop) ) );
+    $qastcomp.as_post( $ast )
+});
+
 $ops.add_hll_op('mo', 'select', -> $qastcomp, $op {
-    $qastcomp.as_post(
-        QAST::Op.new( :op<callmethod>, :name<select_name>,
-            $op[1], $op[2], $op[0] )
-    )
+    my $ast := QAST::Op.new( :op<callmethod>, :name<select>,
+        QAST::WVal.new( :value(moop) ), $op[0], $op[1] );
+    $ast.push( $op[2] ) if nqp::defined($op[2]);
+    $qastcomp.as_post( $ast )
 });
 
 $ops.add_hll_op('mo', 'filter', -> $qastcomp, $op {
     $qastcomp.as_post(
         QAST::Op.new( :op<callmethod>, :name<filter>,
-            $op[1], $op[2], $op[0] )
+            QAST::WVal.new( :value(moop) ), $op[0], $op[1] )
     )
 });
 
