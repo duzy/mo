@@ -38,9 +38,10 @@ say('select: $l->{ 1 } = '~join(', ', $l->{ 1 }));
 say('select: glob = '~glob);
 say('glob: * = '~glob('*'));
 
-class a {
-    $.name = 'foo'
-}
+var $nodes = readdir('.');
+say('readdir: '~$nodes);
+say('select: '~$nodes->{ .name eq '' });
 
+#class a { $.name = 'foo' }
 #var $a = new(a);
 #say($a.name);

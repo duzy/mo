@@ -49,6 +49,7 @@ MO_SOURCES := \
   src/mo/Grammar.nqp \
   src/mo/Actions.nqp \
   src/mo/Compiler.nqp \
+  src/mo/Builtin.nqp \
   \
   src/mo/moar/Ops.nqp \
   src/mo/ModuleLoader.nqp \

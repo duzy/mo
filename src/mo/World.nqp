@@ -583,10 +583,8 @@ MO::World.add_builtin_code('dirname', -> $s {
     my int $i := nqp::rindex($s, '/');
     nqp::substr($s, 0, $i);
 });
-MO::World.add_builtin_code('glob', -> *@patterns {
-    my @result;
-    @result;
-});
+#MO::World.add_builtin_code('glob', MO::Builtin::glob);
+#MO::World.add_builtin_code('readdir', MO::Builtin::readdir);
 MO::World.add_builtin_code('isdir', -> $s {
     nqp::stat($s, nqp::const::STAT_EXISTS) && nqp::stat($s, nqp::const::STAT_ISDIR)
 });
@@ -725,3 +723,5 @@ MO::World.add_interpreter('Perl6', -> $s, %opts {
     my @cl := [ 'perl6', '-e', $s ];
     nqp::spawn(@cl, nqp::cwd, nqp::getenvhash())
 });
+
+MO::Builtin.init();

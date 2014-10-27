@@ -49,6 +49,7 @@ MO_SOURCES := \
   src/mo/Compiler.nqp \
   src/mo/Model.nqp \
   src/mo/World.nqp \
+  src/mo/Builtin.nqp \
   \
   src/mo/parrot/Ops.nqp \
   src/mo/ModuleLoader.nqp \
