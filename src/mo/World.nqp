@@ -492,6 +492,7 @@ class MO::World is HLL::World {
     }
 
     method install_builtin_objects() {
+        self.add_builtin_code($_.key, $_.value) for MO::Builtin.names;
         self.add_object($_.value<value>) for %builtins;
     }
 
@@ -539,163 +540,6 @@ class MO::World is HLL::World {
     }
 }
 
-MO::World.add_builtin_code('new', -> $t, *@pos, *%named {
-    my $obj := nqp::create($t);
-    $obj.'~ctor'(|@pos, |%named) if nqp::can($obj, '~ctor');
-    $obj;
-});
-MO::World.add_builtin_code('getattr', -> $o, $n { nqp::getattr($o, $o, $n) });
-MO::World.add_builtin_code('setattr', -> $o, $n, $v { nqp::bindattr($o, $o, $n, $v) });
-
-# I/O opcodes (vm/parrot/QAST/Operations.nqp)
-MO::World.add_builtin_code('print', -> $s { nqp::print($s) });
-MO::World.add_builtin_code('say', -> $s { nqp::say($s) });
-MO::World.add_builtin_code('die', -> $s { nqp::die($s) });
-MO::World.add_builtin_code('exit', -> $n { nqp::exit($n) });
-MO::World.add_builtin_code('open', -> $s, $m { nqp::open($s, $m) });
-MO::World.add_builtin_code('slurp', -> $s, *%opts {
-    my $h := nqp::open($s, 'r');
-    $h.encoding(%opts<encoding>) if nqp::existskey(%opts, 'encoding');
-    $s := $h.readall();
-    $h.close();
-    $s
-});
-MO::World.add_builtin_code('shell', -> $s, $m?, $e? {
-    nqp::shell($s, $m // nqp::cwd, $e // nqp::getenvhash())
-});
-MO::World.add_builtin_code('system', -> $s, *%opts {
-    nqp::shell($s, %opts<wd> // nqp::cwd, %opts<env> // nqp::getenvhash())
-});
-MO::World.add_builtin_code('cwd', -> { nqp::cwd });
-MO::World.add_builtin_code('basename', -> $s, $ext? {
-    my int $i := nqp::rindex($s, '/') + 1;
-    my int $d := nqp::chars($s);
-    if nqp::defined($ext) {
-        my int $el := nqp::chars($ext);
-        my int $di := $d - $el;
-        if $el < $d && $i < $di && nqp::substr($s, $di, $d) eq $ext {
-            $d := $di;
-        }
-    }
-    nqp::substr($s, $i, $d-$i);
-});
-MO::World.add_builtin_code('dirname', -> $s {
-    my int $i := nqp::rindex($s, '/');
-    nqp::substr($s, 0, $i);
-});
-#MO::World.add_builtin_code('glob', MO::Builtin::glob);
-#MO::World.add_builtin_code('readdir', MO::Builtin::readdir);
-MO::World.add_builtin_code('isdir', -> $s {
-    nqp::stat($s, nqp::const::STAT_EXISTS) && nqp::stat($s, nqp::const::STAT_ISDIR)
-});
-MO::World.add_builtin_code('isreg', -> $s {
-    nqp::stat($s, nqp::const::STAT_EXISTS) && nqp::stat($s, nqp::const::STAT_ISREG)
-});
-MO::World.add_builtin_code('isdev', -> $s {
-    nqp::stat($s, nqp::const::STAT_EXISTS) && nqp::stat($s, nqp::const::STAT_ISDEV)
-});
-MO::World.add_builtin_code('islink', -> $s {
-    nqp::stat($s, nqp::const::STAT_EXISTS) && nqp::stat($s, nqp::const::STAT_ISLNK)
-});
-MO::World.add_builtin_code('isreadable', -> $s { nqp::filereadable($s) });
-MO::World.add_builtin_code('iswritable', -> $s { nqp::filewritable($s) });
-MO::World.add_builtin_code('isexecutable', -> $s { nqp::fileexecutable($s) });
-
-MO::World.add_builtin_code('islist', -> $a { nqp::islist($a) });
-MO::World.add_builtin_code('isstr', -> $a { nqp::isstr($a) });
-
-MO::World.add_builtin_code('isnull', -> $a { nqp::isnull($a) });
-MO::World.add_builtin_code('defined', -> $a { nqp::defined($a) });
-MO::World.add_builtin_code('addr', -> $a { nqp::where($a) });
-
-#MO::World.add_builtin_code('list', -> *@a { nqp::list(|@a) });
-#MO::World.add_builtin_code('hash', -> *@a { nqp::hash(|@a) });
-MO::World.add_builtin_code('list', -> { nqp::list() });
-MO::World.add_builtin_code('hash', -> { nqp::hash() });
-
-MO::World.add_builtin_code('elems', -> $l { nqp::elems($l) });
-MO::World.add_builtin_code('splice', -> $l, $a, $pos, $sz { nqp::splice($l, $a, $pos, $sz) });
-MO::World.add_builtin_code('slice', -> $l, $pos, $sz? {
-    my @result;
-    my int $m := nqp::elems($l);
-    $sz := $m - $pos unless nqp::defined($sz);
-    while $pos < $m && nqp::elems(@result) < $sz {
-        @result.push($l[$pos]);
-        $pos := $pos + 1;
-    }
-    @result
-});
-
-# String manipulation..
-MO::World.add_builtin_code('split', -> $l, $s { nqp::split($l, $s) });
-MO::World.add_builtin_code('join', -> $s, $a { nqp::join($s, $a) });
-MO::World.add_builtin_code('concat', -> $a, $b { nqp::concat($a, $b) });
-MO::World.add_builtin_code('chars', -> $s { nqp::chars($s) });
-MO::World.add_builtin_code('index', -> $s, $c { nqp::index($s, $c) });
-MO::World.add_builtin_code('rindex', -> $s, $c { nqp::rindex($s, $c) });
-MO::World.add_builtin_code('endswith', -> $s, *@a {
-    my int $res := 0;
-    my int $sl := nqp::chars($s);
-    for @a {
-        my int $l := nqp::chars($_);
-        if $l < $sl && nqp::substr($s, $sl-$l, $l) eq $_ {
-            $res := 1;
-            last;
-        }
-    }
-    $res
-});
-MO::World.add_builtin_code('startswith', -> $s, *@a {
-    my int $res := 0;
-    my int $sl := nqp::chars($s);
-    for @a {
-        my int $l := nqp::chars($_);
-        if $l < $sl && nqp::substr($s, 0, $l) eq $_ {
-            $res := 1;
-            last;
-        }
-    }
-    $res
-});
-MO::World.add_builtin_code('substr', -> $s, $a, $b? {
-    nqp::defined($b) ?? nqp::substr($s, $a, $b) !! nqp::substr($s, $a)
-});
-MO::World.add_builtin_code('strip', -> $s {
-    my int $i := 0;
-    my int $e := nqp::chars($s);
-    while $i < $e && nqp::iscclass(nqp::const::CCLASS_WHITESPACE, $s, $i) {  $i := $i + 1 }
-    while $i < $e-1 && nqp::iscclass(nqp::const::CCLASS_WHITESPACE, $s, $e-1) { $e := $e - 1 }
-    nqp::substr($s, $i, $e)
-});
-MO::World.add_builtin_code('addprefix', -> $prefix, $s {
-    nqp::isnull($s) ?? $s !! nqp::isnull($prefix) ?? $s !! "$prefix$s"
-});
-MO::World.add_builtin_code('addsuffix', -> $s, $suffix {
-    nqp::isnull($s) ?? $s !! nqp::isnull($suffix) ?? $s !! "$s$suffix"
-});
-MO::World.add_builtin_code('addinfix', -> $prefix, $s, $suffix {
-    $s := nqp::isnull($s) ?? $s !! nqp::isnull($prefix) ?? $s !! "$prefix$s";
-    $s := nqp::isnull($s) ?? $s !! nqp::isnull($suffix) ?? $s !! "$s$suffix";
-    $s
-});
-
-# MO::World.add_builtin_code('say',            &nqp::say);
-# MO::World.add_builtin_code('exit',           &nqp::exit);
-# MO::World.add_builtin_code('print',          &nqp::print);
-# MO::World.add_builtin_code('sleep',          &nqp::sleep);
-# MO::World.add_builtin_code('open',           &nqp::open);
-# MO::World.add_builtin_code('pipe',           &nqp::openpipe);
-# MO::World.add_builtin_code('system',         &nqp::system);
-# MO::World.add_builtin_code('shell',          &nqp::shell);
-# MO::World.add_builtin_code('execname',       &nqp::execname);
-# MO::World.add_builtin_code('env',            &nqp::getenvhash);
-# MO::World.add_builtin_code('null',           &nqp::null);
-# MO::World.add_builtin_code('isnull',         &nqp::isnull);
-
-
-
-
-
 MO::World.add_interpreter('shell', -> $s, %opts {
     if nqp::existskey(%opts, 'stdout') {
         my $h := nqp::open($s, 'rp');
@@ -723,5 +567,3 @@ MO::World.add_interpreter('Perl6', -> $s, %opts {
     my @cl := [ 'perl6', '-e', $s ];
     nqp::spawn(@cl, nqp::cwd, nqp::getenvhash())
 });
-
-MO::Builtin.init();
