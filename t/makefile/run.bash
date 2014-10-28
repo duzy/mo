@@ -9,7 +9,7 @@ function run() {
     local PROVE="prove --failures --nocolor --exec"
     local RUNNER="parrot -I$L -L$L $L/makefile.pbc"
     local NAME=$(dirname $1)/$1
-    $PROVE "$RUNNER" "$SRCDIR/$1.mk"
+    $PROVE "$RUNNER" "$SRCDIR/$1.mk" -v
 }
 
 run 00
