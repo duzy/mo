@@ -551,7 +551,11 @@ class MO::Actions is HLL::Actions {
     }
 
     method control:sym<with>($/) {
-        make QAST::Op.new( :node($/), :op<call>, $<with_block>.made, $<EXPR>.made );
+        my $expr := $<EXPR>.made;
+        if nqp::istype($expr, QAST::Op) && ($expr.op eq 'select' || $expr.op eq 'filter' || $expr.op eq 'list') {
+            $expr := QAST::Var.new( :scope<positional>, $expr, QAST::IVal.new(:value(0)) );
+        }
+        make QAST::Op.new( :node($/), :op<call>, $<with_block>.made, $expr );
     }
 
     method control:sym<any>($/) {

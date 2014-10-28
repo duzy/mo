@@ -66,8 +66,8 @@ knowhow MO::FilesystemNodeHOW {
     my sub method_platform_blocks($node)    { method_stat($node, nqp::const::STAT_PLATFORM_BLOCKS) }
     my sub method_parent_path($node) { pathparent(method_path($node)) }
     my sub method_parent_name($node) { pathname(method_parent_path($node)) }
-    my sub method_path($node)        { pathabs(nqp::getattr($node, $type, '')) }
-    my sub method_lastname($node)    { pathname(nqp::getattr($node, $type, '')) }
+    my sub method_path($node)        { pathabs(nqp::getattr($node, $type, '$..')) }
+    my sub method_lastname($node)    { pathname(nqp::getattr($node, $type, '$..')) }
     my sub method_newer_than($node1, $node2) {
         my int $t1 := method_exists($node1) ?? method_modifytime($node1) !! 0;
         my int $t2 := method_exists($node2) ?? method_modifytime($node2) !! 0;
@@ -143,7 +143,7 @@ knowhow MO::FilesystemNodeHOW {
     method open(:$path) {
         my $exists := nqp::stat($path, nqp::const::STAT_EXISTS);
         my $node := nqp::create(self.type);
-        nqp::bindattr($node, $type, '', $path);
+        nqp::bindattr($node, $type, '$..', $path);
         nqp::bindattr($node, $type, '$.?', 'filesystem');
         nqp::bindattr($node, $type, '$.NAME', pathname($path));
         nqp::bindattr($node, $type, '$.PATH', pathabs($path));

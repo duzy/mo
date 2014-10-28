@@ -74,7 +74,7 @@ class XML::Actions is HLL::Actions {
         ));
 
         $ast.push(QAST::Op.new( :op<bind>,
-            QAST::Var.new( :scope<attribute>, :name(''), $node, $NODETYPE ),
+            QAST::Var.new( :scope<attribute>, :name('$..'), $node, $NODETYPE ),
             QAST::SVal.new( :value(~$<name>) ),
         ));
 

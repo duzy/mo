@@ -295,7 +295,6 @@ echo "$.name: Generating classes.."
 rm -f $.out/classes.{dex,jar,list}
 [[ -d $.out/classes ]] || mkdir -p "$.out/classes" || exit -1
 find "$.out/classes" -type f -name '*.class' -delete
-cat $.out/classpath
 $cmd -d "$.out/classes" $debug -Xlint:unchecked -encoding "UTF-8" \
     -Xlint:-options -source 1.5 -target 1.5 \
     -sourcepath "$.out/sources" "\@$.out/classpath" "\@$.out/sources.list" || exit -1
@@ -358,14 +357,18 @@ $cmd package -f -m -x -M $am \
         var $dir = $_.parent_path();
         var $classpath = $_.path();
         var $libs = '';
-        for @_ { $libs = $libs ~ ' ' ~ $_.path() }
+        for @_ {
+            if $libs ne '' { $libs = $libs ~ ':' }
+            # $libs = $libs ~ dirname($_.path()) ~ '/classes'
+            $libs = $libs ~ $_.path()
+        }
         lang shell :escape
 -------------------------------
 echo "$.name: Generating classpath.."
 mkdir -p $dir || exit -1
 (
     echo '-bootclasspath "$.platform_jar"'
-    for lib in $libs ; do echo "-cp \\"\$lib\\""; done
+    echo "-cp \\"$libs\\""
 ) > $classpath
 ----------------------------end
     }

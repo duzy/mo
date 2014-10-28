@@ -18,7 +18,7 @@ for ->child do
     end
   }
 
-for ->child{1} do
+for ->child->{1} do
   {
     if .name eq 'test-child-1'
       say(.okay)

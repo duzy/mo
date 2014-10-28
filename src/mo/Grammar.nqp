@@ -158,7 +158,7 @@ grammar MO::Grammar is HLL::Grammar {
 
     token name { <!keyword> <.ident> ['::'<.ident>]* }
 
-    token post_dot { '.'$<name>=['*'|[<ns=.ident>':']?<ident>] [$<query>='?'|<args>]? }
+    token post_dot { '.'$<name>=['*'|'.'|[<ns=.ident>':']?<ident>] [$<query>='?'|<args>]? }
     token post_arrow { '->'<select> }
 
     proto token select     { <...> }
@@ -265,24 +265,6 @@ grammar MO::Grammar is HLL::Grammar {
         $scope.annotate('with', 1) if $with;
         self.statements;
     }
-
-    # proto token selector { <...> }
-    # token selector:sym<[ ]> {:s '[' ~ ']' <EXPR> <selector>? } #[<EXPR>+ %% ',']
-    # token selector:sym<{ }> {:s '{' ~ '}' <newscope: 'selector', '$_', 1> <selector>? }
-    # token selector:sym«:»  { <sym>
-    #     [<?before '??'>$<namespace>='?'|<namespace=.ident>]?
-    #     [<selector>|$<query>='?']?
-    # }
-    # token selector:sym«..» { <sym> }
-    # token selector:sym«.»  {:s <sym> $<name>=[[<.ident>':']?<.ident>] }
-    # token selector:sym«->» {:s <sym> [ <select> | <.panic: 'confused selector'> ] <selector>? }
-
-    # proto token select          { <...> }
-    # token select:sym<name>      { <name=.ident> }
-    # token select:sym<quote>     { <quote> }
-    # token select:sym<path>      { '<' ~ '>' [ <quote> | $<path>=[[<![>]>.]+] ] }
-    # token select:sym<me>        { <?before '['|'{'|':'|'.'> }
-    # token select:sym<*>         { <sym> }
 
     token xml  { <data=.LANG('XML','TOP')> }
     token json { <.panic: 'JSON parser not implemented yet'> }

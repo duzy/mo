@@ -10,8 +10,8 @@ with ->child[0] do {
     end
 }
 
-with ->child[1]
-  do {
+with ->child[1] do
+  {
       say(.okay)
 
       if .name eq "test-child-2"
@@ -21,8 +21,8 @@ with ->child[1]
       end
   }
 
-with ->child->{ .name eq "test-child-2" }
-    do {
+with ->child->{ .name eq "test-child-2" } do
+    {
         say("ok\t\t- with ->child\{ .name eq \"test-child-2\" \}")
         if .name eq "test-child-2"
           say("ok\t\t- .name eq \"test-child-2\"")

@@ -13,7 +13,7 @@ else
     say("xx - \$s = $s")
 end
 
-if child.name eq 'test-child-1'
+if child[0].name eq 'test-child-1'
     say("ok - child.name")
 else
     say("xx - child.name = "~child.name)

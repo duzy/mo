@@ -1,7 +1,7 @@
 knowhow MO::NodeHOW {
     my $type;
 
-    # ''                tag (e.g. XML tag name, <name/>)
+    # '$..'             tag (e.g. XML tag name, <name/>)
     # '$.^'             node parent
     # '$.?'             node class (what kind of node?)
     # '$.*'             all attributes in represented order
@@ -10,9 +10,9 @@ knowhow MO::NodeHOW {
     # 'name'            a named child
     #
 
-    sub method_name($node) { nqp::getattr($node, $type, '') }
+    sub method_name($node) { nqp::getattr($node, $type, '$..') }
     sub method_type($node) { nqp::getattr($node, $type, '$.?') }
-    sub method_text($node) { nqp::join('', nqp::getattr($node, $type, '*')) }
+    sub method_text($node) { nqp::join('$..', nqp::getattr($node, $type, '*')) }
     sub method_attributes($node) { nqp::getattr($node, $type, '$.*') }
     sub method_get($node, $name) { nqp::getattr($node, $type, '$.'~$name) }
     sub method_set($node, $name, $value) { MO::NodeHOW.node_bindattr($node, $name, $value) }
@@ -100,11 +100,11 @@ knowhow MO::NodeHOW {
         nqp::push($all, $text);
     }
 
-    method node_keyed_i($node, $key) {
-        nqp::null();
-    }
+    # method node_keyed_i($node, $key) {
+    #     nqp::null();
+    # }
 
-    method node_keyed_s($node, $key) {
-        nqp::getattr($node, $type, $key);
-    }
+    # method node_keyed_s($node, $key) {
+    #     nqp::getattr($node, $type, $key);
+    # }
 }

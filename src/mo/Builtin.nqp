@@ -71,7 +71,7 @@ knowhow MO::Builtin {
     sub isexecutable($s) { nqp::fileexecutable($s) }
 
     sub islist($a) { nqp::islist($a) }
-    sub isstr($a) { nqp::isstr($a) }
+    sub isstr($a)  { nqp::isstr($a) }
     sub isnull($a) { nqp::isnull($a) }
 
     sub defined($a) { nqp::defined($a) }
@@ -154,7 +154,15 @@ knowhow MO::Builtin {
 
     sub readdir(*@dirs) {
         my @result;
-        # TODO: ...
+        for @dirs {
+            my @names := VMCall::readdir($_);
+            my $prefix := $_ eq '.' ?? "" !! "$_/";
+            for @names {
+                if $_ ne '.' && $_ ne '..' {
+                    @result.push(MO::FilesystemNodeHOW.open("$prefix$_"));
+                }
+            }
+        }
         @result
     }
 

@@ -1,46 +1,46 @@
 say("1..22")
 
-with -><t/mo/test> do
-  {
-      if .EXISTS
-        say("ok\t\t- test exists")
-      else
-        say("xx\t\t- test not exists: " ~ .EXISTS)
-      end
+with readdir('t/mo/test') do
+{
+    if .EXISTS
+        say("ok\t\t- test exists");
+    else
+        say("xx\t\t- test not exists: " ~ .EXISTS);
+    end
 
-      if .NAME eq 'test'
-        say("ok\t\t- .NAME eq 'test'")
-      else
-        say("xx\t\t- .NAME eq 'test' : " ~ .NAME)
-      end
+    if .NAME eq 'test'
+        say("ok\t\t- .NAME eq 'test'");
+    else
+        say("xx\t\t- .NAME eq 'test' : " ~ .NAME);
+    end
 
-      if $_.name() eq 't/mo/test'
-        say("ok\t\t- \$_.name() eq 't/mo/test'")
-      else
-        say("xx\t\t- \$_.name() eq 't/mo/test' : "~$_.name())
-      end
+    if $_.name() eq 't/mo/test'
+        say("ok\t\t- \$_.name() eq 't/mo/test'");
+    else
+        say("xx\t\t- \$_.name() eq 't/mo/test' : "~$_.name());
+    end
   }
 
 with -><t/mo>['test'] do
-  {
-      if .EXISTS
-        say("ok\t\t- test exists")
-      else
-        say("xx\t\t- test not exists: " ~ .EXISTS)
-      end
+{
+    if .EXISTS
+        say("ok\t\t- test exists");
+    else
+        say("xx\t\t- test not exists: " ~ .EXISTS);
+    end
 
-      if .NAME eq 'test'
-        say("ok\t\t- .NAME eq 'test'")
-      else
-        say("xx\t\t- .NAME eq 'test' : " ~ .NAME)
-      end
+    if .NAME eq 'test'
+        say("ok\t\t- .NAME eq 'test'");
+    else
+        say("xx\t\t- .NAME eq 'test' : " ~ .NAME);
+    end
 
-      if $_.name() eq 't/mo/test'
-        say("ok\t\t- \$_.name() eq 't/mo/test'")
-      else
-        say("xx\t\t- \$_.name() eq 't/mo/test' : "~$_.name())
-      end
-  }
+    if $_.name() eq 't/mo/test'
+        say("ok\t\t- \$_.name() eq 't/mo/test'");
+    else
+        say("xx\t\t- \$_.name() eq 't/mo/test' : "~$_.name());
+    end
+}
 
 for -><.>['test/many/1.txt', "test/many/2.txt"] do
   {

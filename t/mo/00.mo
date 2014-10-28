@@ -1,8 +1,11 @@
 ## attributes of the current node
+say('dotdot: .. = '~..)
 say('dot: .name = '~.name)
+say('select: child.name = '~child.name)
 say('select: ->child = '~->child)
+say('select: ->child[0].. = '~->child[0]..)
 say('select: ->child[0].name = '~->child[0].name)
-#say('select: ->child.name = '~->child.name)
+say('select: ->child.name = '~->child.name)
 say('select: ->child[0, 1, 2] = '~->child[0, 1, 2])
 say('select: ->child[0, 1, 2][0].name = '~->child[0, 1, 2][0].name)
 say('select: ->child[0, 1, 2][1].name = '~->child[0, 1, 2][1].name)
@@ -36,12 +39,24 @@ say('select: $l->{ 1 } = '~$l->{ 1 });
 say('select: $l->{ 1 } = '~join(', ', $l->{ 1 }));
 
 say('select: glob = '~glob);
-say('glob: * = '~glob('*'));
+say('TODO: glob: * = '~glob('*'));
 
 var $nodes = readdir('.');
 say('readdir: '~$nodes);
-say('select: '~$nodes->{ .name eq '' });
+for $nodes { say('readdir: '~$_.name()~",\t"~$_.path()) }
+say('select: '~$nodes->{ isnull($_) });
+say('select: '~$nodes->{ .name() eq '' });
 
 #class a { $.name = 'foo' }
 #var $a = new(a);
 #say($a.name);
+
+with ->child->{ .name eq "test-child-2" } do
+{
+    say("ok\t\t- with ->child\{ .name eq \"test-child-2\" \}");
+    if .name eq "test-child-2"
+        say("ok\t\t- .name eq \"test-child-2\"");
+    else
+        say("xx\t\t- .name eq \"test-child-2\"");
+    end
+}
