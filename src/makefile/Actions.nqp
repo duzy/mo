@@ -1,4 +1,11 @@
 class MakeFile::Actions is HLL::Actions {
+    sub trim($s) {
+        my int $n := nqp::chars($s);
+        my int $a := nqp::findnotcclass(nqp::const::CCLASS_WHITESPACE, $s, 0, $n);
+        while $a < $n && nqp::iscclass(nqp::const::CCLASS_WHITESPACE, $s, $n-1) { $n := $n-1 }
+        nqp::substr($s, $a, $n)
+    }
+
     method go($/) {
         my $block := QAST::Block.new( :node($/) );
 
@@ -33,10 +40,6 @@ class MakeFile::Actions is HLL::Actions {
         );
 
         make $compunit;
-    }
-
-    sub trim($s) {
-        $s
     }
 
     method statement:sym<assign>($/) {
