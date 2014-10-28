@@ -333,7 +333,7 @@ $cmd package -f -m -M $am \
     -J "$.out/sources" \
     -P "$.out/sources/R.public" \
     -G "$.out/sources/R.proguard" \
-	--output-text-symbols "$.out/sources" \
+    --output-text-symbols "$.out/sources" \
     --generate-dependencies --auto-add-overlay \
     $libs $reses $assets
 ----------------------------end
@@ -345,7 +345,7 @@ $cmd package -f -m -x -M $am \
     -J "$.out/sources" \
     -P "$.out/sources/R.public" \
     -G "$.out/sources/R.proguard" \
-	--output-text-symbols "$.out/sources" \
+    --output-text-symbols "$.out/sources" \
     --generate-dependencies --non-constant-id --auto-add-overlay \
     $libs $reses $assets
 ----------------------------end

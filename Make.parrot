@@ -33,6 +33,15 @@ XML_SOURCES := \
   src/xml/Compiler.nqp \
   src/xml/World.nqp \
 
+MAKEFILE_PBC := gen/parrot/makefile.pbc
+MAKEFILE_PIR := gen/parrot/makefile.pir
+MAKEFILE_NQP := gen/parrot/makefile.nqp
+MAKEFILE_SOURCES := \
+  src/makefile/Grammar.nqp \
+  src/makefile/Actions.nqp \
+  src/makefile/Compiler.nqp \
+  src/makefile/World.nqp \
+
 MODULELOADER_PBC := gen/parrot/mo/ModuleLoader.pbc
 MODULELOADER_PIR := gen/parrot/mo/ModuleLoader.pir
 MODULELOADER_NQP := gen/parrot/mo/ModuleLoader.nqp
@@ -54,7 +63,7 @@ MO_SOURCES := \
   src/mo/parrot/Ops.nqp \
   src/mo/ModuleLoader.nqp \
 
-$(MO_PBC): $(MO_PIR) $(MODULELOADER_PBC)
+$(MO_PBC): $(MO_PIR) $(MODULELOADER_PBC) $(MAKEFILE_PBC)
 	@mkdir -p $(@D)
 	$(PARROT) -t=pbc --output="$@" "$<" 2>/dev/null
 	@[ -f $@ ]
@@ -114,6 +123,21 @@ $(JSON_NQP): $(JSON_SOURCES)
 	$(CAT) $^ > "$@"
 	@[ -f $@ ]
 
+$(MAKEFILE_PBC): $(MAKEFILE_PIR)
+	@mkdir -p $(@D)
+	$(PARROT) -t=pbc --output="$@" "$<" 2>/dev/null
+	@[ -f $@ ]
+
+$(MAKEFILE_PIR): $(MAKEFILE_NQP) $(COMMON_PBC)
+	@mkdir -p $(@D)
+	$(NQP) --combine --target=pir --output="$@" $<
+	@[ -f $@ ]
+
+$(MAKEFILE_NQP): $(MAKEFILE_SOURCES)
+	@mkdir -p $(@D)
+	$(CAT) $^ > "$@"
+	@[ -f $@ ]
+
 $(COMMON_PBC): $(COMMON_PIR)
 	@mkdir -p $(@D)
 	$(PARROT) -t=pbc --output="$@" "$<" 2>/dev/null
@@ -135,6 +159,9 @@ test-xml: t/xml/run.bash $(XML_PBC)
 	@$(BASH) $<
 
 test-json: ; @echo "JSON..."
+
+test-makefile: t/makefile/run.bash $(MAKEFILE_PBC)
+	@$(BASH) $<
 
 test-mo: t/mo/run.bash $(MO_PBC)
 	@$(BASH) $<
