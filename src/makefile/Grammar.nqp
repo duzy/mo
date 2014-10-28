@@ -17,14 +17,18 @@ grammar MakeFile::Grammar is HLL::Grammar {
 
     proto rule statement { <...> }
     rule statement:sym<assign> {
-        <expandable> <equal> <text>
+        <text '='> <equal> <text \n>
+        { say(~$/) }
     }
 
     proto token expandable { <...> }
+    token expandable:sym<$()> { '$(' ~ ')' <text ')'> }
+    token expandable:sym<${}> { '${' ~ '}' <text '}'> }
+    token expandable:sym<$> { <sym><-[({]> }
 
     token equal { '='|':='|'?=' }
 
-    token text {
-        
+    token text($neg) {
+        [<!before $neg>.]+
     }
 }
