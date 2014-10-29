@@ -1,6 +1,8 @@
 __me := $(lastword $(MAKEFILE_LIST))
 
-NDK_ROOT := /home/zhan/tools/android-ndk-r9d
+NDK_ROOT := $(strip $(or\
+    $(wildcard /open/android/android-ndk-r9d),\
+    $(wildcard /home/zhan/tools/android-ndk-r9d)))
 include $(NDK_ROOT)/build/core/init.mk
 __my_dir := $(call parent-dir,$(__me))
 

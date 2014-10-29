@@ -75,7 +75,7 @@ class native <$path>
         unless isreg($config_xml) {
             lang shell :escape
 ---------------------------
-make -s -f $sysdir/android.mk NDK_PROJECT_PATH=$project_path > $config_xml
+make -s -f $sysdir/android.mk NDK_PROJECT_PATH=$project_path > $config_xml || rm -f $config_xml
 ------------------------end
         }
 
