@@ -110,11 +110,13 @@ $ops.add_hll_op('mo', 'falsey', -> $qastcomp, $op { # from nqp/src/vm/parrot/NQP
 
 $ops.add_hll_op('mo', 'get', -> $qastcomp, $op {
     my $ast;
-    if nqp::istype($op[0], QAST::Op) && ($op[0].op eq 'select' || $op[0].op eq 'filter' || $op[0].op eq 'list') {
+    if (nqp::istype($op[0], QAST::Op) && ($op[0].op eq 'select' || $op[0].op eq 'filter' || $op[0].op eq 'list'))
+    || (nqp::istype($op[0], QAST::Var) && (nqp::substr($op[0].name, 0, 1) eq '@'))
+    {
         my $v := QAST::Var.new( :scope<positional>, $op[0], QAST::IVal.new(:value(0)) );
-        $ast := QAST::Op.new( :op<getattr>, $v, $v, $op[1] ),
+        $ast := QAST::Op.new( :op<getattr>, $v, $v, $op[1] );
     } else {
-        $ast := QAST::Op.new( :op<getattr>, $op[0], $op[0], $op[1] ),
+        $ast := QAST::Op.new( :op<getattr>, $op[0], $op[0], $op[1] );
     }
     $qastcomp.as_post( $ast );
 });

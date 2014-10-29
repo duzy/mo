@@ -82,8 +82,9 @@ make -s -f $sysdir/android.mk NDK_PROJECT_PATH=$project_path > $config_xml
         var $config = load_xml($config_xml)
         say($config.top)
 
-        var $m = $config->module->{ .name eq $config.top }
-        say($m[0].BUILT_MODULE) #say($m.BUILT_MODULE)
+        var @m = $config->module->{ .name eq $config.top }
+        say(@m[0].BUILT_MODULE) #say($m.BUILT_MODULE)
+        say(@m.BUILT_MODULE)
     }
 }
 
