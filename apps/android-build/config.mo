@@ -36,8 +36,12 @@ def BuildTool($sdk, $version, $name) {
         "$sdk/build-tools/17.0.0/$name"
 }
 
+def load_xml($xml) {
+    lang XML in $xml
+}
+
 def load_manifest($path) {
-    lang XML in "$path/AndroidManifest.xml"
+    load_xml("$path/AndroidManifest.xml")
 }
 
 def search_library($path, $lib) {
@@ -60,7 +64,27 @@ def notnull($v, $err) {
 
 class native <$path>
 {
-    
+    {
+        var $and_mk = any isreg "$path/Android.mk";
+        var $app_mk = any isreg "$path/Application.mk";
+        notnull($and_mk, "Android.mk is not underneath $path");
+        notnull($app_mk, "Application.mk is not underneath $path");
+
+        var $project_path = dirname($path);
+        var $config_xml = "$path/config.xml";
+        unless isreg($config_xml) {
+            lang shell :escape
+---------------------------
+make -s -f $sysdir/android.mk NDK_PROJECT_PATH=$project_path > $config_xml
+------------------------end
+        }
+
+        var $config = load_xml($config_xml)
+        say($config.top)
+
+        var $m = $config->module->{ .name eq $config.top }
+        say($m[0].BUILT_MODULE) #say($m.BUILT_MODULE)
+    }
 }
 
 class project <$path, $variant>
@@ -88,10 +112,16 @@ class project <$path, $variant>
     $.libs = list();
     $.lib_projects = hash();
 
+    $.native = list();
+
     $.out = "$path/bin/$variant";
     $.target;
 
     {
+        if isdir("$path/jni") {
+            $.native = new(native, "$path/jni");
+        }
+
         var $name = $.name;
         var $manifest = $.manifest;
         if isnull($name) { $name = $.name = split('.', $manifest.package).pop() }
