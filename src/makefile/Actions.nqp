@@ -19,7 +19,8 @@ class MakeFile::Actions is HLL::Actions {
                 if $_<expandable> {
                     $text := $text ~ value($_<expandable>);
                 } elsif $_<quote> {
-                    $text := $text ~ ~$_;
+                    my $str := nqp::join('', $_<quote><quote_EXPR><quote_delimited><quote_atom>);
+                    $text := $text ~ $str;
                 } else {
                     $text := $text ~ ~$_;
                 }
@@ -121,6 +122,9 @@ class MakeFile::Actions is HLL::Actions {
     method text_atom:sym<.>($/) {
         make QAST::SVal.new( :value(~$/) );
     }
+
+    #method quote:sym<'>($/) { make $<quote_EXPR>.made; } #'
+    #method quote:sym<">($/) { make $<quote_EXPR>.made; } #"
 
     method expandable:sym<$()>($/) { make $<nameargs>.made }
     method expandable:sym<${}>($/) { make $<nameargs>.made }

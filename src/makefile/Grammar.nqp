@@ -46,7 +46,7 @@ grammar MakeFile::Grammar is HLL::Grammar {
     }
 
     proto rule statement       { <...> }
-    rule statement:sym<assign> { <.ws><name=text '='|\n> <equal> <value=text <eol>> }
+    rule statement:sym<assign> { <.ws><name=text \s*<equal>|\n> <equal> <value=text <eol>> }
     rule statement:sym<:>      { <rule> }
     rule statement:sym<$>      { <expandable> }
     rule statement:sym<say>    { <sym> '(' ~ ')' <text> }
@@ -57,7 +57,7 @@ grammar MakeFile::Grammar is HLL::Grammar {
 
     proto token text_atom  { <...> }
     token text_atom:sym<$> { <expandable> }
-    token text_atom:sym<q> { <quote> }
+    token text_atom:sym<q> { <quote> } #!!!!!!
     token text_atom:sym<.> { <-[$]> }
 
     proto token quote  { <...> }
