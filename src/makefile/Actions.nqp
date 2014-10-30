@@ -1,4 +1,10 @@
 class MakeFile::Actions is HLL::Actions {
+    sub trim_left($s) {
+        my int $n := nqp::chars($s);
+        my int $a := nqp::findnotcclass(nqp::const::CCLASS_WHITESPACE, $s, 0, $n);
+        nqp::substr($s, $a, $n)
+    }
+
     sub trim($s) {
         my int $n := nqp::chars($s);
         my int $a := nqp::findnotcclass(nqp::const::CCLASS_WHITESPACE, $s, 0, $n);
@@ -6,8 +12,45 @@ class MakeFile::Actions is HLL::Actions {
         nqp::substr($s, $a, $n)
     }
 
+    sub expend($text_ast) {
+        my $text := '';
+        if $text_ast<text_atom> {
+            for $text_ast<text_atom> {
+                if $_<expandable> {
+                    $text := $text ~ value($_<expandable>);
+                } elsif $_<quote> {
+                    $text := $text ~ ~$_;
+                } else {
+                    $text := $text ~ ~$_;
+                }
+            }
+        } else {
+            $text := ~$text_ast;
+        }
+        $text
+    }
+
+    sub value($ast) {
+        my $scope := $*SCOPE;
+        my $name;
+        if $ast<nameargs> {
+            $name := $ast<nameargs><name>;
+        } elsif $ast<name> {
+            $name := $ast<name>;
+        } else {
+            nqp::die("unknown ast "~$ast);
+        }
+
+        my %sym := $scope.symbol(expend($name));
+        #unless %sym { nqp::die("no value for "~$name) }
+        #%sym<value>
+        %sym ?? %sym<value> !! ''
+    }
+
     method go($/) {
-        my $block := QAST::Block.new( :node($/) );
+        my $block := $*SCOPE;
+        my $stmts := $block.push( QAST::Stmts.new( :node($/) ) );
+        $stmts.push($_.made) for $<statement>;
 
         my $compunit := QAST::CompUnit.new(
             :hll('MakeFile'),
@@ -43,29 +86,63 @@ class MakeFile::Actions is HLL::Actions {
     }
 
     method statement:sym<assign>($/) {
-        say('assign: '~trim(~$<name>)~'='~$<value>);
+        my $scope := $*SCOPE;
+        my $name := expend($<name>);
+        my $value := trim_left(~$<value>);
+
+        $scope.symbol($name, :$value, :value_ast($<value>), :source(~$<equal>));
+
+        make QAST::Op.new( :node($<equal>), :op<bind>,
+            QAST::Var.new( :decl<var>, :scope<lexical>, :$name ),
+            QAST::SVal.new( :$value ),
+        );
     }
 
     method statement:sym<:>($/) {
-        say('rule: '~$/);
+        make QAST::Stmts.new(:node($/));
     }
 
     method statement:sym<$>($/) {
-        say('expend: '~$/);
+        make QAST::Stmts.new(:node($/));
     }
 
-    # method text_atom:sym<$>($/) {   }
-    # method text_atom:sym<.>($/) {   }
-
-    method expandable:sym<$()>($/) {
+    method statement:sym<say>($/) {
+        make QAST::Op.new( :node($/), :op<say>, QAST::SVal.new( :value(~$<text>) ) );
     }
 
-    method expandable:sym<${}>($/) {
+    method text_atom:sym<$>($/) {
+        make $<expandable>.made;
     }
 
-    method expandable:sym<$>($/) {
+    method text_atom:sym<q>($/) {
+        make $<quote>.made;
+    }
+
+    method text_atom:sym<.>($/) {
+        make QAST::SVal.new( :value(~$/) );
+    }
+
+    method expandable:sym<$()>($/) { make $<nameargs>.made }
+    method expandable:sym<${}>($/) { make $<nameargs>.made }
+    method expandable:sym<$>($/) { self.nameargs($/) }
+
+    method nameargs($/) {
+        my $name := expend($<name>);
+        if $name eq 'info' {
+            my $s := '';
+            if +$<args><text> {
+                $s := $s ~ expend($_) for $<args><text>;
+            } else {
+                $s := $s ~ expend($<args><text>);
+            }
+            nqp::say($s);
+            make QAST::SVal.new( :value('') );
+        } else {
+            make QAST::Var.new( :decl<var>, :scope<lexical>, :$name );
+        }
     }
 
     method rule ($/) {
+        make QAST::SVal.new( :value(~$/) );
     }
 }
