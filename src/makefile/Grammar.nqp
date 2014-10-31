@@ -88,4 +88,9 @@ grammar MakeFile::Grammar is HLL::Grammar {
     }
 
     token recipe { [[\\\n]?<text \\\n|<eol>>]* }
+        [ '|' <ts>* [ <post=text ' '|<eol>><ts>* ]* ]?
+        [ ';'<action> | [\n\t<action>]* ]
+    }
+
+    token action { [[\\\n]?<text \\\n|<eol>>]* }
 }
