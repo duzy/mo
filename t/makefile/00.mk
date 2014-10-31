@@ -13,9 +13,15 @@ $(info $(FOOtestBAR))
 
 $(warning "$(FOO$(VAR)BAR), $(FOOtestBAR)")
 
-foo : bar | baz
-	echo $@ $(VAR)
-bar:
+foo : bar1 bar2 | baz1 baz2
+	echo $@ $^ $(VAR)
+bar1:
 	echo $@ $(V2)
-baz:
+bar2:
+	echo $@ $(V2)
+baz1:
+	echo $@ \
+a b c \
+	defgh
+baz2:
 	echo $@

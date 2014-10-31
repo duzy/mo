@@ -138,7 +138,10 @@ class MakeFile::Actions is HLL::Actions {
     }
 
     method args($/) {
-        my $ast := QAST::Op.new(:op<callmethod>, :node($/), QAST::WVal.new(:value(MakeFile::Builtin)));
+        my $ast := QAST::Op.new(:op<callmethod>, :node($/),
+            # QAST::WVal.new(:value(MakeFile::Builtin))
+            QAST::Var.new( :scope<local>, :name<builtin> )
+        );
         if +$<text> {
             $ast.push(QAST::SVal.new(:value(expend($_)))) for $<text>;
         } else {
@@ -147,7 +150,20 @@ class MakeFile::Actions is HLL::Actions {
         make $ast;
     }
 
-    method rule ($/) {
-        make QAST::SVal.new( :value(~$/) );
+    method rule($/) {
+        my $scope := $*SCOPE;
+        my $block := QAST::Block.new( QAST::Stmts.new() );
+        $block[0].push( QAST::Op.new( :op<bind>,
+            QAST::Var.new( :decl<var>, :scope<local>, :name<builtin> ),
+            QAST::WVal.new( :value(MakeFile::Builtin) ),
+        ) );
+        $block[0].push( QAST::Var.new(:name<$@>, :scope<lexical>, :decl<param>) );
+        $block[0].push( QAST::Var.new(:name<$^>, :scope<lexical>, :decl<param>) );
+        $block[0].push( QAST::Op.new( :op<bind>,
+            QAST::Var.new(:name('$<'), :scope<lexical>, :decl<var>),
+            QAST::Var.new(:name('$^'), :scope<lexical>),
+        ) );
+        $scope.push( $block );
+        make QAST::Stmts.new();
     }
 }
