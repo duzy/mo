@@ -104,11 +104,7 @@ class MakeFile::Actions is HLL::Actions {
     }
 
     method statement:sym<$>($/) {
-        make QAST::Stmts.new(:node($/));
-    }
-
-    method statement:sym<say>($/) {
-        make QAST::Op.new( :node($/), :op<say>, QAST::SVal.new( :value(~$<text>) ) );
+        make $<expandable>.made;
     }
 
     method text_atom:sym<$>($/) {
@@ -132,18 +128,23 @@ class MakeFile::Actions is HLL::Actions {
 
     method nameargs($/) {
         my $name := expend($<name>);
-        if $name eq 'info' {
-            my $s := '';
-            if +$<args><text> {
-                $s := $s ~ expend($_) for $<args><text>;
-            } else {
-                $s := $s ~ expend($<args><text>);
-            }
-            nqp::say($s);
-            make QAST::SVal.new( :value('') );
+        if $<args> && nqp::can(MakeFile::Builtin, $name) {
+            my $ast := $<args>.made;
+            $ast.name($name);
+            make $ast;
         } else {
             make QAST::Var.new( :decl<var>, :scope<lexical>, :$name );
         }
+    }
+
+    method args($/) {
+        my $ast := QAST::Op.new(:op<callmethod>, :node($/), QAST::WVal.new(:value(MakeFile::Builtin)));
+        if +$<text> {
+            $ast.push(QAST::SVal.new(:value(expend($_)))) for $<text>;
+        } else {
+            $ast.push(QAST::SVal.new(:value(expend($<text>))));
+        }
+        make $ast;
     }
 
     method rule ($/) {

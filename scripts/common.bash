@@ -1,3 +1,5 @@
+SRCDIR="$(dirname ${BASH_SOURCE[1]})"
+
 if [[ "x$vm" = "x" ]]; then
     echo 'error: $vm is empty'
     exit -1
@@ -26,4 +28,33 @@ function mo-cmd() {
 
 function run() {
     $(mo-cmd) $@
+}
+
+function check() {
+    local txt="$1"
+    local out="$2"
+
+    # IFS=$'\n' local txt_lines=($(cat $txt))
+    # IFS=$'\n' local out_lines=($(cat $out))
+    mapfile -t txt_lines < $txt
+    mapfile -t out_lines < $out
+
+    local okay=1
+    for i in $(seq ${#out_lines[*]}); do
+        [[ "${out_lines[$i-1]}" == "${txt_lines[$i-1]}" ]] || {
+            echo '.wrong line #'$i':'
+            echo "--output: ${out_lines[$i-1]}"
+            echo "--expect: ${txt_lines[$i-1]}"
+            okay=0
+            break
+        }
+    done
+
+    if [[ $okay == 1 && "${#out_lines[*]}" == "${#txt_lines[*]}" ]]; then
+        echo '.ok'
+    elif [[ "${#out_lines[*]}" != "${#txt_lines[*]}" ]]; then
+        echo ".xx (want ${#txt_lines[*]} lines, but ${#out_lines[*]})"
+    else
+        echo '.xx'
+    fi
 }

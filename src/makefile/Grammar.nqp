@@ -49,7 +49,6 @@ grammar MakeFile::Grammar is HLL::Grammar {
     rule statement:sym<assign> { <.ws><name=text \s*<equal>|\n> <equal> <value=text <eol>> }
     rule statement:sym<:>      { <rule> }
     rule statement:sym<$>      { <expandable> }
-    rule statement:sym<say>    { <sym> '(' ~ ')' <text> }
 
     token equal { '='|':='|'?=' }
 
@@ -72,7 +71,12 @@ grammar MakeFile::Grammar is HLL::Grammar {
     token nameargs($a) { <name=text $a|' '> \s* <args $a>? }
     token args($a) { <text ','|$a>? %% ',' }
 
+    token targets($e) {
+        <text $e|' '>+
+    }
+
     rule rule {
-        <text ':'> ':' <text '|'|<eol>>? ['|' <text <eol>>]?\n?[^^\t<text <eol>>\n?]*
+        <targets=text ':'|' '> ':' <prerequisite=text '|'|<eol>>*
+        ['|' <text ' '|<eol>>*]?\n?[^^\t<text <eol>>\n?]*
     }
 }
