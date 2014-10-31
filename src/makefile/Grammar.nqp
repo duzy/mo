@@ -9,6 +9,10 @@ grammar MakeFile::Grammar is HLL::Grammar {
             MakeFile::World.new(:handle($source_id), :description($file));
 
         my $*SCOPE := QAST::Block.new( :node($/), QAST::Stmts.new() );
+        $*SCOPE[0].push( QAST::Op.new( :op<bind>,
+            QAST::Var.new( :decl<var>, :scope<local>, :name<builtin> ),
+            QAST::WVal.new( :value(MakeFile::Builtin) ),
+        ) );
 
         self.go
     }
@@ -28,6 +32,7 @@ grammar MakeFile::Grammar is HLL::Grammar {
     }
 
     token eol { \n|'#'\N*\n? }
+    token ts { <[\t\ ]> }
 
     token special_rule_name {
         | '.DEFAULTS'
@@ -71,12 +76,12 @@ grammar MakeFile::Grammar is HLL::Grammar {
     token nameargs($a) { <name=text $a|' '> \s* <args $a>? }
     token args($a) { <text ','|$a>? %% ',' }
 
-    token targets($e) {
-        <text $e|' '>+
+    token rule {
+        [ <target=text ':'|' '><ts>* ]+ ':'<ts>*
+        [ <!before '|'><prerequisite=text '|'|' '|<eol>><ts>* ]*
+        [ '|' <ts>* [ <post=text ' '|<eol>><ts>* ]* ]?
+        [ ';'<action> | [\n\t<action>]* ]
     }
 
-    rule rule {
-        <targets=text ':'|' '> ':' <prerequisite=text '|'|<eol>>*
-        ['|' <text ' '|<eol>>*]?\n?[^^\t<text <eol>>\n?]*
-    }
+    token action { [[\\\n]?<text \\\n|<eol>>]* }
 }
