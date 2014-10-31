@@ -11,6 +11,8 @@ $(info FOO$(VAR)BAR)
 $(info $(FOO$(VAR)BAR))
 $(info $(FOOtestBAR))
 
+$(warning "$(FOO$(VAR)BAR), $(FOOtestBAR)")
+
 foo : bar | baz
 	echo $@ $(VAR)
 bar:

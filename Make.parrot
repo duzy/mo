@@ -41,6 +41,7 @@ MAKEFILE_SOURCES := \
   src/makefile/Actions.nqp \
   src/makefile/Compiler.nqp \
   src/makefile/World.nqp \
+  src/makefile/Builtin.nqp \
 
 MODULELOADER_PBC := gen/parrot/mo/ModuleLoader.pbc
 MODULELOADER_PIR := gen/parrot/mo/ModuleLoader.pir
