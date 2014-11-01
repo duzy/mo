@@ -50,28 +50,32 @@ grammar MakeFile::Grammar is HLL::Grammar {
         | '.SUFFIXES'
     }
 
-    proto rule statement       { <...> }
-    rule statement:sym<assign> { <.ws><name=text \s*<equal>|\n> <equal> <value=text <eol>> }
-    rule statement:sym<:>      { <rule> }
-    rule statement:sym<$>      { <expandable> }
+    proto rule statement         { <...> }
+    rule statement:sym<assign>   { <.ws><name=text \s*<equal>|\n> <equal> <value=text <eol>> }
+    rule statement:sym<define>   { <sym> }
+    rule statement:sym<undefine> { <sym> }
+    rule statement:sym<override> { <sym> }
+    rule statement:sym<include>  { <sym> }
+    rule statement:sym<:>        { <rule> }
+    rule statement:sym<$>        { <reference> }
 
-    token equal { '='|':='|'?=' }
+    token equal { '='|':='|'::='|'?=' }
 
     token text($stop) { [<!before $stop><text_atom>]+ }
 
     proto token text_atom  { <...> }
-    token text_atom:sym<$> { <expandable> }
-    token text_atom:sym<q> { <quote> } #!!!!!!
+    token text_atom:sym<$> { <reference> }
+    token text_atom:sym<q> { <quote> }
     token text_atom:sym<.> { <-[$]> }
 
     proto token quote  { <...> }
     token quote:sym<'> { <?[']> <quote_EXPR: ':q'>  }
     token quote:sym<"> { <?["]> <quote_EXPR: ':qq'> }
 
-    proto token expandable    { <...> }
-    token expandable:sym<$()> { '$(' ~ ')' <nameargs ')'> }
-    token expandable:sym<${}> { '${' ~ '}' <nameargs '}'> }
-    token expandable:sym<$>   { <sym>$<name>=<-[({]> }
+    proto token reference    { <...> }
+    token reference:sym<$()> { '$(' ~ ')' <nameargs ')'> }
+    token reference:sym<${}> { '${' ~ '}' <nameargs '}'> }
+    token reference:sym<$>   { <sym>$<name>=<-[({]> }
 
     token nameargs($a) { <name=text $a|' '> \s* <args $a>? }
     token args($a) { <text ','|$a>? %% ',' }
@@ -79,9 +83,9 @@ grammar MakeFile::Grammar is HLL::Grammar {
     token rule {
         [ <target=text ':'|' '><ts>* ]+ ':'<ts>*
         [ <!before '|'><prerequisite=text '|'|' '|<eol>><ts>* ]*
-        [ '|' <ts>* [ <post=text ' '|<eol>><ts>* ]* ]?
-        [ ';'<action> | [\n\t<action>]* ]
+        [ '|'<ts>* [ <post=text ' '|<eol>><ts>* ]* ]?
+        [ ';'<recipe> | [\n\t<recipe>]* ]
     }
 
-    token action { [[\\\n]?<text \\\n|<eol>>]* }
+    token recipe { [[\\\n]?<text \\\n|<eol>>]* }
 }
