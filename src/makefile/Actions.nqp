@@ -1,3 +1,4 @@
+# Doc: http://www.gnu.org/software/make/manual/make.html
 class MakeFile::Actions is HLL::Actions {
     sub trim_left($s) {
         my int $n := nqp::chars($s);
@@ -16,8 +17,8 @@ class MakeFile::Actions is HLL::Actions {
         my $text := '';
         if $text_ast<text_atom> {
             for $text_ast<text_atom> {
-                if $_<expandable> {
-                    $text := $text ~ value($_<expandable>);
+                if $_<reference> {
+                    $text := $text ~ value($_<reference>);
                 } elsif $_<quote> {
                     my $str := nqp::join('', $_<quote><quote_EXPR><quote_delimited><quote_atom>);
                     $text := $text ~ $str;
@@ -104,11 +105,11 @@ class MakeFile::Actions is HLL::Actions {
     }
 
     method statement:sym<$>($/) {
-        make $<expandable>.made;
+        make $<reference>.made;
     }
 
     method text_atom:sym<$>($/) {
-        make $<expandable>.made;
+        make $<reference>.made;
     }
 
     method text_atom:sym<q>($/) {
@@ -122,9 +123,9 @@ class MakeFile::Actions is HLL::Actions {
     #method quote:sym<'>($/) { make $<quote_EXPR>.made; } #'
     #method quote:sym<">($/) { make $<quote_EXPR>.made; } #"
 
-    method expandable:sym<$()>($/) { make $<nameargs>.made }
-    method expandable:sym<${}>($/) { make $<nameargs>.made }
-    method expandable:sym<$>($/) { self.nameargs($/) }
+    method reference:sym<$()>($/) { make $<nameargs>.made }
+    method reference:sym<${}>($/) { make $<nameargs>.made }
+    method reference:sym<$>($/) { self.nameargs($/) }
 
     method nameargs($/) {
         my $name := expend($<name>);
