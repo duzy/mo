@@ -64,6 +64,14 @@ def notnull($v, $err) {
 
 class native <$path>
 {
+    $.config_xml
+    $.config
+
+    $.out_lib
+    $.out_obj
+    $.built
+    $.target
+
     {
         var $and_mk = any isreg "$path/Android.mk";
         var $app_mk = any isreg "$path/Application.mk";
@@ -71,20 +79,54 @@ class native <$path>
         notnull($app_mk, "Application.mk is not underneath $path");
 
         var $project_path = dirname($path);
-        var $config_xml = "$path/config.xml";
-        unless isreg($config_xml) {
-            lang shell :escape
+        $.out_lib = "$project_path/libs"
+        $.out_obj = "$project_path/obj"
+        $.config_xml = "$.out_obj/config.xml";
+    }
+
+    $.config_xml : "$path/Android.mk" "$path/Application.mk"
+    {
+        var $project_path = dirname($path);
+        lang shell :escape
 ---------------------------
-make -s -f $sysdir/android.mk NDK_PROJECT_PATH=$project_path > $config_xml || rm -f $config_xml
+echo "Generating $.config_xml.."
+mkdir -p \$(dirname $.config_xml)
+make -s -f $sysdir/android.mk NDK_PROJECT_PATH=$project_path > $.config_xml || rm -f $.config_xml
 ------------------------end
+    }
+
+    {
+        <"$.config_xml">.make(me);
+
+        if isreg($.config_xml) {
+            $.config = load_xml($.config_xml);
+
+            var @m = $.config->module->{ .name eq $.config.top }
+            $.built  = @m.BUILT_MODULE
+            $.target = @m.INSTALLED
         }
+    }
 
-        var $config = load_xml($config_xml)
-        say($config.top)
+    method make: $.target : $.built
+    {
+        lang shell :escape
+---------------------------
+echo "Generating $.target.."
+mkdir -p \$(dirname $.target) && cp -f $.built $.target
+------------------------end
+    }
 
-        var @m = $config->module->{ .name eq $config.top }
-        say(@m[0].BUILT_MODULE) #say($m.BUILT_MODULE)
-        say(@m.BUILT_MODULE)
+    $.built :
+    {
+        lang shell :escape
+---------------------------
+echo "Generating $.built.."
+mkdir -p \$(dirname $.target) || exit -1
+------------------------end
+    }
+
+    {
+        me.make()
     }
 }
 
