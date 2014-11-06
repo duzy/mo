@@ -72,6 +72,12 @@ class native <$path>
     $.built
     $.target
 
+    method binaries() {
+        var $list = list()
+        $list.push( $.target )
+        $list
+    }
+
     {
         var $and_mk = any isreg "$path/Android.mk";
         var $app_mk = any isreg "$path/Application.mk";
@@ -102,6 +108,10 @@ make -s -f $sysdir/android.mk NDK_PROJECT_PATH=$project_path > $.config_xml || r
             $.config = load_xml($.config_xml);
 
             var @m = $.config->module->{ .name eq $.config.top }
+            if +@m < 1 {
+                die("missing top module "~$.config.top)
+            }
+
             $.built  = @m.BUILT_MODULE
             $.target = @m.INSTALLED
         }
@@ -126,7 +136,7 @@ mkdir -p \$(dirname $.target) || exit -1
     }
 
     {
-        me.make()
+        # me.make()
     }
 }
 
@@ -155,7 +165,8 @@ class project <$path, $variant>
     $.libs = list();
     $.lib_projects = hash();
 
-    $.native = list();
+    $.native;
+    $.native_binaries;
 
     $.out = "$path/bin/$variant";
     $.target;
@@ -163,6 +174,7 @@ class project <$path, $variant>
     {
         if isdir("$path/jni") {
             $.native = new(native, "$path/jni");
+            $.native_binaries = $.native.binaries()
         }
 
         var $name = $.name;
@@ -302,7 +314,7 @@ $cmd -sigalg MD5withRSA -digestalg SHA1 $keystore $keypass $storepass \
 ----------------------------end
     }
 
-    "$.out/_.pack" : "$.path/AndroidManifest.xml" "$.out/classes.dex"
+    "$.out/_.pack" : "$.path/AndroidManifest.xml" "$.out/classes.dex" $.native_binaries
     {
         var $dir    = $_.parent_path();
         var $pack   = $_.path();
@@ -454,6 +466,12 @@ mkdir -p $dir || exit -1
             say("$.name: Building "~$project.name()~" ($lib)");
             $project.make();
         }
+    }
+
+    $.native_binaries :
+    {
+        say($_.path());
+        $.native.make();
     }
 }
 
