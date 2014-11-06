@@ -60,5 +60,4 @@ $(foreach _app,$(NDK_APPS),\
   $(eval include $(BUILD_SYSTEM)/setup-app.mk)\
  )
 
-#include $(__my_dir)/android_dump.mk
-include $(__my_dir)/android_dump_xml.mk
+include $(__my_dir)/do/$(DO).mk

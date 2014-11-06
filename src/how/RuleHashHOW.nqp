@@ -82,13 +82,15 @@ knowhow MO::RuleHashHOW {
 
     sub method_link($o, $targets, $prerequisites, $build) {
         $targets := flatten_str_list($targets);
-        $prerequisites := flatten_str_list($prerequisites);
+        if +$targets {
+            $prerequisites := flatten_str_list($prerequisites);
 
-        my @prerequisites;
-        @prerequisites.push(target($o, $_)) for $prerequisites;
+            my @prerequisites;
+            @prerequisites.push(target($o, $_)) for $prerequisites;
 
-        for $targets {
-            target($o, $_).bind($build, @prerequisites);
+            for $targets {
+                target($o, $_).bind($build, @prerequisites);
+            }
         }
     }
 
@@ -99,6 +101,8 @@ knowhow MO::RuleHashHOW {
                 @a.push($_)
             } elsif nqp::islist($_) {
                 @a.push($_) for flatten_str_list($_);
+            } elsif nqp::isnull($_) {
+                # discard null item..
             } else {
                 nqp::die('not a string');
             }

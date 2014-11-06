@@ -71,6 +71,7 @@ class native <$path>
     $.out_obj
     $.built
     $.target
+    $.target_name
 
     method binaries() {
         var $list = list()
@@ -95,9 +96,10 @@ class native <$path>
         var $project_path = dirname($path);
         lang shell :escape
 ---------------------------
-echo "Generating $.config_xml.."
+echo "$.target_name: Generating $.config_xml.."
 mkdir -p \$(dirname $.config_xml)
-make -s -f $sysdir/android.mk NDK_PROJECT_PATH=$project_path > $.config_xml || rm -f $.config_xml
+make -s -f $sysdir/ndk/boot.mk NDK_PROJECT_PATH=$project_path DO=xml \
+    > $.config_xml || rm -f $.config_xml
 ------------------------end
     }
 
@@ -114,6 +116,7 @@ make -s -f $sysdir/android.mk NDK_PROJECT_PATH=$project_path > $.config_xml || r
 
             $.built  = @m.BUILT_MODULE
             $.target = @m.INSTALLED
+            $.target_name = $.config.top
         }
     }
 
@@ -121,22 +124,20 @@ make -s -f $sysdir/android.mk NDK_PROJECT_PATH=$project_path > $.config_xml || r
     {
         lang shell :escape
 ---------------------------
-echo "Generating $.target.."
+echo "$.target_name: Generating native $.target.."
 mkdir -p \$(dirname $.target) && cp -f $.built $.target
 ------------------------end
     }
 
     $.built :
     {
+        var $project_path = dirname($path);
         lang shell :escape
 ---------------------------
-echo "Generating $.built.."
-mkdir -p \$(dirname $.target) || exit -1
+echo "$.target_name: Generating native $.built.."
+make -s -f $sysdir/ndk/boot.mk NDK_PROJECT_PATH=$project_path \
+    DO=build DO_TARGET_MODULE_NAME=$.target_name
 ------------------------end
-    }
-
-    {
-        # me.make()
     }
 }
 
@@ -470,7 +471,7 @@ mkdir -p $dir || exit -1
 
     $.native_binaries :
     {
-        say($_.path());
+        say("$.name: make "~$_.path()~"..");
         $.native.make();
     }
 }
