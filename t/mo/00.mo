@@ -1,3 +1,4 @@
+# 45-rules.mo
 say('1..40');
 
 "foo" : "bar"
@@ -29,8 +30,8 @@ system('rm -f foo bar');
 
 class foobar
 {
-    $.target = 'foobar';
-    @.depends = list();
+    var $.target = 'foobar';
+    var @.depends = list();
 
     {
         @.depends.push('foo');
