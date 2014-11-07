@@ -2,7 +2,7 @@ say('1..4');
 
 class A
 {
-    $.okay = "ok - A.okay";
+    var $.okay = "ok - A.okay";
 
     method test1() {
         say('ok - A.test1');

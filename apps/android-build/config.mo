@@ -72,13 +72,13 @@ class native <$path>
     var $.out_obj
 
     method binaries() {
-        var $list = list()
-        $list.push( $.module.INSTALLED )
+        var $list = list();
+        $list.push($.module.INSTALLED)
         $list
     }
 
     method sources() {
-        var $list = list()
+        var $list = list();
         for split(" ", $.module.SRC_FILES) {
             $list.push($.module.PATH~"/$_")
         }
@@ -176,6 +176,7 @@ class project <$path, $variant>
     var $.lib_projects = hash();
 
     var $.native;
+    var $.native_binaries;
 
     var $.out = "$path/bin/$variant";
     var $.target;
@@ -183,6 +184,7 @@ class project <$path, $variant>
     {
         if isdir("$path/jni") {
             $.native = new(native, "$path/jni");
+            $.native_binaries = $.native.binaries();
         }
 
         var $name = $.name;
@@ -322,7 +324,7 @@ $cmd -sigalg MD5withRSA -digestalg SHA1 $keystore $keypass $storepass \
 ----------------------------end
     }
 
-    "$.out/_.pack" : "$.path/AndroidManifest.xml" "$.out/classes.dex" $.native.binaries()
+    "$.out/_.pack" : "$.path/AndroidManifest.xml" "$.out/classes.dex" $.native_binaries
     {
         var $dir    = $_.parent_path();
         var $pack   = $_.path();
@@ -476,7 +478,7 @@ mkdir -p $dir || exit -1
         }
     }
 
-    $.native.binaries() :
+    $.native_binaries :
     {
         say("$.name: make "~$_.path()~"..");
         $.native.make();
