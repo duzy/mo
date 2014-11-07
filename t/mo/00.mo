@@ -1,62 +1,86 @@
-## attributes of the current node
-say('dotdot: .. = '~..)
-say('dot: .name = '~.name)
-say('select: child.name = '~child.name)
-say('select: ->child = '~->child)
-say('select: ->child[0].. = '~->child[0]..)
-say('select: ->child[0].name = '~->child[0].name)
-say('select: ->child.name = '~->child.name)
-say('select: ->child[0, 1, 2] = '~->child[0, 1, 2])
-say('select: ->child[0, 1, 2][0].name = '~->child[0, 1, 2][0].name)
-say('select: ->child[0, 1, 2][1].name = '~->child[0, 1, 2][1].name)
-say('select: ->child->{ 1 } = '~->child->{ 1 })
-say('select: ->child->{ 0 } = '~->child->{ 0 })
-say('select: ->child->{ 1 }[0].name = '~->child->{ 1 }[0].name)
-say('select: ->child->{ .name eq \'test-child-1\' }[0].name = '~->child->{ .name eq 'test-child-1' }[0].name)
-say('select: ->* = '~->*)
-say('select: ->*[0] = '~->*[0])
-say('select: ->*[1] = '~->*[1].name)
-say('select: .xmlns:test = '~.xmlns:test)
-say('select: .test:name = '~.test:name)
-say('select: .* = '~.*)
-say('select: $_.xmlns:test = '~$_.xmlns:test)
-say('select: $_.test:name = '~$_.test:name)
-say('select: $_.* = '~$_.*)
-say('select: ->test:* = '~->test:*)
-say('select: ->test:child = '~->test:child)
-say('select: ->test:child->{ .name eq \'test-child-1\' } = '~->test:child->{ .name eq 'test-child-1' })
-say('select: ->test:child[0].name = '~->test:child[0].name)
-say('select: ->test:child[0].test:name = '~->test:child[0].test:name)
-#say('select: ->test:{ .name eq \'test-child-1\' } = '~->test:{ .name eq 'test-child-1' })
-#say('select: ->child->test:{ .name eq \'test-child-1\' } = '~->child->test:{ .name eq 'test-child-1' })
-#say('select: ->child->test:{ .name eq \'test-child-1\' } = '~->child->test:{ .name eq 'test-child-1' })
-say('select: child = '~child);
+say('1..40');
 
-var $l = ('a', 'b', 'c', 'd');
-say('select: $l[0] = '~$l[0]);
-say('select: $l[0, 1, 2] = '~$l[0, 1, 2]);
-say('select: $l->{ 1 } = '~$l->{ 1 });
-say('select: $l->{ 1 } = '~join(', ', $l->{ 1 }));
-
-say('select: glob = '~glob);
-say('TODO: glob: * = '~glob('*'));
-
-var $nodes = readdir('.');
-say('readdir: '~$nodes);
-for $nodes { say('readdir: '~$_.name()~",\t"~$_.path()) }
-say('select: '~$nodes->{ isnull($_) });
-say('select: '~$nodes->{ .name() eq '' });
-
-#class a { $.name = 'foo' }
-#var $a = new(a);
-#say($a.name);
-
-with ->child->{ .name eq "test-child-2" } do
+"foo" : "bar"
 {
-    say("ok\t\t- with ->child\{ .name eq \"test-child-2\" \}");
-    if .name eq "test-child-2"
-        say("ok\t\t- .name eq \"test-child-2\"");
-    else
-        say("xx\t\t- .name eq \"test-child-2\"");
-    end
+    say('ok - 7. build foo');
+    say((($_.name() eq 'foo') ? 'ok' : 'xx')~' - 8. $_.name() is '~$_.name());
+    say((($_.path() eq cwd()~'/foo') ? 'ok' : 'xx')~' - 9. $_.path() is '~$_.path());
+    say(((system('test -f foo') != 0) ? 'ok' : 'xx')~' - 10. (test -f foo) != 0');
+    say(((system('touch foo || exit 1') == 0) ? 'ok' : 'xx')~' - 11. (touch foo) == 0');
+    say(((system('test -f foo') == 0) ? 'ok' : 'xx')~' - 12. (test -f foo) == 0');
+    say(((+@_ == 1) ? 'ok' : 'xx')~' - 13. +@_ == 1 ');
+    say(((@_[0].name() eq 'bar') ? 'ok' : 'xx')~' - 14. @_[0].name() is '~@_[0].name());
+    say(((@_[0].path() eq cwd()~'/bar') ? 'ok' : 'xx')~' - 15. @_[0].path() is '~@_[0].path());
 }
+
+"bar" :
+{
+    say('ok - 1. build bar');
+    say((($_.name() eq 'bar') ? 'ok' : 'xx')~' - 2. $_.name() is '~$_.name());
+    say((($_.path() eq cwd()~'/bar') ? 'ok' : 'xx')~' - 3. $_.path() is '~$_.path());
+    say(((system('test -f bar') != 0) ? 'ok' : 'xx')~' - 4. (test -f bar) != 0');
+    say(((system('touch bar || exit 1') == 0) ? 'ok' : 'xx')~' - 5. (touch bar) == 0');
+    say(((system('test -f bar') == 0) ? 'ok' : 'xx')~' - 6. (test -f bar) == 0');
+}
+
+system('rm -f foo bar');
+
+<"foo">.make();
+
+class foobar
+{
+    $.target = 'foobar';
+    @.depends = list();
+
+    {
+        @.depends.push('foo');
+        @.depends.push('bar');
+    }
+
+    method normal($v) {
+        say("ok - $v. normal");
+    }
+
+    method make: $.target : @.depends
+    {
+        say('ok - 30. build foobar');
+        say((($_.name() eq 'foobar') ? 'ok' : 'xx')~' - 31. $_.name() is '~$_.name());
+        say((($_.path() eq cwd()~'/foobar') ? 'ok' : 'xx')~' - 32. $_.path() is '~$_.path());
+        say(((system('test -f foobar') != 0) ? 'ok' : 'xx')~' - 33. (test -f foobar) != 0');
+        say(((system('touch foobar || exit 1') == 0) ? 'ok' : 'xx')~' - 34. (touch foobar) == 0');
+        say(((system('test -f foobar') == 0) ? 'ok' : 'xx')~' - 35. (test -f foobar) == 0');
+        say(((+@_ == 2) ? 'ok' : 'xx')~' - 36. +@_ == 2');
+        say(((@_[0].name() eq 'foo') ? 'ok' : 'xx')~' - 37. @_[0].name() is '~@_[0].name());
+        say(((@_[1].name() eq 'bar') ? 'ok' : 'xx')~' - 38. @_[1].name() is '~@_[1].name());
+        say(((system('test -f foo') == 0) ? 'ok' : 'xx')~' - 39. (test -f foo) == 0');
+        say(((system('test -f bar') == 0) ? 'ok' : 'xx')~' - 40. (test -f bar) == 0');
+    }
+
+    'foo' :
+    {
+        say('ok - 16. build foo');
+        say((($_.name() eq 'foo') ? 'ok' : 'xx')~' - 17. $_.name() is '~$_.name());
+        say((($_.path() eq cwd()~'/foo') ? 'ok' : 'xx')~' - 18. $_.path() is '~$_.path());
+        say(((system('test -f foo') != 0) ? 'ok' : 'xx')~' - 19. (test -f foo) != 0');
+        say(((system('touch foo || exit 1') == 0) ? 'ok' : 'xx')~' - 20. (touch foo) == 0');
+        say(((system('test -f foo') == 0) ? 'ok' : 'xx')~' - 21. (test -f foo) == 0');
+        say((<'foo'>.exists() ? 'ok' : 'xx')~' - 22. <\'foo\'>.exists()');
+    }
+
+    'bar' :
+    {
+        say('ok - 23. build bar');
+        say((($_.name() eq 'bar') ? 'ok' : 'xx')~' - 24. $_.name() is '~$_.name());
+        say((($_.path() eq cwd()~'/bar') ? 'ok' : 'xx')~' - 25. $_.path() is '~$_.path());
+        say(((system('test -f bar') != 0) ? 'ok' : 'xx')~' - 26. (test -f bar) != 0');
+        say(((system('touch bar || exit 1') == 0) ? 'ok' : 'xx')~' - 27. (touch bar) == 0');
+        say(((system('test -f bar') == 0) ? 'ok' : 'xx')~' - 28. (test -f bar) == 0');
+        me.normal(29);
+    }
+}
+
+var $t = new(foobar);
+system('rm -f foo bar foobar');
+$t.make();
+
+system('rm -f foo bar foobar');

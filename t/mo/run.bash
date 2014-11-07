@@ -52,16 +52,16 @@ run $SRCDIR/30-template
 run $SRCDIR/30-template-with
 run $SRCDIR/30-template-if
 run $SRCDIR/30-template-for
-run $SRCDIR/40-filesystem -v
+run $SRCDIR/40-filesystem
 run $SRCDIR/41-io
 run $SRCDIR/41-io-open
 run $SRCDIR/41-io-pipe
 run $SRCDIR/41-io-print
 run $SRCDIR/41-io-shell
 run $SRCDIR/41-io-system
-run $SRCDIR/44-filesystem-make
-run $SRCDIR/44-filesystem-make-rule
-run $SRCDIR/44-filesystem-make-rule-2
+#run $SRCDIR/44-filesystem-make
+#run $SRCDIR/44-filesystem-make-rule
+#run $SRCDIR/44-filesystem-make-rule-2
 run $SRCDIR/45-rules
 run $SRCDIR/50-funs
 run $SRCDIR/50-fun-returns

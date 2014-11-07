@@ -1,27 +1,6 @@
-say("1..22")
+say("1..18")
 
-with readdir('t/mo/test') do
-{
-    if .EXISTS
-        say("ok\t\t- test exists");
-    else
-        say("xx\t\t- test not exists: " ~ .EXISTS);
-    end
-
-    if .NAME eq 'test'
-        say("ok\t\t- .NAME eq 'test'");
-    else
-        say("xx\t\t- .NAME eq 'test' : " ~ .NAME);
-    end
-
-    if $_.name() eq 't/mo/test'
-        say("ok\t\t- \$_.name() eq 't/mo/test'");
-    else
-        say("xx\t\t- \$_.name() eq 't/mo/test' : "~$_.name());
-    end
-  }
-
-with -><t/mo>['test'] do
+with readdir('t/mo')->{ .NAME eq 'test' }
 {
     if .EXISTS
         say("ok\t\t- test exists");
@@ -42,95 +21,86 @@ with -><t/mo>['test'] do
     end
 }
 
-for -><.>['test/many/1.txt', "test/many/2.txt"] do
-  {
-      if $_.name() eq './test/many/1.txt'
-        say("ok\t\t- \$_.name() eq './test/many/1.txt'")
-      elsif $_.name() eq './test/many/2.txt'
-        say("ok\t\t- \$_.name() eq './test/many/2.txt'")
-      else
-        say("xx\t\t- \$_.name() : "~$_.name())
-      end
+with readdir("t/mo")->{ .NAME eq 'test' }
+{
+    if .EXISTS
+        say("ok\t\t- test exists");
+    else
+        say("xx\t\t- test not exists: " ~ .EXISTS);
+    end
 
-      if .NAME eq '1.txt'
-        say("ok\t\t- .NAME eq 1.txt")
-      elsif .NAME eq '2.txt'
-        say("ok\t\t- .NAME eq 2.txt")
-      else
-        say("xx\t\t- unexpected: " ~ .NAME)
-      end
-  }
+    if .NAME eq 'test'
+        say("ok\t\t- .NAME eq 'test'");
+    else
+        say("xx\t\t- .NAME eq 'test' : " ~ .NAME);
+    end
 
-for -><test/many>['1.txt', "2.txt"] do
-  {
-      if $_.name() eq 'test/many/1.txt'
-        say("ok\t\t- \$_.name() eq 'test/many/1.txt'")
-      elsif $_.name() eq 'test/many/2.txt'
-        say("ok\t\t- \$_.name() eq 'test/many/2.txt'")
-      else
-        say("xx\t\t- \$_.name() : "~$_.name())
-      end
+    if $_.name() eq 't/mo/test'
+        say("ok\t\t- \$_.name() eq 't/mo/test'");
+    else
+        say("xx\t\t- \$_.name() eq 't/mo/test' : "~$_.name());
+    end
+}
 
-      if .NAME eq '1.txt'
-        say("ok\t\t- .NAME eq 1.txt")
-      elsif .NAME eq '2.txt'
-        say("ok\t\t- .NAME eq 2.txt")
-      else
-        say("xx\t\t- unexpected: " ~ .NAME)
-      end
-  }
+for readdir("t/mo/test/many")->{ .NAME eq '1.txt' || .NAME eq "2.txt" }
+{
+    if $_.name() eq 't/mo/test/many/1.txt'
+        say("ok\t\t- \$_.name() eq 't/mo/test/many/1.txt'");
+    elsif $_.name() eq 't/mo/test/many/2.txt'
+        say("ok\t\t- \$_.name() eq 't/mo/test/many/2.txt'");
+    else
+        say("xx\t\t- \$_.name() : "~$_.name());
+    end
 
-var $a = -><.>
-  [
-   "test/many/1.txt",
-   "test/many/2.txt",
-  ]
-  {
-  say('~~~~')
-      if $_.name() eq './test/many/1.txt'
-        say("ok\t\t- \$_.name() eq './test/many/1.txt'")
-      elsif $_.name() eq './test/many/2.txt'
-        say("ok\t\t- \$_.name() eq './test/many/2.txt'")
-      else
-        say("xx\t\t- \$_.name() : "~$_.name())
-      end
+    if .NAME eq '1.txt'
+        say("ok\t\t- .NAME eq 1.txt");
+    elsif .NAME eq '2.txt'
+        say("ok\t\t- .NAME eq 2.txt");
+    else
+        say("xx\t\t- unexpected: " ~ .NAME);
+    end
+}
 
-      if .NAME eq '1.txt'
-        say("ok\t\t- .NAME eq 1.txt")
-      elsif .NAME eq '2.txt'
-        say("ok\t\t- .NAME eq 2.txt")
-      else
-        say("xx\t\t- unexpected .NAME: " ~ .NAME)
-      end
+var $a = readdir("t/mo/test/many")->{ .NAME eq '1.txt' || .NAME eq "2.txt" }->{
+    if $_.name() eq 't/mo/test/many/1.txt'
+        say("ok\t\t- \$_.name() eq 't/mo/test/many/1.txt'");
+    elsif $_.name() eq 't/mo/test/many/2.txt'
+        say("ok\t\t- \$_.name() eq 't/mo/test/many/2.txt'");
+    else
+        say("xx\t\t- \$_.name() : "~$_.name());
+    end
 
-      1
-  }
+    if .NAME eq '1.txt'
+        say("ok\t\t- .NAME eq 1.txt");
+    elsif .NAME eq '2.txt'
+        say("ok\t\t- .NAME eq 2.txt");
+    else
+        say("xx\t\t- unexpected .NAME: " ~ .NAME);
+    end
+
+    1
+}
 
 if +$a == 2
-    say('ok - +$a == 2')
+    say("ok\t\t- +\$a == 2");
 else
-    say('xx - +$a == 2')
+    say("xx\t\t- +\$a == 2");
 end
 
-$a = -><"test/many">
-  [
-   "1.txt",
-   "2.txt",
-  ]
-  {
-      if .NAME eq '1.txt'
-        say("ok\t\t- .NAME eq 1.txt")
-      elsif .NAME eq '2.txt'
-        say("ok\t\t- .NAME eq 2.txt")
-      else
-        say("xx\t\t- unexpected .NAME: " ~ .NAME)
-      end
+$a = readdir("t/mo/test/many")->{ .NAME eq '1.txt' || .NAME eq "2.txt" }->{
+    if .NAME eq '1.txt'
+        say("ok\t\t- .NAME eq 1.txt");
+    elsif .NAME eq '2.txt'
+        say("ok\t\t- .NAME eq 2.txt");
+    else
+        say("xx\t\t- unexpected .NAME: " ~ .NAME);
+    end
 
-      1
-  }
+    1
+}
 
 if +$a == 2
-    say('ok - +$a == 2')
+    say("ok\t\t- +\$a == 2");
 else
-    say('xx - +$a == 2')
+    say("xx\t\t- +\$a == 2");
 end
