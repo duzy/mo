@@ -20,6 +20,7 @@ function run-android-examples() {
 
 function run-normal-examples() {
     for mo in \
+        closure \
         proto-simple \
         proto-template \
         proto-run \

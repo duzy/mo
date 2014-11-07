@@ -2,7 +2,7 @@ var $count = 0;
         
 class test<$num>
 {
-    $.field;
+    var $.field;
     {
         var $v;
         var $s = 'test-'~$count~'-'~$num;

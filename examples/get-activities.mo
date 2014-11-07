@@ -3,6 +3,7 @@ for ->application->activity do {
 
     say('2. '~.android:name~', '~.android:label~', '~.android:theme);
 
-    ->:android
-    say('3. '~.name~', '~.label~', '~.theme);
+    # ->:android
+    # say('3. '~.name~', '~.label~', '~.theme);
+    say('3. '~.android:name~', '~.android:label~', '~.android:theme);
 }
