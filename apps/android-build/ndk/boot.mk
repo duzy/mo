@@ -3,7 +3,10 @@ __me := $(lastword $(MAKEFILE_LIST))
 NDK_ROOT := $(strip $(or\
     $(wildcard /open/android/android-ndk-r9d),\
     $(wildcard /home/zhan/tools/android-ndk-r9d)))
+
+## Check $(BUILD_SYSTEM)/build-local.mk for help..
 include $(NDK_ROOT)/build/core/init.mk
+
 __my_dir := $(call parent-dir,$(__me))
 
 ifndef NDK_PROJECT_PATH
@@ -52,6 +55,23 @@ ANDROID_MK_INCLUDED := \
   $(BUILD_EXECUTABLE) \
   $(PREBUILT_SHARED_LIBRARY) \
 
+
+# this is the list of directories containing dependency information
+# generated during the build. It will be updated by build scripts
+# when module definitions are parsed.
+#
+ALL_DEPENDENCY_DIRS :=
+
+# this is the list of all generated files that we would need to clean
+ALL_HOST_EXECUTABLES      :=
+ALL_HOST_STATIC_LIBRARIES :=
+ALL_STATIC_LIBRARIES      :=
+ALL_SHARED_LIBRARIES      :=
+ALL_EXECUTABLES           :=
+
+WANTED_INSTALLED_MODULES  :=
+
+
 # ($(BUILD_SYSTEM)/setup-app.mk)
 #
 # Setup the app..
@@ -59,5 +79,6 @@ ANDROID_MK_INCLUDED := \
 $(foreach _app,$(NDK_APPS),\
   $(eval include $(BUILD_SYSTEM)/setup-app.mk)\
  )
+
 
 include $(__my_dir)/do/$(DO).mk

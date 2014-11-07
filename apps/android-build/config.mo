@@ -64,18 +64,24 @@ def notnull($v, $err) {
 
 class native <$path>
 {
-    $.config_xml
-    $.config
+    var $.config_xml
+    var $.config
+    var $.module
 
-    $.out_lib
-    $.out_obj
-    $.built
-    $.target
-    $.target_name
+    var $.out_lib
+    var $.out_obj
 
     method binaries() {
         var $list = list()
-        $list.push( $.target )
+        $list.push( $.module.INSTALLED )
+        $list
+    }
+
+    method sources() {
+        var $list = list()
+        for split(" ", $.module.SRC_FILES) {
+            $list.push($.module.PATH~"/$_")
+        }
         $list
     }
 
@@ -96,7 +102,7 @@ class native <$path>
         var $project_path = dirname($path);
         lang shell :escape
 ---------------------------
-echo "$.target_name: Generating $.config_xml.."
+echo ": Generating $.config_xml.."
 mkdir -p \$(dirname $.config_xml)
 make -s -f $sysdir/ndk/boot.mk NDK_PROJECT_PATH=$project_path DO=xml \
     > $.config_xml || rm -f $.config_xml
@@ -114,68 +120,69 @@ make -s -f $sysdir/ndk/boot.mk NDK_PROJECT_PATH=$project_path DO=xml \
                 die("missing top module "~$.config.top)
             }
 
-            $.built  = @m.BUILT_MODULE
-            $.target = @m.INSTALLED
-            $.target_name = $.config.top
+            $.module = @m[0]
         }
     }
 
-    method make: $.target : $.built
+    method make: $.module.INSTALLED : $.module.BUILT_MODULE
     {
+        var $target = $_.name();
+        var $built = @_[0].name();
+        var $name = $.module.name;
         lang shell :escape
 ---------------------------
-echo "$.target_name: Generating native $.target.."
-mkdir -p \$(dirname $.target) && cp -f $.built $.target
+echo "$name: Generating native $target.."
+mkdir -p \$(dirname $target) && cp -f $built $target
 ------------------------end
     }
 
-    $.built :
+    $.module.BUILT_MODULE : me.sources()
     {
+        var $built = $_.name();
         var $project_path = dirname($path);
+        var $name = $.module.name;
         lang shell :escape
 ---------------------------
-echo "$.target_name: Generating native $.built.."
+echo "$name: Generating native $built.."
 make -s -f $sysdir/ndk/boot.mk NDK_PROJECT_PATH=$project_path \
-    DO=build DO_TARGET_MODULE_NAME=$.target_name
+    DO=build DO_TARGET_MODULE_NAME=$name all
 ------------------------end
     }
 }
 
 class project <$path, $variant>
 {
-    $.platform;
-    $.platform_jar;
-    $.platform_aidl;
-    $.platform_properties;
+    var $.platform;
+    var $.platform_jar;
+    var $.platform_aidl;
+    var $.platform_properties;
 
-    $.cmds = hash();
+    var $.cmds = hash();
 
-    $.sign_cert = 'cert';
-    $.sign_storepass_filename;
-    $.sign_keypass_filename;
-    $.sign_keystore_filename;
-    $.sign_storepass;
-    $.sign_keypass;
+    var $.sign_cert = 'cert';
+    var $.sign_storepass_filename;
+    var $.sign_keypass_filename;
+    var $.sign_keystore_filename;
+    var $.sign_storepass;
+    var $.sign_keypass;
 
-    $.path = $path;
-    $.name = basename($path);
-    $.manifest = load_manifest($path);
+    var $.path = $path;
+    var $.name = basename($path);
+    var $.manifest = load_manifest($path);
 
-    $.is_library = 0;
+    var $.is_library = 0;
 
-    $.libs = list();
-    $.lib_projects = hash();
+    var $.libs = list();
+    var $.lib_projects = hash();
 
-    $.native;
-    $.native_binaries;
+    var $.native;
 
-    $.out = "$path/bin/$variant";
-    $.target;
+    var $.out = "$path/bin/$variant";
+    var $.target;
 
     {
         if isdir("$path/jni") {
             $.native = new(native, "$path/jni");
-            $.native_binaries = $.native.binaries()
         }
 
         var $name = $.name;
@@ -315,7 +322,7 @@ $cmd -sigalg MD5withRSA -digestalg SHA1 $keystore $keypass $storepass \
 ----------------------------end
     }
 
-    "$.out/_.pack" : "$.path/AndroidManifest.xml" "$.out/classes.dex" $.native_binaries
+    "$.out/_.pack" : "$.path/AndroidManifest.xml" "$.out/classes.dex" $.native.binaries()
     {
         var $dir    = $_.parent_path();
         var $pack   = $_.path();
@@ -469,7 +476,7 @@ mkdir -p $dir || exit -1
         }
     }
 
-    $.native_binaries :
+    $.native.binaries() :
     {
         say("$.name: make "~$_.path()~"..");
         $.native.make();

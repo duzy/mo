@@ -596,7 +596,7 @@ grammar MO::Grammar is HLL::Grammar {
 
     rule class_member:sym<$> {
         :my $*IN_DECL; { $*IN_DECL := 'member'; }
-        <variable> <!before ':'> <initializer>? ';'? { $*IN_DECL := 0; }
+        'var' <variable> <!before ':'> <initializer>? ';'? { $*IN_DECL := 0; }
     }
 
     rule class_member:sym<:> {
