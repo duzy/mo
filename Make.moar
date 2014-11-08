@@ -49,6 +49,7 @@ MO_SOURCES := \
   src/mo/Model.nqp \
   src/mo/World.nqp \
   src/mo/Grammar.nqp \
+  src/mo/Glob.nqp \
   src/mo/Actions.nqp \
   src/mo/Compiler.nqp \
   src/mo/Builtin.nqp \

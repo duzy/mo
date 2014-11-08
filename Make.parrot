@@ -55,6 +55,7 @@ MO_PIR := gen/parrot/mo.pir
 MO_NQP := gen/parrot/mo.nqp
 MO_SOURCES := \
   src/mo/Grammar.nqp \
+  src/mo/Glob.nqp \
   src/mo/Actions.nqp \
   src/mo/Compiler.nqp \
   src/mo/Model.nqp \

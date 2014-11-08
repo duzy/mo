@@ -148,7 +148,10 @@ knowhow MO::Builtin {
 
     sub glob(*@patterns) {
         my @result;
-        # TODO: glob...
+        for @patterns -> $pattern {
+            #my int $s := 
+            # TODO: glob...
+        }
         @result
     }
 
