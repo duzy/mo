@@ -3,10 +3,12 @@
 #  git clone https://github.com/MoarVM/MoarVM.git
 #  
 MOARDIR := $(or $(wildcard /open/perl6/MoarVM),$(wildcard ~/tools/perl6/MoarVM))
-BASH := $(shell which bash)
-CAT := $(shell which cat)
 MOAR := $(MOARDIR)/install/bin/moar
 NQP := $(MOARDIR)/install/bin/nqp-m --module-path=gen/moar
+BASH := $(shell which bash)
+CAT := $(shell which cat)
+MOAR := $(shell which moar)
+NQP := $(shell which nqp-m) --module-path=gen/moar
 
 COMMON_MBC := gen/moar/common.moarvm
 COMMON_NQP := gen/moar/common.nqp
