@@ -11,9 +11,11 @@ class moop
         my @result;
         if nqp::islist($a) {
             for $a {
-                my $children := $_.children($name);
-                if nqp::defined($children) {
-                    @result.push($_) for $children;
+                if nqp::can($_, 'children') {
+                    my $children := $_.children($name);
+                    if nqp::defined($children) {
+                        @result.push($_) for $children;
+                    }
                 }
             }
         } elsif nqp::defined($a) {

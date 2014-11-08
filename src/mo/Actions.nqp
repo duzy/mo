@@ -27,9 +27,9 @@ class MO::Actions is HLL::Actions {
         $count
     }
 
-    method term:sym<value>($/)    { make $<value>.made; $/.prune; }
-    method term:sym<variable>($/) { make $<variable>.made; $/.prune; }
-    method term:sym<colonpair>($/) { make $<colonpair>.made; $/.prune; }
+    method term:sym<value>($/)     { make $<value>.made; } # $/.prune;
+    method term:sym<variable>($/)  { make $<variable>.made; } # $/.prune;
+    method term:sym<colonpair>($/) { make $<colonpair>.made; } # $/.prune;
     method term:sym<name>($/) {
         my @name := nqp::split('::', ~$<name>);
         my $ast := $*W.symbol_ast($/, @name, 0);
@@ -39,28 +39,28 @@ class MO::Actions is HLL::Actions {
             $ast.push( QAST::IVal.new( :value(1) ) );
         }
         make $ast;
-        $/.prune;
+        # $/.prune;
     }
 
     method term:sym«.»($/) {
         my $ast := $<post_dot>.made;
         $ast.unshift( QAST::Var.new( :name<$_>, :scope<lexical> ) );
         make $ast;
-        $/.prune;
+        # $/.prune;
     }
 
     method term:sym«->»($/) {
         my $ast := $<post_arrow>.made;
         $ast.unshift( QAST::Var.new( :name<$_>, :scope<lexical> ) );
         make $ast;
-        $/.prune;
+        # $/.prune;
     }
 
     method term:sym<def>($/) {
         my $scope := $*W.pop_scope();
         $scope.push( wrap_return_handler($scope, $<statements>.made) );
         make QAST::Op.new( :node($/), :op<takeclosure>, $scope );
-        $/.prune;
+        # $/.prune;
     }
 
     method term:sym<return>($/) {
@@ -75,7 +75,7 @@ class MO::Actions is HLL::Actions {
             # $ast[0].push(QAST::WVal.new( :value($*W.find_sym(['NQPMu'])) ));
         }
         make $ast;
-        $/.prune;
+        # $/.prune;
     }
 
     method term:sym<str>($/) {
@@ -90,7 +90,7 @@ class MO::Actions is HLL::Actions {
         }
 
         make $call;
-        $/.prune;
+        # $/.prune;
     }
 
     method term:sym<map>($/) { make QAST::Op.new( :op<map>, $<pred>.made, expr_list_ast($<list>.made) ); }
@@ -201,12 +201,12 @@ class MO::Actions is HLL::Actions {
             $ast.named( ~$<name> );
         }
         make $ast;
-        $/.prune;
+        # $/.prune;
     }
 
     method initializer($/) {
         make $<EXPR>.made;
-        $/.prune;
+        # $/.prune;
     }
 
     method args($/) { make $<arglist>.made; }
@@ -252,6 +252,10 @@ class MO::Actions is HLL::Actions {
     method select:sym<name>($/) {
         make QAST::Op.new( :node($/), :op<select>,
             QAST::SVal.new( :value(~$<name>) ) );
+    }
+
+    method select:sym<quote>($/) {
+        make QAST::Op.new( :node($/), :op<select>, $<quote>.made );
     }
 
     method select:sym<{ }>($/) {
@@ -788,7 +792,7 @@ class MO::Actions is HLL::Actions {
         make $stmts;
     }
 
-    method declaration:sym<rule>($/) {
+    method definition:sym<rule>($/) {
         my $build := $*W.pop_scope;
         $build.name( QAST::Node.unique('rule') );
         $build.push( $<statements>.made );

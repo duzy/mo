@@ -63,14 +63,12 @@ grammar MO::Grammar is HLL::Grammar {
     token term:sym«.»  { <post_dot> }
     token term:sym«->» { <post_arrow> }
 
-    token term:sym<def>  {:s
+    token term:sym<def> {:s
         <sym> '(' ~ ')' [ { self.push_scope( ~$<sym> ) } <params>? ]
         '{' ~ '}' <statements>
     }
     token term:sym<return> {:s <sym> [['(' ~ ')' <EXPR>] | <EXPR>]? }
-    token term:sym<str>    {:s
-        <sym>\s $<name>=[<.ident>['::'<.ident>]*] ['with' <EXPR>]?
-    }
+    token term:sym<str>    {:s <sym>\s $<name>=[<.ident>['::'<.ident>]*] ['with' <EXPR>]? }
     token term:sym<map>    {:s <sym>\s <pred=.map_pred> <list=.EXPR> }
     token term:sym<any>    { <?before <sym>><any=.control> }
     token term:sym<many>   { <?before <sym>><many=.control> }
@@ -163,6 +161,7 @@ grammar MO::Grammar is HLL::Grammar {
 
     proto token select     { <...> }
     token select:sym<name> { $<name>=[[<ns=.ident>?':']? ['*'|<ident>]] }
+    token select:sym<quote>{ <quote> }
     token select:sym<{ }>  { '{' ~ '}' <newscope: 'selector', '$_'> }
 
     token args { '(' ~ ')' <arglist> }
@@ -334,10 +333,10 @@ grammar MO::Grammar is HLL::Grammar {
     rule statements { <.ws> <statement>* }
 
     proto rule statement                { <...> }
-    rule statement:sym<expr>            { <EXPR> ';'? }
     rule statement:sym<control>         { <control> }
     rule statement:sym<declaration>     { <declaration> }
     rule statement:sym<definition>      { <definition> }
+    rule statement:sym<expr>            { <EXPR> ';'? } ## A singular <EXPR> must be the last to try.
 
     rule statement:sym<yield_t> { 'yield' <name=.ident> ';'? }
     rule statement:sym<yield_x> { 'yield' <EXPR> ';'? }
@@ -421,7 +420,9 @@ grammar MO::Grammar is HLL::Grammar {
         ';'? { $*IN_DECL := 0; }
     }
 
-    rule declaration:sym<rule> {
+    proto rule definition { <...> }
+
+    rule definition:sym<rule> {
         :my $*IN_DECL; { $*IN_DECL := 'rule'; }
         <targets=.EXPR>+ $<colon>=':' <prerequisites=.EXPR>*
         {
@@ -429,14 +430,10 @@ grammar MO::Grammar is HLL::Grammar {
             unless nqp::defined($scope.ann('package')) {
                 $<colon>.CURSOR.panic("rule declared in non-package scope");
             }
+            self.push_scope( ~$<sym>, [ 'me', '$_', '@_' ] );
         }
-        '{' ~ '}' [
-        {
-            my $scope := self.push_scope( ~$<sym>, [ 'me', '$_', '@_' ] );
-        } <statements> ] { $*IN_DECL := 0; }
+        '{' ~ '}' <statements> { $*IN_DECL := 0; }
     }
-
-    proto rule definition { <...> }
 
     rule definition:sym<template> {
         :my $outerpackage := $*W.get_package;
