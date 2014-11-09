@@ -148,9 +148,12 @@ knowhow MO::Builtin {
 
     sub glob(*@patterns) {
         my @result;
+        my $comp := nqp::getcomp('MO::Glob');
         for @patterns -> $pattern {
-            #my int $s := 
-            # TODO: glob...
+            #try {
+            my $code := $comp.compile($pattern);
+            
+            #}
         }
         @result
     }
