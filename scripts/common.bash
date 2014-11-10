@@ -27,6 +27,10 @@ function mo-cmd() {
 }
 
 function run() {
+    # echo '--------------------------------------------------------------'
+    # echo "gdb -i=mi --args $(mo-cmd-parrot $D) $@"
+    # echo "gdb -i=mi --args parrot -Igen/parrot -Lgen/parrot gen/parrot/mo.pbc apps/android-build/main.mo apps/android-build/hello apps/android-build/hello2"
+    # echo '--------------------------------------------------------------'
     $(mo-cmd) $@
 }
 

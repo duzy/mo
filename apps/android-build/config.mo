@@ -100,9 +100,10 @@ class native <$path>
     $.config_xml : "$path/Android.mk" "$path/Application.mk"
     {
         var $project_path = dirname($path);
+        var $name = basename($project_path);
         lang shell :escape
 ---------------------------
-echo ": Generating $.config_xml.."
+echo "$name: Generating $.config_xml.."
 mkdir -p \$(dirname $.config_xml)
 make -s -f $sysdir/ndk/boot.mk NDK_PROJECT_PATH=$project_path DO=xml \
     > $.config_xml || rm -f $.config_xml
@@ -335,6 +336,7 @@ $cmd -sigalg MD5withRSA -digestalg SHA1 $keystore $keypass $storepass \
         var $assets = "-A '$.path/assets'";
         var $debug  = $variant eq 'debug' ? '--debug-mode' : '';
         var $cmd    = $.cmds<aapt>;
+        var $natives = isnull($.native_binaries) ? '' : join(' ', $.native_binaries);
         unless isdir($assets) { $assets = '' }
         lang shell :escape
 --------------------------------
@@ -344,6 +346,12 @@ $cmd package -f -F $pack -M $am $libs $reses $assets \
     $debug --auto-add-overlay
 
 echo "$.name: Packing natives.. (TODO)"
+# for l in $natives ; do
+#     $cmd add -k $pack \$l
+# done
+$cmd add -k $pack $natives
+
+jar tf $pack
 
 echo "$.name: Packing classes.."
 $cmd add -k $pack $dex > /dev/null
