@@ -150,14 +150,15 @@ knowhow MO::Builtin {
         my @filenames;
         my $match := MO::GlobGrammar.parse($pattern, :p(0), :actions(MO::GlobActions));
         my $glob := $match.made;
-        say($glob);
+        say('collect: '~nqp::join(',',$glob.collect));
         @filenames
     }
 
     sub glob(*@patterns) {
         my @result;
         for @patterns -> $pattern {
-            try { @result.push($_) for do_glob($pattern) }
+            @result.push($_) for do_glob($pattern)
+            # try { @result.push($_) for do_glob($pattern) }
         }
         @result
     }
