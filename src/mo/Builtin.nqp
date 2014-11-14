@@ -147,11 +147,9 @@ knowhow MO::Builtin {
     }
 
     sub do_glob($pattern) {
-        my @filenames;
         my $match := MO::GlobGrammar.parse($pattern, :p(0), :actions(MO::GlobActions));
         my $glob := $match.made;
-        say('collect: '~nqp::join(',',$glob.collect));
-        @filenames
+        $glob.collect
     }
 
     sub glob(*@patterns) {
