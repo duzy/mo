@@ -1,47 +1,63 @@
 class MO::Glob
 {
     has str $!init;
+    has int $!skip;
     has @!parts;
+    has @!stems;
+    has @!acc;
 
     method new($s) { nqp::create(MO::Glob)."!INIT"($s) }
     method !INIT(str $s) {
-        $!init := $s;
+        $!init  := $s;
         @!parts := [];
+        @!stems := [];
+        @!acc   := [];
+        $!skip  := 0;
         self
     }
 
     method add($part) { @!parts.push($part) }
 
-    has @!acc;
-
-    has $!path;
-    has $!prefix;
-    has $!names;
-
     method wildcard:<*>(int $n, $part) {
-        if nqp::isnull($!names) {
+        $!skip := -1;
+        if +@!stems {
+            
+        } else {
             my @result;
-            my int $prelen := nqp::chars($!prefix);
-            my @names := VMCall::readdir($!path);
-            for @names {
-                my int $l := nqp::chars($_);
-                if $prelen <= $l && nqp::substr($_, 0, $prelen) eq $!prefix {
-                    @result.push($_);
+            for @!acc -> str $s {
+                my str $path := '.';
+                my str $prefix := '';
+                my int $i := nqp::rindex($s, '/');
+                if 0 < $i {
+                    $path := nqp::substr($s, 0, $i);
+                    $prefix := nqp::substr($s, $i+1);
+                } elsif 0 == $i {
+                    $path := '/';
+                    $prefix := nqp::substr($s, $i+1);
+                } else {
+                    $prefix := $s;
+                }
+
+                my int $prelen := nqp::chars($prefix);
+                my @names := VMCall::readdir($path);
+                for @names -> str $name {
+                    my int $l := nqp::chars($name);
+                    if $prelen <= $l && nqp::substr($name, 0, $prelen) eq $prefix {
+                        @result.push(nqp::substr($name, $prelen));
+                    }
                 }
             }
-            $!names := @result;
-        } else {
-            $!skip := -1;
+            @!stems := @result;
         }
     }
 
     method wildcard:<?>(int $n, $part) {
-        if nqp::isnull($!names) {
-            $!names := VMCall::readdir($!path);
+        if nqp::isnull(@!stems) {
             $!skip := 1;
-        } elsif +$!names {
+            #@!stems := VMCall::readdir($!path);
+        } elsif +@!stems {
             my @result;
-            $!names := @result;
+            @!stems := @result;
         }
     }
 
@@ -65,17 +81,37 @@ class MO::Glob
             $suffix := $s;
         }
 
+        if nqp::chars($suffix) {
+            my @a;
+            for @!stems -> str $stem {
+                my int $l := nqp::chars($stem);
+                my int $sl := nqp::chars($suffix);
+                # say($stem~', '~nqp::substr($stem, $l-$sl, $sl)~', '~$suffix);
+                if $sl <= $l && nqp::substr($stem, $l-$sl, $sl) eq $suffix {
+                    @a.push($stem);
+                }
+            }
+            say("stems: "~nqp::join(',',@a));
+            @!stems := @a;
+        }
+
+        if nqp::defined($subpath) && nqp::chars($subpath) {
+            
+        } else {
+            
+        }
+
         my int $suflen := nqp::chars($suffix);
         if $suflen {
-            my @names;
-            for $!names {
-                @names.push($_);
-            }
-            $!names := @names;
+            # my @names;
+            # for @!stems {
+            #     @names.push($_);
+            # }
+            # @!stems := @names;
         }
     }
 
-    method iterate() {
+    method collect() {
         my str $s := $!init;
         my str $path := '.';
         my str $prefix := '';
@@ -89,10 +125,11 @@ class MO::Glob
         } else {
             $prefix := $s;
         }
+
         if nqp::stat($path, nqp::const::STAT_ISDIR) {
-            $!path := $path;
-            $!prefix := $prefix;
             if +@!parts {
+                @!acc.push($s);
+
                 my int $n := 0;
                 while $n < +@!parts {
                     my $part := @!parts[$n];
@@ -100,17 +137,26 @@ class MO::Glob
                     self."wildcard:<$op>"($n, $part);
                     $n := $n + 1;
                 }
-                @!acc := $!names;
-            } elsif nqp::stat("$s", 0) {
+
+                my @a;
+                if +@!stems {
+                    for @!acc -> str $prefix {
+                        for @!stems -> str $stem {
+                            my str $s := "$prefix$stem";
+                            @a.push($s) if nqp::stat($s, 0);
+                        }
+                    }
+                    @!stems := [];
+                } elsif +@!acc {
+                    for @!acc {
+                        @a.push($_) if $s ne $_ && nqp::stat($_, 0);
+                    }
+                }
+                @!acc := @a;
+            } elsif nqp::stat($s, 0) {
                 @!acc.push($s);
             }
         }
-        1
-    }
-
-    method collect() {
-        @!acc := [];
-        self.iterate();
         @!acc
     }
 }
@@ -119,7 +165,7 @@ grammar MO::GlobGrammar is HLL::Grammar {
     token TOP { :my $*GLOB; <atom>* }
     proto token atom        { <...> }
     token atom:sym<quest>   { '?' }
-    token atom:sym<star>    { '*' }
+    token atom:sym<star>    { '*'+ }
     token atom:sym<enum>    { '[' ~ ']' <enum> }
     token atom:sym<alt>     { '{' ~ '}' <alt>* %% ',' }
     token atom:sym<literal> { <literal> }
