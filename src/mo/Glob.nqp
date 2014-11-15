@@ -5,6 +5,7 @@ class MO::Glob
     has int $!skip;
     has @!parts;
     has @!stems;
+    has @!stops;
     has @!acc;
 
     method new(str $s) { nqp::create(MO::Glob)."!INIT"($s) }
@@ -12,6 +13,7 @@ class MO::Glob
         $!init  := $s;
         @!parts := [];
         @!stems := [];
+        @!stops := [];
         @!acc   := [];
         $!prev  := 0;
         $!skip  := 0;
@@ -71,37 +73,48 @@ class MO::Glob
     }
 
     method wildcard:<[]>($part) {
+        @!stems := self.wildcard unless +@!stems; # scan if no stems cached
+
         my $enum := $part<enum>;
-        say("enum: $enum, $part");
-        my @a;
-        # if +@!stems {
-        #     for @!stems -> str $stem {
-        #         @a.push("$stem$_") for $enum
-        #     }
-        # } else {
-        #     @a.push($_) for $enum;
-        # }
-        @!stems := @a;
+        if +@!stems && +$enum {
+            my @a;
+            for @!stems -> str $stem {
+                my int $okay := 0;
+                for $enum -> $e {
+                    if $e<a> && $e<b> {
+                        # TODO: ...
+                    } elsif nqp::substr($stem, 0, 1) eq ~$e {
+                        $okay := 1;
+                    }
+                    @a.push("$stem") if $okay;
+                }
+            }
+            @!stems := @a;
+            $!skip := 1;
+        } else {
+            $!skip := 0;
+        }
         $!prev := 3;
-        $!skip := 0;
     }
 
     method wildcard:<{}>($part) {
-        my @a;
-        if +$part<alt> {
-            if +@!stems {
-                for $part<alt> -> str $alt {
-                    for @!stems -> str $stem {
-                        @a.push("$stem$alt");
+        @!stems := self.wildcard unless +@!stems; # scan if no stems cached
+
+        my $alts := $part<alt>;
+        if +$alts && +@!stems {
+            my @a;
+            for @!stems -> str $stem {
+                my int $okay := 0;
+                for $alts -> str $alt {
+                    my int $l := nqp::chars($alt);
+                    if nqp::substr($stem, 0, $l) eq $alt {
+                        $okay := 1; last;
                     }
                 }
-            } else {
-                for $part<alt> -> str $alt {
-                    @a.push($alt);
-                }
+                @a.push("$stem") if $okay;
             }
+            @!stems := @a;
         }
-        @!stems := @a;
         $!prev := 4;
         $!skip := 0;
     }
@@ -131,7 +144,7 @@ class MO::Glob
                         @a.push($stem);
                     }
                 }
-            } elsif $!prev == 2 { # ?
+            } elsif $!prev == 2 || $!prev == 3 { # ?, []
                 for @!stems -> str $stem {
                     my int $l := nqp::chars($stem);
                     my int $sl := nqp::chars($suffix);
@@ -139,9 +152,14 @@ class MO::Glob
                         @a.push($stem);
                     }
                 }
-            } else { # [], {}
+            } elsif $!prev == 4 { # {}
                 for @!stems -> str $stem {
-                    @a.push("$stem$suffix");
+                    # @a.push("$stem$suffix");
+                    my int $l := nqp::chars($stem);
+                    my int $sl := nqp::chars($suffix);
+                    if $sl <= $l && nqp::substr($stem, $l-$sl, $sl) eq $suffix {
+                        @a.push($stem);
+                    }
                 }
             }
             @!stems := @a;
