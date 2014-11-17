@@ -8,6 +8,17 @@ class MO::Glob
     has @!stops; # stop positions of stems
     has @!acc;
 
+    class Stem
+    {
+        has str $!string;
+        has int $!stop;
+        method new(str $s) { nqp::create(Stem)."!INIT"($s) }
+        method !INIT(str $s) {
+            $!string := $s;
+            self
+        }
+    }
+
     method new(str $s) { nqp::create(MO::Glob)."!INIT"($s) }
     method !INIT(str $s) {
         $!init  := $s;
@@ -50,7 +61,7 @@ class MO::Glob
         @stems
     }
 
-    my set_stop(int $n, int $stop) {
+    my method set_stop(int $n, int $stop) {
         if $n < +@!stops {
             @!stops[$n] := $stop;
         } else {
