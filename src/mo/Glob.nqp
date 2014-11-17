@@ -4,8 +4,8 @@ class MO::Glob
     has int $!prev;
     has int $!skip;
     has @!parts;
-    has @!stems;
-    has @!stops;
+    has @!stems; # working with 'stops'
+    has @!stops; # stop positions of stems
     has @!acc;
 
     method new(str $s) { nqp::create(MO::Glob)."!INIT"($s) }
@@ -50,8 +50,21 @@ class MO::Glob
         @stems
     }
 
+    my set_stop(int $n, int $stop) {
+        if $n < +@!stops {
+            @!stops[$n] := $stop;
+        } else {
+            @!stops.push($stop);
+        }
+    }
+
     method wildcard:<*>($part) {
         @!stems := self.wildcard unless +@!stems; # only scan if no stems cached
+        my int $n := 0;
+        for @!stems -> str $stem {
+            my int $stop := nqp::chars($stem);
+            self.set_stop($n := $n + 1, -$stop);
+        }
         $!prev := 1;
         $!skip := 0;
     }
@@ -63,7 +76,9 @@ class MO::Glob
             my int $ql := nqp::chars(~$part);
             my @a;
             for @!stems -> str $stem {
-                @a.push($stem) if $ql <= nqp::chars($stem);
+                if $ql <= nqp::chars($stem) {
+                    @a.push($stem);
+                }
             }
             @!stems := @a;
             $!skip := $ql;
@@ -81,11 +96,13 @@ class MO::Glob
             for @!stems -> str $stem {
                 my int $okay := 0;
                 for $enum -> $e {
+                    my str $s := nqp::substr($stem, 0, 1);
                     if $e<a> && $e<b> {
-                        # TODO: ...
-                    } elsif nqp::substr($stem, 0, 1) eq ~$e {
+                        $okay := 1 if ~$e<a> <= $s && $s <= $e<b>;
+                    } elsif $s eq ~$e {
                         $okay := 1;
                     }
+                    $okay := 0 if $okay && $e<neg>;
                     @a.push("$stem") if $okay;
                 }
             }
