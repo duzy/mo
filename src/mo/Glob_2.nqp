@@ -8,6 +8,17 @@ class MO::Glob
     has @!stops; # stop positions of stems
     has @!acc;
 
+    class Stem
+    {
+        has str $!string;
+        has int $!stop;
+        method new(str $s) { nqp::create(Stem)."!INIT"($s) }
+        method !INIT(str $s) {
+            $!string := $s;
+            self
+        }
+    }
+
     method new(str $s) { nqp::create(MO::Glob)."!INIT"($s) }
     method !INIT(str $s) {
         $!init  := $s;
@@ -60,11 +71,11 @@ class MO::Glob
 
     method wildcard:<*>($part) {
         @!stems := self.wildcard unless +@!stems; # only scan if no stems cached
-        # my int $n := 0;
-        # for @!stems -> str $stem {
-        #     my int $stop := nqp::chars($stem);
-        #     self.set_stop($n := $n + 1, -$stop);
-        # }
+        my int $n := 0;
+        for @!stems -> str $stem {
+            my int $stop := nqp::chars($stem);
+            self.set_stop($n := $n + 1, -$stop);
+        }
         $!prev := 1;
         $!skip := 0;
     }
@@ -128,9 +139,7 @@ class MO::Glob
                         $okay := 1; last;
                     }
                 }
-                if $okay {
-                    @a.push($stem);
-                }
+                @a.push("$stem") if $okay;
             }
             @!stems := @a;
         }
@@ -250,51 +259,40 @@ class MO::Glob
 }
 
 grammar MO::GlobGrammar is HLL::Grammar {
-    token TOP               { <atom>* }
+    token TOP { :my $*GLOB; <atom>* }
     proto token atom        { <...> }
     token atom:sym<quest>   { '?'+ }
     token atom:sym<star>    { '*'+ }
     token atom:sym<enum>    { '[' ~ ']' [$<neg>=<[!^]>? <enum>*] }
     token atom:sym<alt>     { '{' ~ '}' <alt>* %% ',' }
     token atom:sym<literal> { <literal> }
-    token literal     { <-[*?[{]>+ }
-    token alt         { <-[,}]>+ }
-    proto token enum  { <...> }
+    token literal { <-[*?[{]>+ }
+    token alt { <-[,}]>+ }
+    proto token enum { <...> }
     token enum:sym<-> { <a=.e> '-' <b=.e> }
     token enum:sym<.> { <e> }
-    token e           { <-[\]]> }
+    token e { <-[\]]> }
 }
 
 class MO::GlobActions is HLL::Actions {
-    method TOP($/) {
-        my $glob := MO::Glob.new('');
-        my str $s := '';
-        for $<atom> -> $atom {
-            $s := $s ~ $atom.made;
-        }
-        say("$/\t->\t$s");
-        make $glob
+    sub wildcard($/, $op) {
+        $/<wildcard> := $op;
+        $*GLOB := MO::Glob.new('') unless nqp::defined($*GLOB);
+        $*GLOB.add($/);
     }
-    method atom:sym<alt>($/) {
-        my str $s := '';
-        for $<alt> -> str $alt {
-            $s := "$s|" if $s ne '';
-            $s := "$s'$alt'";
+
+    method TOP($/)               { make $*GLOB }
+    method atom:sym<alt>($/)     { wildcard($/, '{}') }
+    method atom:sym<star>($/)    { wildcard($/, '*') }
+    method atom:sym<enum>($/)    { wildcard($/, '[]') }
+    method atom:sym<quest>($/)   { wildcard($/, '?') }
+    method atom:sym<literal>($/) {
+        if nqp::defined($*GLOB) {
+            $*GLOB.add($/);
+        } else {
+            $*GLOB := MO::Glob.new($/);
         }
-        make "[$s]"
     }
-    method atom:sym<star>($/) { make "<-[[?]>*" }
-    method atom:sym<enum>($/) {
-        my str $s := '<[';
-        for $<enum> -> $enum {
-            $s := $s ~ $enum.made;
-        }
-        make "$s]>"
-    }
-    method atom:sym<quest>($/) { make "." }
-    method atom:sym<literal>($/) { make ~$/ }
-    method enum:sym<->($/) { make $<a>~"-"~$<b> }
-    method enum:sym<.>($/) { make ~$<e> }
 }
 
 # my $match;
