@@ -1,3 +1,5 @@
+use codec
+
 def load_protocol($protocol) {
     lang XML in $protocol
 }
@@ -7,8 +9,7 @@ with $protocol {
     #say('class '~.name);
     for message {
         #say('  message '~.name);
-        for field {
-            say('    '~.name);
-        }
+        #for field { say('    '~.name) }
+        say(str codec.message)
     }
 }

@@ -1,0 +1,3 @@
+template message
+------------------
+message $(.name)
