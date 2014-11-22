@@ -174,5 +174,8 @@ test-examples: examples/test.bash $(MO_PBC)
 run-examples: examples/run.bash $(MO_PBC)
 	@$(BASH) $<
 
-run-apps: apps/android-build/run.bash $(MO_PBC)
+run-apps: run-app-android-build run-app-protocol
+run-app-android-build: apps/android-build/run.bash $(MO_PBC)
+	@$(BASH) $<
+run-app-protocol: apps/protocol/run.bash $(MO_PBC)
 	@$(BASH) $<
