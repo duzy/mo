@@ -22,6 +22,22 @@ knowhow MO::NodeHOW {
         nqp::getattr($node, $type, nqp::isnull($name) ?? '*' !! $name)
     }
 
+    sub method_remove($node, $target) {
+        my @children := nqp::getattr($node, $type, '*');
+        my int $i := 0;
+        for @children -> $child {
+            if nqp::where($child) == nqp::where($target) {
+               return nqp::splice(@children, [], $i, 1);
+            }
+            $i := $i + 1;
+        }
+        0
+    }
+
+    sub method_insert($node, $src, $sibling) {
+        MO::NodeHOW.node_child($node, $src, $sibling)
+    }
+
     method methods() {
         my %methods;
         %methods<name>       := &method_name;
@@ -33,6 +49,7 @@ knowhow MO::NodeHOW {
         %methods<count>      := &method_count;
         %methods<parent>     := &method_parent;
         %methods<children>   := &method_children;
+        %methods<insert>     := &method_insert;
         %methods;
     }
 
@@ -63,20 +80,42 @@ knowhow MO::NodeHOW {
         $node;
     }
 
-    method node_child($o, $node) {
+    method node_child($o, $node, $sibling = nqp::null()) {
         my $name := $node.name;
-        my $named := nqp::getattr($o, $type, $name);
-        my $all := nqp::getattr($o, $type, '*');
-        if nqp::isnull($named) {
-            $named := nqp::list();
-            nqp::bindattr($o, $type, $name, $named);
+        my @named := nqp::getattr($o, $type, $name);
+        my @allch := nqp::getattr($o, $type, '*');
+        if nqp::isnull(@named) {
+            @named := nqp::list();
+            nqp::bindattr($o, $type, $name, @named);
         }
-        if nqp::isnull($all) {
-            $all := nqp::list();
-            nqp::bindattr($o, $type, '*', $all);
+        if nqp::isnull(@allch) {
+            @allch := nqp::list();
+            nqp::bindattr($o, $type, '*', @allch);
         }
-        nqp::push($named, $node);
-        nqp::push($all, $node);
+        if nqp::defined($sibling) {
+            my int $i := 0;
+            for @allch -> $child {
+                if nqp::where($child) == nqp::where($sibling) {
+                    nqp::splice(@allch, [$node], $i, 0);
+                    last;
+                }
+                $i := $i + 1;
+            }
+            $i := 0;
+            my int $inserted := 0;
+            for @named -> $child {
+                if nqp::where($child) == nqp::where($sibling) {
+                    nqp::splice(@named, [$node], $i, 0);
+                    $inserted := 1;
+                    last;
+                }
+                $i := $i + 1;
+            }
+            nqp::push(@named, $node) unless $inserted;
+        } else {
+            nqp::push(@allch, $node);
+            nqp::push(@named, $node);
+        }
         nqp::bindattr($node, $type, '$.^', $o);
     }
 

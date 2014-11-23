@@ -499,13 +499,13 @@ class MO::World is HLL::World {
     method install_interpreters() {
         my $compiler := nqp::getcomp('mo'); #HLL::Compiler.new();
         for %*LANG {
-            #my $lang := %*LANG{$_.key};
-            #my $actions := %*LANG{$_.key~'-actions'};
-            my $key := $_.key;
-            my $h := %*LANG;
+            my $lang := %*LANG{$_.key};
+            my $actions := %*LANG{$_.key~'-actions'};
+            #my $key := $_.key;
+            #my $h := %*LANG;
             self.add_interpreter($_.key, -> $s, %opts {
-                my $lang := $h{$key};
-                my $actions := $h{$key~'-actions'};
+                #my $lang := $h{$key};
+                #my $actions := $h{$key~'-actions'};
                 my $ast := $lang.parse(~$s, :$actions).made;
                 $compiler.compile($ast, :from<ast>)();
             });

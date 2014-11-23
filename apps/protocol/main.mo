@@ -1,11 +1,13 @@
 use codec
 
+def load($xml) { lang XML in $xml }
+
 for include {
-    say("$(.filename)")
+    var $node = load('apps/protocol/'~.filename);
+    .^.insert($node, $_);
 }
 
-#def protocol($protocol) { lang XML in $protocol }
-#var $protocol = protocol('apps/protocol/test_proto.xml')
+#var $protocol = load('apps/protocol/test_proto.xml')
 #var $code = str codec::Class with $protocol
 
 var $lang = .lang;
