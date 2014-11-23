@@ -70,6 +70,7 @@ grammar MO::Grammar is HLL::Grammar {
     token term:sym<return> {:s <sym> [['(' ~ ')' <EXPR>] | <EXPR>]? }
     token term:sym<str>    {:s <sym>\s $<name>=[<.ident>['::'<.ident>]*] ['with' <EXPR>]? }
     token term:sym<map>    {:s <sym>\s <pred=.map_pred> <list=.EXPR> }
+    # token term:sym<lang>   { <?before <sym>><definition> }
     token term:sym<any>    { <?before <sym>><any=.control> }
     token term:sym<many>   { <?before <sym>><many=.control> }
 
@@ -148,15 +149,16 @@ grammar MO::Grammar is HLL::Grammar {
     token quote:sym<'>  { <?[']> <quote_EXPR: ':q'>  }
     token quote:sym<">  { <?["]> <quote_EXPR: ':qq'> }
 
-    token quote_escape:sym<$>   { <?[$]> <?quotemod_check('s')> <variable> }
     token quote_escape:sym<{ }> { <?[{]> <?quotemod_check('c')> <block> }
+    token quote_escape:sym<$()> { <?before '$('> <?quotemod_check('s')> '$(' ~ ')' <EXPR> }
+    token quote_escape:sym<$>   { <?[$]> <?quotemod_check('s')> <variable> }
     token quote_escape:sym<esc> { \\ e <?quotemod_check('b')> }
 
     token number { $<sign>=[<[+\-]>?] [ <dec_number> | <integer> ] }
 
     token name { <!keyword> <.ident> ['::'<.ident>]* }
 
-    token post_dot { '.'$<name>=['*'|'.'|[<ns=.ident>':']?<ident>] [$<query>='?'|<args>]? }
+    token post_dot { '.'$<name>=['*'|'^'|'.'|'?'|[<ns=.ident>':']?<ident>] [$<query>='?'|<args>]? }
     token post_arrow { '->'<select> }
 
     proto token select     { <...> }
@@ -411,14 +413,14 @@ grammar MO::Grammar is HLL::Grammar {
         <variable> <initializer>? ';'? { $*IN_DECL := 0; }
     }
 
-    rule namedarg { ':'<name=.ident> '(' ~ ')' <value=.EXPR>  }
-
     rule declaration:sym<use> {
         :my $*IN_DECL;
         <sym>\s { $*IN_DECL := ~$<sym>; }
         <name> <params=.EXPR>? <namedarg>* %% ','
         ';'? { $*IN_DECL := 0; }
     }
+
+    rule namedarg { ':'<name=.ident> '(' ~ ')' <value=.EXPR>  }
 
     proto rule definition { <...> }
 
@@ -456,7 +458,7 @@ grammar MO::Grammar is HLL::Grammar {
     }
     rule template_starter { ^^ '-'**3..*\n? }
     rule template_stopper { \n? [<.template_starter>'end'|$] }
-    rule template_atoms { <template_atom>* }
+    token template_atoms { <template_atom>* }
 
     proto token template_atom   { <...> }
     token template_atom:sym<$>  { <variable> }
@@ -471,20 +473,22 @@ grammar MO::Grammar is HLL::Grammar {
     proto rule template_statement { <...> }
     token template_statement:sym< > { <.tsp>\n }
     token template_statement:sym<for> {
-        <.tsp> ['for'\s+<EXPR>[';'<.eis>\n]?] ~ [<.tsp>'end'<.els>]
+        <.tsp>\s* ['for'\s+<EXPR>[';'<.eis>\n]?] ~ [<.tsp>'end'<.els>]
         [ { self.push_scope( ~$<sym>, '$_' ) } <template_atoms> ]
     }
     token template_statement:sym<if> {
-        <.tsp> ['if'\s+<EXPR>[';'<.eis>\n]?] ~ [<.tsp>'end'<.els>]
+        <.tsp>\s* ['if'\s+<EXPR>[';'<.eis>\n]?] ~ [<.tsp>'end'<.els>]
         [ <template_atoms> <else=.template_else>? ]
     }
+    token template_statement:sym<declaration> { <.tsp><?before 'var'><declaration> }
+    token template_statement:sym<expr>        { <.tsp><EXPR> ';'? } ## A singular <EXPR> must be the last to try.
 
     proto rule template_else { <...> }
     token template_else:sym<if> {
-        <.tsp> ['elsif'\s+<EXPR><.eis>] ~ <else=.template_else>? <template_atoms>
+        <.tsp>\s* ['elsif'\s+<EXPR><.eis>] ~ <else=.template_else>? <template_atoms>
     }
     token template_else:sym< > {
-        <.tsp> 'else'<.eis> <template_atoms>
+        <.tsp>\s* 'else'<.eis> <template_atoms>
     }
 
     token eis { [<![\n]>\s]* } # eat inline space

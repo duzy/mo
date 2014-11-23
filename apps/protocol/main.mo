@@ -1,15 +1,29 @@
 use codec
 
-def load_protocol($protocol) {
-    lang XML in $protocol
+for include {
+    say("$(.filename)")
 }
 
-var $protocol = load_protocol('apps/protocol/test_proto.xml'); # @ARGS[0]
-with $protocol {
-    #say('class '~.name);
-    for message {
-        #say('  message '~.name);
-        #for field { say('    '~.name) }
-        say(str codec.message)
-    }
+#def protocol($protocol) { lang XML in $protocol }
+#var $protocol = protocol('apps/protocol/test_proto.xml')
+#var $code = str codec::Class with $protocol
+
+var $lang = .lang;
+
+if $lang eq 'c' {
+    var $h = str codec::C_h;
+    var $code = str codec::C;
+    say($h);
+    say("----------");
+    say($code);
+} elsif $lang eq 'c++' {
+    var $h = str codec::Cpp_h;
+    var $code = str codec::Cpp;
+    say($h);
+    say("----------");
+    say($code);
+} elsif $lang eq 'go' {
+    say('TODO: ...');
+} elsif $lang eq 'java' {
+    say('TODO: ...');
 }

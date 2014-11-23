@@ -2,7 +2,7 @@
     name = "zproto_example"
     signature = "0"
     title = "zproto example protocol"
-    script = "zproto_codec_c"
+    lang = "c"
     package_dir = "../include"
     source_dir = "."
     >

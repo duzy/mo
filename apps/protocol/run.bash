@@ -2,4 +2,4 @@
 
 . scripts/common.bash
 
-run $SRCDIR/main.mo $SRCDIR/test_proto.xml
+run $SRCDIR/test_proto.xml $SRCDIR/main.mo

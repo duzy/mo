@@ -162,10 +162,9 @@ class MO::Actions is HLL::Actions {
     method quote:sym<'>($/) { make $<quote_EXPR>.made; } #'
     method quote:sym<">($/) { make $<quote_EXPR>.made; } #"
 
-    method quote_escape:sym<{ }>($/) {
-        make QAST::Op.new( :op<stringify>, $<block>.made, :node($/) );
-    }
-    method quote_escape:sym<$>($/) { make $<variable>.made; }
+    method quote_escape:sym<{ }>($/) { make QAST::Op.new( :op<stringify>, $<block>.made, :node($/) ) }
+    method quote_escape:sym<$()>($/) { make QAST::Op.new( :op<stringify>, $<EXPR>.made, :node($/) ) }
+    method quote_escape:sym<$>($/)   { make $<variable>.made }
     method quote_escape:sym<esc>($/) { make "\c[27]"; }
 
     method number($/) {
@@ -877,7 +876,7 @@ class MO::Actions is HLL::Actions {
         my $ast := QAST::SVal.new(:value(''));
         if +$<template_atom> {
             for $<template_atom> {
-                $ast := QAST::Op.new( :op<concat>, $ast, $_.made );
+                $ast := QAST::Op.new( :op<concat>, $ast, $_.made ) if nqp::defined($_.made);
             }
         }
         make $ast;
@@ -927,9 +926,17 @@ class MO::Actions is HLL::Actions {
         make QAST::Op.new( :node($/), :op<for>, $<EXPR>.made, $scope );
     }
 
-    method template_statement:sym<if>($/) { make template_if($/); }
-    method template_else:sym<if>($/)      { make template_if($/); }
-    method template_else:sym< >($/)       { make $<template_atoms>.made; }
+    method template_statement:sym<declaration>($/) {
+        my $scope := $*W.current_scope;
+        $scope[0].push($<declaration>.made);
+    }
+    method template_statement:sym<expr>($/) {
+        my $scope := $*W.current_scope;
+        $scope[0].push($<EXPR>.made);
+    }
+    method template_statement:sym<if>($/)          { make template_if($/) }
+    method template_else:sym<if>($/)               { make template_if($/) }
+    method template_else:sym< >($/)                { make $<template_atoms>.made }
 
     my sub template_if($/) {
         my $ast := QAST::Op.new( :node($/), :op<if>, $<EXPR>.made,

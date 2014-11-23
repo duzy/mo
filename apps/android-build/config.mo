@@ -342,6 +342,9 @@ $cmd -sigalg MD5withRSA -digestalg SHA1 $keystore $keypass $storepass \
 --------------------------------
 echo "$.name: Packing resources.."
 mkdir -p $dir || exit -1
+
+echo $cmd package -f -F $pack -M $am $libs $reses $assets \
+    $debug --auto-add-overlay
 $cmd package -f -F $pack -M $am $libs $reses $assets \
     $debug --auto-add-overlay
 
@@ -349,9 +352,9 @@ echo "$.name: Packing natives.. (TODO)"
 # for l in $natives ; do
 #     $cmd add -k $pack \$l
 # done
-$cmd add -k $pack $natives
+# $cmd add -k $pack $natives
 
-jar tf $pack
+# jar tf $pack
 
 echo "$.name: Packing classes.."
 $cmd add -k $pack $dex > /dev/null

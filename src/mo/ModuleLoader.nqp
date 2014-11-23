@@ -172,29 +172,24 @@ class MO::ModuleLoader {
             # Make a symbole for the loaded module.
             my @name := nqp::split('::', $module_name);
             my $final := @name[+@name - 1];
-            if 0 {
-                my $unit := nqp::ctxlexpad(@module_ctx[0][1]);
-                @GLOBALish[0].WHO{$final} := $unit<EXPORT>;
-            } else {
-                my $module := self.create_module($final); # create a new container for symbols
-                my int $i := 0;
-                while $i < $mn {
-                    my @m := @module_ctx[$i];
-                    my $unit := nqp::ctxlexpad(@m[1]);
-                    for $unit<EXPORT>.WHO {
-                        if nqp::existskey($module.WHO, $_.key) {
-                            my $s := $module.WHO{$_.key};
-                            # TODO: report line number where it's defined
-                            nqp::die($_.key ~ " already defined in "~nqp::substr($s, 1));
-                        }
-
-                        # alias -- point-to-package(PTP)
-                        $module.WHO{$_.key} := MO::PTP.new($unit<EXPORT>);
+            my $module := self.create_module($final); # create a new container for symbols
+            my int $i := 0;
+            while $i < $mn {
+                my @m := @module_ctx[$i];
+                my $unit := nqp::ctxlexpad(@m[1]);
+                for $unit<EXPORT>.WHO {
+                    if nqp::existskey($module.WHO, $_.key) {
+                        my $s := $module.WHO{$_.key};
+                        # TODO: report line number where it's defined
+                        nqp::die($_.key ~ " already defined in "~nqp::substr($s, 1));
                     }
-                    $i := $i + 1;
+
+                    # alias -- point-to-package(PTP)
+                    $module.WHO{$_.key} := MO::PTP.new($unit<EXPORT>);
                 }
-                @GLOBALish[0].WHO{$final} := $module;
+                $i := $i + 1;
             }
+            @GLOBALish[0].WHO{$final} := $module;
         }
 
         @module_ctx;
