@@ -1,6 +1,6 @@
 template C_h
 --------------
-.var $class = .name;
+.var $class = .name ;
 /** $(license[0].text()) */
 \#ifndef __$($class)_H__INCLUDED__
 \#define __$($class)_H__INCLUDED__ 1
@@ -8,7 +8,7 @@ template C_h
 /* These are the $class messages:
 .for message ;
 
-   $(.name) - 
+    $(.name) - 
 .   for field ;
         $(.name) $(.type)
 .   end

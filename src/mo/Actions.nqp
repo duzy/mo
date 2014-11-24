@@ -93,9 +93,10 @@ class MO::Actions is HLL::Actions {
         # $/.prune;
     }
 
-    method term:sym<map>($/) { make QAST::Op.new( :op<map>, $<pred>.made, expr_list_ast($<list>.made) ); }
-    method term:sym<any>($/) { make $<any>.made; }
-    method term:sym<many>($/) { make $<many>.made; }
+    method term:sym<map>($/)  { make QAST::Op.new( :op<map>, $<pred>.made, expr_list_ast($<list>.made) ) }
+    method term:sym<any>($/)  { make $<any>.made }
+    method term:sym<many>($/) { make $<many>.made }
+    method term:sym<lang>($/) { make $<lang>.made }
 
     method circumfix:sym<( )>($/) {
         make $<EXPR>.made;
@@ -1129,7 +1130,8 @@ class MO::Actions is HLL::Actions {
         $rulehash
     }
 
-    method definition:sym<lang>($/) {
+    method definition:sym<lang>($/) { make $<lang>.made }
+    method lang($/) {
         my $langname := ~$<langname>;
         unless $*W.has_interpreter($langname) {
             $<langname>.CURSOR.panic("language $langname is not supported");
@@ -1149,16 +1151,7 @@ class MO::Actions is HLL::Actions {
             }
         }
 
-        my $source;
-
-        if $<externalfile> {
-            $source := QAST::Op.new( :op<call>,
-                $*W.symbol_ast($/, ['slurp'], 1), $<externalfile>.made,
-            );
-        } else {
-            $source := $<source>.made;
-        }
-
+        my $source := $<lang_body>.made;
         my $langcode := QAST::Block.new( :node($/), QAST::Stmts.new(
             QAST::Op.new( :op<bind>,
                 QAST::Var.new( :name<options>, :scope<local>, :decl<var> ),
@@ -1207,6 +1200,16 @@ class MO::Actions is HLL::Actions {
         } else {
             make QAST::Op.new( :op<call>, QAST::Op.new( :op<takeclosure>, $langcode ) );
         }
+    }
+
+    method lang_body:sym<in>($/) {
+        make QAST::Op.new( :op<call>,
+            $*W.symbol_ast($/, ['slurp'], 1), $<externalfile>.made,
+        )
+    }
+
+    method lang_body:sym<template>($/) {
+        make $<source>.made;
     }
 
     method lang_modifier:sym<:stdout>($/) {

@@ -70,7 +70,7 @@ grammar MO::Grammar is HLL::Grammar {
     token term:sym<return> {:s <sym> [['(' ~ ')' <EXPR>] | <EXPR>]? }
     token term:sym<str>    {:s <sym>\s $<name>=[<.ident>['::'<.ident>]*] ['with' <EXPR>]? }
     token term:sym<map>    {:s <sym>\s <pred=.map_pred> <list=.EXPR> }
-    # token term:sym<lang>   { <?before <sym>><definition> }
+    token term:sym<lang>   { <sym>\s <lang(1)> }
     token term:sym<any>    { <?before <sym>><any=.control> }
     token term:sym<many>   { <?before <sym>><many=.control> }
 
@@ -607,18 +607,21 @@ grammar MO::Grammar is HLL::Grammar {
         '{' ~ '}' <statements>
     }
 
-    rule definition:sym<lang> {
+    rule definition:sym<lang> { <sym>\s <lang(0)> }
+    rule lang(int $imm) {
         :my $*IN_DECL;
         :my %*option;
         { $*IN_DECL := 'lang'; %*option<escape> := 0; }
-        <sym>\s <langname=.ident> <lang_modifier>*
-        ['as'\s [<variable>|<name=.ident>]]?
-        [
-        | 'in' <externalfile=.EXPR> ';'?
-        | <template_starter> ~ <template_stopper>
+        <langname=.ident> <lang_modifier>*
+        ['as'\s [<?{ $imm }><.panic: '"as" is unexpected in this context'>|<variable>|<name=.ident>]]?
+        <lang_body> { $*IN_DECL := 0; }
+    }
+
+    proto rule lang_body { <...> }
+    rule lang_body:sym<in> { <sym> <externalfile=.EXPR> ';'? }
+    rule lang_body:sym<template> {
+        <template_starter> ~ <template_stopper>
             [ { $*IN_DECL := 'lang-source' }<source=.lang_source> ]
-        ]
-        { $*IN_DECL := 0; }
     }
 
     proto rule lang_modifier { <...> }
