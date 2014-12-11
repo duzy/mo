@@ -117,8 +117,10 @@ $ops.add_hll_op('mo', 'get', -> $qastcomp, $op {
     {
         my $v := QAST::Var.new( :scope<positional>, $op[0], QAST::IVal.new(:value(0)) );
         $ast := QAST::Op.new( :op<getattr>, $v, $v, $op[1] );
+        # $ast := QAST::Var.new( :scope<attribute>, $v, $op[1] );
     } else {
         $ast := QAST::Op.new( :op<getattr>, $op[0], $op[0], $op[1] );
+        # $ast := QAST::Var.new( :scope<attribute>, $op[0], $op[1] );
     }
     $qastcomp.as_post( $ast );
 });

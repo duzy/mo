@@ -242,7 +242,8 @@ class MO::Actions is HLL::Actions {
             $ast.op('callmethod');
             $ast.name(~$<name>);
         } else {
-            $ast := QAST::Op.new( :node($/), :op<get>,  QAST::SVal.new(:value('$.'~$<name>)) );
+            $ast := QAST::Op.new( :node($/), :op<get>, QAST::SVal.new(:value('$.'~$<name>)) );
+            # $ast := QAST::Var.new( :node($/), :scope<attribute>, :name('$.'~$<name>) );
         }
         make $ast;
     }
