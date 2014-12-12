@@ -202,7 +202,7 @@ grammar MO::Grammar is HLL::Grammar {
     token kw:sym<return>{ <sym> }
     token kw:sym<as>    { <sym> }
     token kw:sym<template>{ <sym> }
-    token kw:sym<lang> { <sym> }
+    token kw:sym<lang>  { <sym> }
     token kw:sym<class> { <sym> }
     token kw:sym<method>{ <sym> }
 
