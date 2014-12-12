@@ -39,6 +39,7 @@ run $SRCDIR/01-control-loop-for
 run $SRCDIR/09-bare-select
 run $SRCDIR/10-dot-dot
 run $SRCDIR/10-dot-name
+run $SRCDIR/10-dot-set
 run $SRCDIR/10-arrow-name
 run $SRCDIR/10-arrow-name-many
 run $SRCDIR/10-arrow-many

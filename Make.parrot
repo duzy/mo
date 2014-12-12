@@ -35,7 +35,7 @@ $(MO_PBC): $(MO_PIR) $(MODULELOADER_PBC) $(MAKEFILE_PBC)
 
 $(MO_PIR): $(MO_NQP) $(XML_PBC) $(JSON_PBC)
 	@mkdir -p $(@D)
-	$(NQP) --combine --target=pir --output="$@" $<
+	$(NQP) --target=pir --output="$@" $<
 	@[ -f $@ ]
 
 $(MO_NQP): $(MO_SOURCES)
@@ -65,7 +65,7 @@ $(XML_PBC): $(XML_PIR)
 
 $(XML_PIR): $(XML_NQP) $(COMMON_PBC)
 	@mkdir -p $(@D)
-	$(NQP) --combine --target=pir --output="$@" $<
+	$(NQP) --target=pir --output="$@" $<
 	@[ -f $@ ]
 
 $(XML_NQP): $(XML_SOURCES)
@@ -80,7 +80,7 @@ $(JSON_PBC): $(JSON_PIR)
 
 $(JSON_PIR): $(JSON_NQP)
 	@mkdir -p $(@D)
-	$(NQP) --combine --target=pir --output="$@" $^
+	$(NQP) --target=pir --output="$@" $^
 	@[ -f $@ ]
 
 $(JSON_NQP): $(JSON_SOURCES)
@@ -95,7 +95,7 @@ $(MAKEFILE_PBC): $(MAKEFILE_PIR)
 
 $(MAKEFILE_PIR): $(MAKEFILE_NQP) $(COMMON_PBC)
 	@mkdir -p $(@D)
-	$(NQP) --combine --target=pir --output="$@" $<
+	$(NQP) --target=pir --output="$@" $<
 	@[ -f $@ ]
 
 $(MAKEFILE_NQP): $(MAKEFILE_SOURCES)
@@ -110,7 +110,7 @@ $(COMMON_PBC): $(COMMON_PIR)
 
 $(COMMON_PIR): $(COMMON_NQP)
 	@mkdir -p $(@D)
-	$(NQP) --combine --target=pir --output="$@" "$^"
+	$(NQP) --target=pir --output="$@" "$^"
 	@[ -f $@ ]
 
 $(COMMON_NQP): $(COMMON_SOURCES)
