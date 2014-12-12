@@ -32,6 +32,7 @@ class XML::Actions is HLL::Actions {
 
     method markup_content:sym<tag>($/)     { make $<tag>.made; }
     method markup_content:sym<cdata>($/)   { make $<cdata>.made; }
+    method markup_content:sym<comment>($/) { make $<comment>.made; }
     method markup_content:sym<content>($/) { make $<content>.made; }
 
     method tag:sym<start>($/) {
@@ -116,5 +117,8 @@ class XML::Actions is HLL::Actions {
     }
 
     method cdata($/) {
+    }
+
+    method comment($/) {
     }
 }

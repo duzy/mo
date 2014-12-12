@@ -1,0 +1,107 @@
+# -*- makefile-gmake -*-
+BASH := $(shell which bash)
+CAT := $(shell which cat)
+NQP := $(shell which nqp-j) --module-path=gen/jvm
+
+COMMON_JAR := gen/jvm/common.jar
+COMMON_NQP := gen/jvm/common.nqp
+
+JSON_JAR := gen/jvm/json.jar
+JSON_NQP := gen/jvm/json.nqp
+
+XML_JAR := gen/jvm/xml.jar
+XML_NQP := gen/jvm/xml.nqp
+
+MAKEFILE_JAR := gen/jvm/makefile.jar
+MAKEFILE_NQP := gen/jvm/makefile.nqp
+
+MODULELOADER_JAR := gen/jvm/mo/ModuleLoader.jar
+MODULELOADER_NQP := gen/jvm/mo/ModuleLoader.nqp
+
+MO_JAR := gen/jvm/mo.jar
+MO_NQP := gen/jvm/mo.nqp
+
+$(MO_JAR): $(MO_NQP) $(MODULELOADER_JAR) $(XML_JAR) $(JSON_JAR) $(MAKEFILE_JAR)
+	@mkdir -p $(@D)
+	$(NQP) --target=jar --output="$@" $<
+	@[ -f $@ ]
+
+$(MO_NQP): $(MO_SOURCES)
+	@mkdir -p $(@D)
+	$(CAT) $^ > "$@"
+	@[ -f $@ ]
+
+$(MODULELOADER_JAR): $(MODULELOADER_NQP)
+	@mkdir -p $(@D)
+	$(NQP) --target=jar --output="$@" $<
+	@[ -f $@ ]
+
+$(MODULELOADER_NQP): $(MODULELOADER_SOURCES)
+	@mkdir -p $(@D)
+	$(CAT) $^ > "$@"
+	@[ -f $@ ]
+
+$(XML_JAR): $(XML_NQP) $(COMMON_JAR)
+	@mkdir -p $(@D)
+	$(NQP) --target=jar --output="$@" $<
+	@[ -f $@ ]
+
+$(XML_NQP): $(XML_SOURCES)
+	@mkdir -p $(@D)
+	$(CAT) $^ > "$@"
+	@[ -f $@ ]
+
+$(JSON_JAR): $(JSON_NQP)
+	@mkdir -p $(@D)
+	$(NQP) --target=jar --output="$@" $^
+	@[ -f $@ ]
+
+$(JSON_NQP): $(JSON_SOURCES)
+	@mkdir -p $(@D)
+	$(CAT) $^ > "$@"
+	@[ -f $@ ]
+
+$(MAKEFILE_JAR): $(MAKEFILE_NQP) $(COMMON_JAR)
+	@mkdir -p $(@D)
+	$(NQP) --target=jar --output="$@" $<
+	@[ -f $@ ]
+
+$(MAKEFILE_NQP): $(MAKEFILE_SOURCES)
+	@mkdir -p $(@D)
+	$(CAT) $^ > "$@"
+	@[ -f $@ ]
+
+$(COMMON_JAR): $(COMMON_NQP)
+	@mkdir -p $(@D)
+	$(NQP) --target=jar --output="$@" "$^"
+	@[ -f $@ ]
+
+$(COMMON_NQP): $(COMMON_SOURCES)
+	@mkdir -p $(@D)
+	$(CAT) $^ > "$@"
+	@[ -f $@ ]
+
+test: test-xml test-json test-mo
+
+test-xml: t/xml/run.bash $(XML_JAR)
+	@$(BASH) $<
+
+test-json: ; @echo "JSON..."
+
+test-makefile: t/makefile/run.bash $(MAKEFILE_JAR)
+	@$(BASH) $<
+
+test-mo: t/mo/run.bash $(MO_JAR)
+	@$(BASH) $<
+
+test-examples: examples/test.bash $(MO_JAR)
+	@$(BASH) $<
+
+run-examples: examples/run.bash $(MO_JAR)
+	@$(BASH) $<
+
+run-apps: run-app-android-build run-app-protocol
+run-app-android-build: apps/android-build/run.bash $(MO_JAR)
+	@$(BASH) $<
+run-app-protocol: apps/protocol/run.bash $(MO_JAR)
+	@$(BASH) $<

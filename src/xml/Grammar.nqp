@@ -27,6 +27,7 @@ grammar XML::Grammar is HLL::Grammar {
     proto token markup_content { <...> }
     token markup_content:sym<tag>     { <tag> }
     token markup_content:sym<cdata>   { <cdata> }
+    token markup_content:sym<comment> { <comment> }
     token markup_content:sym<content> { <content> }
 
     proto token tag { <...> }
@@ -48,8 +49,12 @@ grammar XML::Grammar is HLL::Grammar {
         ]
     }
 
+    token comment {
+        '<!--' ~ '-->' [<!before '-->'>.]*
+    }
+
     token cdata {
-        '<![CDATA[' ~ ']]>' [<!before: ']]>'>.]*
+        '<![CDATA[' ~ ']]>' [<!before ']]>'>.]*
     }
 
     token entity {

@@ -7,63 +7,26 @@ NQP := $(shell which nqp-p) --module-path=gen/parrot
 COMMON_PBC := gen/parrot/common.pbc
 COMMON_PIR := gen/parrot/common.pir
 COMMON_NQP := gen/parrot/common.nqp
-COMMON_SOURCES := \
-  src/mo/parrot/VMCall.nqp \
-  src/core/Variable.nqp \
-  src/core/Routine.nqp \
-  src/how/NodeHOW.nqp \
-  src/how/FilesystemNodeHOW.nqp \
-  src/how/AttributeHOW.nqp \
-  src/how/ClassHOW.nqp \
-  src/how/RuleHashHOW.nqp \
-  src/how/TemplateHOW.nqp \
 
 JSON_PBC := gen/parrot/json.pbc
 JSON_PIR := gen/parrot/json.pir
 JSON_NQP := gen/parrot/json.nqp
-JSON_SOURCES := \
-  src/json/Grammar.nqp \
 
 XML_PBC := gen/parrot/xml.pbc
 XML_PIR := gen/parrot/xml.pir
 XML_NQP := gen/parrot/xml.nqp
-XML_SOURCES := \
-  src/xml/Grammar.nqp \
-  src/xml/Actions.nqp \
-  src/xml/Compiler.nqp \
-  src/xml/World.nqp \
 
 MAKEFILE_PBC := gen/parrot/makefile.pbc
 MAKEFILE_PIR := gen/parrot/makefile.pir
 MAKEFILE_NQP := gen/parrot/makefile.nqp
-MAKEFILE_SOURCES := \
-  src/makefile/Grammar.nqp \
-  src/makefile/Actions.nqp \
-  src/makefile/Compiler.nqp \
-  src/makefile/World.nqp \
-  src/makefile/Builtin.nqp \
 
 MODULELOADER_PBC := gen/parrot/mo/ModuleLoader.pbc
 MODULELOADER_PIR := gen/parrot/mo/ModuleLoader.pir
 MODULELOADER_NQP := gen/parrot/mo/ModuleLoader.nqp
-MODULELOADER_SOURCES := \
-  src/mo/parrot/VMCall.nqp \
-  src/mo/ModuleLoader.nqp \
 
 MO_PBC := gen/parrot/mo.pbc
 MO_PIR := gen/parrot/mo.pir
 MO_NQP := gen/parrot/mo.nqp
-MO_SOURCES := \
-  src/mo/Grammar.nqp \
-  src/mo/Glob.nqp \
-  src/mo/Actions.nqp \
-  src/mo/Compiler.nqp \
-  src/mo/Model.nqp \
-  src/mo/World.nqp \
-  src/mo/Builtin.nqp \
-  \
-  src/mo/parrot/Ops.nqp \
-  src/mo/ModuleLoader.nqp \
 
 $(MO_PBC): $(MO_PIR) $(MODULELOADER_PBC) $(MAKEFILE_PBC)
 	@mkdir -p $(@D)

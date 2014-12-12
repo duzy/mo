@@ -2,64 +2,28 @@
 #
 #  git clone https://github.com/MoarVM/MoarVM.git
 #  
-MOARDIR := $(or $(wildcard /open/perl6/MoarVM),$(wildcard ~/tools/perl6/MoarVM))
-MOAR := $(MOARDIR)/install/bin/moar
-NQP := $(MOARDIR)/install/bin/nqp-m --module-path=gen/moar
 BASH := $(shell which bash)
 CAT := $(shell which cat)
-MOAR := $(shell which moar)
 NQP := $(shell which nqp-m) --module-path=gen/moar
 
 COMMON_MBC := gen/moar/common.moarvm
 COMMON_NQP := gen/moar/common.nqp
-COMMON_SOURCES := \
-  src/mo/moar/VMCall.nqp \
-  src/core/Variable.nqp \
-  src/core/Routine.nqp \
-  src/how/NodeHOW.nqp \
-  src/how/Node.nqp \
-  src/how/FilesystemNodeHOW.nqp \
-  src/how/FilesystemNode.nqp \
-  src/how/AttributeHOW.nqp \
-  src/how/ClassHOW.nqp \
-  src/how/TemplateHOW.nqp \
-
-JSON_MBC := gen/moar/json.moarvm
-JSON_NQP := gen/moar/json.nqp
-JSON_SOURCES := \
-  src/json/Grammar.nqp \
-
-XML_MBC := gen/moar/xml.moarvm
-XML_NQP := gen/moar/xml.nqp
-XML_SOURCES := \
-  src/xml/Grammar.nqp \
-  src/xml/Actions.nqp \
-  src/xml/Compiler.nqp \
-  src/xml/World.nqp \
 
 MODULELOADER_MBC := gen/moar/mo/ModuleLoader.moarvm
 MODULELOADER_NQP := gen/moar/mo/ModuleLoader.nqp
-MODULELOADER_SOURCES := \
-  src/mo/moar/VMCall.nqp \
-  src/mo/ModuleLoader.nqp \
 
 MO_MBC := gen/moar/mo.moarvm
 MO_NQP := gen/moar/mo.nqp
-MO_SOURCES := \
-  src/mo/Model.nqp \
-  src/mo/World.nqp \
-  src/mo/Grammar.nqp \
-  src/mo/Glob.nqp \
-  src/mo/Actions.nqp \
-  src/mo/Compiler.nqp \
-  src/mo/Builtin.nqp \
-  \
-  src/mo/moar/Ops.nqp \
-  src/mo/ModuleLoader.nqp \
+
+JSON_MBC := gen/moar/json.moarvm
+JSON_NQP := gen/moar/json.nqp
+
+XML_MBC := gen/moar/xml.moarvm
+XML_NQP := gen/moar/xml.nqp
 
 $(MO_MBC): $(MO_NQP) $(XML_MBC) $(JSON_MBC) $(MODULELOADER_MBC)
 	@mkdir -p $(@D)
-	$(NQP) --combine --target=mbc --output="$@" $<
+	$(NQP) --target=mbc --output="$@" $<
 	@[ -f $@ ]
 
 $(MO_NQP): $(MO_SOURCES)
@@ -79,7 +43,7 @@ $(MODULELOADER_NQP): $(MODULELOADER_SOURCES)
 
 $(XML_MBC): $(XML_NQP) $(COMMON_MBC)
 	@mkdir -p $(@D)
-	$(NQP) --combine --target=mbc --output="$@" $<
+	$(NQP) --target=mbc --output="$@" $<
 	@[ -f $@ ]
 
 $(XML_NQP): $(XML_SOURCES)
@@ -89,7 +53,7 @@ $(XML_NQP): $(XML_SOURCES)
 
 $(JSON_MBC): $(JSON_NQP)
 	@mkdir -p $(@D)
-	$(NQP) --combine --target=mbc --output="$@" $^
+	$(NQP) --target=mbc --output="$@" $^
 	@[ -f $@ ]
 
 $(JSON_NQP): $(JSON_SOURCES)
@@ -99,7 +63,7 @@ $(JSON_NQP): $(JSON_SOURCES)
 
 $(COMMON_MBC): $(COMMON_NQP)
 	@mkdir -p $(@D)
-	$(NQP) --combine --target=mbc --output="$@" "$^"
+	$(NQP) --target=mbc --output="$@" "$^"
 	@[ -f $@ ]
 
 $(COMMON_NQP): $(COMMON_SOURCES)
