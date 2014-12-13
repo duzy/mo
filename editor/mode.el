@@ -106,36 +106,45 @@
     "endswith" "startswith" "substr" "strip" "addprefix" "addsuffix" "addinfix"
     "load" "init" "getattr" "setattr" "me" "null" "islist" "do"))
 
+(defvar mo-re-local-variable-name     "\\([$@%]\\)\\([.]?\\)\\([a-z_][A-Za-z_0-9:]*\\)")
+(defvar mo-re-export-variable-name    "\\([$@%]\\)\\([.]?\\)\\([A-Z][A-Za-z_0-9:]*\\)")
+(defvar mo-re-variable-keyed          "[$@%][.]?[A-Za-z_][A-Za-z_0-9:]*\\(<\\)\\(.*?\\)\\(>\\)")
+(defvar mo-re-colon-keyword           "\s\\(:[A-Za-z_][A-Za-z_0-9]*\\)\\>")
+(defvar mo-re-export-function-name    "\\([A-Z][A-Za-z_0-9]*\\)(")
+(defvar mo-re-local-function-name     "\\([a-z_][A-Za-z_0-9]*\\)(")
+(defvar mo-re-lang-name               "lang\s+\\([a-z_][A-Za-z_0-9]*\\)")
+(defvar mo-re-method-name             "method\s+\\([A-Za-z_][A-Za-z_0-9]*\\)\s*:")
+(defvar mo-re-reference-export-name   "\\([A-Z][A-Za-z_0-9]*\\)")
+(defvar mo-re-reference-local-name    "\\([a-z_][A-Za-z_0-9]*\\)")
+
 (defun mo-ppre (re) (format "\\<\\(%s\\)\\>[^_]" (regexp-opt re)))
 (defun mo-idre () nil)
 
 (defvar mo-font-lock-defaults
-  (list
-   (list "\\([\$@%]\\)\\([\.]?\\)\\([a-z_][A-Za-z_0-9:]*\\)"
-         '(1 mo-variable-name-face) '(2 mo-variable-name-bold-face) '(3 mo-variable-name-face))
-   (list "\\([\$@%]\\)\\([\.]?\\)\\([A-Z][A-Za-z_0-9:]*\\)"
-         '(1 mo-variable-name-bold-face) '(2 mo-variable-name-bold-face) '(3 mo-variable-name-bold-face))
-   (list "[\$@%][\.]?[A-Za-z_][A-Za-z_0-9:]*\\(<\\)\\(.*?\\)\\(>\\)"
-         '(1 mo-constant-face) '(2 mo-string-face) '(3 mo-constant-face))
+  (let ()
+    (list
+     (list mo-re-local-variable-name            '(1 mo-variable-name-face)      '(2 mo-variable-name-bold-face) '(3 mo-variable-name-face))
+     (list mo-re-export-variable-name           '(1 mo-variable-name-bold-face) '(2 mo-variable-name-bold-face) '(3 mo-variable-name-bold-face))
+     (list mo-re-variable-keyed                 '(1 mo-constant-face)           '(2 mo-string-face)             '(3 mo-constant-face))
 
-   (list "[^A-Za-z_0-9]\\(<\\)\\(.*?\\)\\(>\\)" ;; FIXME: '(2 mo-light-gray-background-face) is not working
-         '(1 mo-string-bold-face) '(2 mo-light-gray-background-face) '(3 mo-string-bold-face))
+     ;; FIXME: '(2 mo-light-gray-background-face) is not working
+     (list "[^A-Za-z_0-9]\\(<\\)\\(.*?\\)\\(>\\)" '(1 mo-string-bold-face) '(2 mo-light-gray-background-face) '(3 mo-string-bold-face))
+     
+     (cons "\\(?:class\\|template\\)\s+\\([A-Z][A-Za-z_0-9]*\\)"  '(1 mo-type-bold-face))
+     (cons "\\(?:class\\|template\\)\s+\\([a-z_][A-Za-z_0-9]*\\)" '(1 mo-type-face))
 
-   (cons "\\(?:class\\|template\\)\s+\\([A-Z][A-Za-z_0-9]*\\)" '(1 mo-type-bold-face))
-   (cons "\\(?:class\\|template\\)\s+\\([a-z_][A-Za-z_0-9]*\\)" '(1 mo-type-face))
+     (cons mo-re-method-name               '(1 mo-function-name-face))
+     (cons mo-re-lang-name                 '(1 mo-reference-bold-face))
 
-   (cons "method\s+\\([A-Za-z_][A-Za-z_0-9]*\\)\s*:" '(1 mo-function-name-face))
-
-   (cons "lang\s+\\([a-z_][A-Za-z_0-9]*\\)" '(1 mo-reference-bold-face))
-
-   (cons (mo-ppre mo-keyword-list) '(1 mo-keyword-face))
-   (cons (mo-ppre mo-builtin-list) '(1 mo-builtin-face))
-   (cons "\s\\(:[A-Za-z_][A-Za-z_0-9]*\\)\\>" '(1 mo-constant-face)) ;;  :keyword
-   (cons "\\([A-Z][A-Za-z_0-9]*\\)(" '(1 mo-function-name-bold-face))
-   (cons "\\([a-z_][A-Za-z_0-9]*\\)(" '(1 mo-function-name-face))
-   (cons "[A-Z][A-Za-z_0-9]*" mo-reference-bold-face)
-   (cons "[a-z_][A-Za-z_0-9]*" mo-reference-face)
-   )
+     (cons (mo-ppre mo-keyword-list)       '(1 mo-keyword-face))
+     (cons (mo-ppre mo-builtin-list)       '(1 mo-builtin-face))
+     
+     (cons mo-re-colon-keyword             '(1 mo-constant-face)) ;;  :keyword
+     (cons mo-re-export-function-name      '(1 mo-function-name-bold-face))
+     (cons mo-re-local-function-name       '(1 mo-function-name-face))
+     (cons mo-re-reference-export-name     '(1 mo-reference-bold-face))
+     (cons mo-re-reference-local-name      '(1 mo-reference-face))
+     ))
   "Minimal highlighting expressions for MO mode")
 
 (defvar mo-syntax-table
