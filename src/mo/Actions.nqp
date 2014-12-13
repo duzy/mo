@@ -925,7 +925,10 @@ class MO::Actions is HLL::Actions {
             QAST::SVal.new(:value($result.name)),
             QAST::Op.new( :op<concat>, $result, $<template_atoms>.made ) ) );
 
-        make QAST::Op.new( :node($/), :op<for>, $<EXPR>.made, $scope );
+        make QAST::Stmts.new( :node($/),
+            QAST::Op.new( :op<for>, $<EXPR>.made, $scope ),
+            $result,
+        );
     }
 
     method template_statement:sym<declaration>($/) {
