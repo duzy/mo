@@ -1,28 +1,50 @@
+(defvar mo-template-text-face 'mo-template-text-face)
+(defface mo-template-text-face
+  '((t (:inherit 'mo-string-face))) "mo: template text face"
+  :group 'mo)
+
 (defun mo-template-expresion-re (re) (format "\\$(.*?%s.*?)" re))
 (defun mo-template-statement-re (re) (format "^\\..*?%s.*?[\n;]?" re))
 (defun mo-template-statement-ppre (re) (mo-template-statement-re (format "\\<\\(%s\\)\\>" re)))
 
 (defvar mo-template-font-lock-defaults
   (let ((re-variable-name1 "\\([\$@%]\\)\\([\\.]?\\)\\([a-z_][A-Za-z_0-9:]*\\)")
-        (re-variable-name2 "\\([\$@%]\\)\\([\\.]?\\)\\([A-Z][A-Za-z_0-9:]*\\)"))
+        (re-variable-name2 "\\([\$@%]\\)\\([\\.]?\\)\\([A-Z][A-Za-z_0-9:]*\\)")
+        (re-variable-name3 "[\\$@%][\\.]?[A-Za-z_][A-Za-z_0-9:]*\\(<\\)\\(.*?\\)\\(>\\)"))
     (list
      (list (mo-template-expresion-re re-variable-name1)
-           '(1 mo-variable-name-face) '(2 mo-variable-name-bold-face) '(3 mo-variable-name-face))
+           '(1 mo-variable-name-face)
+           '(2 mo-variable-name-bold-face)
+           '(3 mo-variable-name-face))
      (list (mo-template-expresion-re re-variable-name2)
-           '(1 mo-variable-name-bold-face) '(2 mo-variable-name-bold-face) '(3 mo-variable-name-bold-face))
+           '(1 mo-variable-name-bold-face)
+           '(2 mo-variable-name-bold-face)
+           '(3 mo-variable-name-bold-face))
 
      (list (mo-template-statement-re re-variable-name1)
-           '(1 mo-variable-name-face) '(2 mo-variable-name-bold-face) '(3 mo-variable-name-face))
+           '(1 mo-variable-name-face)
+           '(2 mo-variable-name-bold-face)
+           '(3 mo-variable-name-face))
      (list (mo-template-statement-re re-variable-name2)
-           '(1 mo-variable-name-bold-face) '(2 mo-variable-name-bold-face) '(3 mo-variable-name-bold-face))
-     (list (mo-template-statement-re "[\\$@%][\\.]?[A-Za-z_][A-Za-z_0-9:]*\\(<\\)\\(.*?\\)\\(>\\)")
-           '(1 mo-constant-face) '(2 mo-string-face) '(3 mo-constant-face))
+           '(1 mo-variable-name-bold-face)
+           '(2 mo-variable-name-bold-face)
+           '(3 mo-variable-name-bold-face))
+     (list (mo-template-statement-re re-variable-name3)
+           '(1 mo-constant-face)
+           '(2 mo-string-face)
+           '(3 mo-constant-face))
 
      (cons (mo-template-expresion-re (mo-ppre mo-keyword-list)) '(1 mo-keyword-face))
      (cons (mo-template-statement-re (mo-ppre mo-keyword-list)) '(1 mo-keyword-face))
 
-     (list "^\\(\\.\\)[^;\n]*\\([\n;]?\\)" '(1 mo-constant-bold-face) '(2 mo-constant-bold-face))
-     (list "\\(\\$(\\).*?\\()\\)" '(1 mo-constant-face) '(2 mo-constant-face))
+     (list "^\\(\\.\\)[^;\n]*\\([\n;]?\\)" '(1 mo-constant-bold-face) '(2 mo-constant-face))
+     (list "\\(.*?\\)\\(\\$(\\).*?\\()\\)\\(.*?\\)\\(?:\\$(\\|\n\\)?"
+           '(1 mo-template-text-face)
+           '(2 mo-constant-face)
+           '(3 mo-constant-face)
+           '(4 mo-template-text-face))
+
+     (cons "^\\([^\\.][^\n]*\\)" '(1 mo-template-text-face))
      ))
   "Minimal highlighting expressions for MO template")
 
