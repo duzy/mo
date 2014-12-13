@@ -473,27 +473,28 @@ grammar MO::Grammar is HLL::Grammar {
     proto rule template_statement { <...> }
     token template_statement:sym< > { <.tsp>\n }
     token template_statement:sym<for> {
-        <.tsp>\s* ['for'\s+<EXPR>[';'<.eis>\n]?] ~ [<.tsp>'end'<.els>]
+        <.tsp> ['for'\s+<EXPR><.tst>] ~ [<.tsp>'end'<.tst>]
         [ { self.push_scope( ~$<sym>, '$_' ) } <template_atoms> ]
     }
     token template_statement:sym<if> {
-        <.tsp>\s* ['if'\s+<EXPR>[';'<.eis>\n]?] ~ [<.tsp>'end'<.els>]
+        <.tsp> ['if'\s+<EXPR><.tst>] ~ [<.tsp>'end'<.tst>]
         [ <template_atoms> <else=.template_else>? ]
     }
-    token template_statement:sym<declaration> { <.tsp><?before 'var'><declaration> }
-    token template_statement:sym<expr>        { <.tsp><EXPR> ';'? } ## A singular <EXPR> must be the last to try.
+    token template_statement:sym<declaration> { <.tsp><?before 'var'><declaration><.tst> }
+    token template_statement:sym<expr>        { <.tsp><EXPR><.tst> } ## A singular <EXPR> must be the last to try.
 
     proto rule template_else { <...> }
     token template_else:sym<if> {
-        <.tsp>\s* ['elsif'\s+<EXPR><.eis>] ~ <else=.template_else>? <template_atoms>
+        <.tsp> ['elsif'\s+<EXPR><.tst>] ~ <else=.template_else>? <template_atoms>
     }
     token template_else:sym< > {
-        <.tsp>\s* 'else'<.eis> <template_atoms>
+        <.tsp> 'else'<.tst> <template_atoms>
     }
 
     token eis { [<![\n]>\s]* } # eat inline space
     token els { <eis>\n }      # eat line space
     token tsp { ^^'.'<eis> }   # template statement prefix
+    token tst { <eis>[[';'<.eis>\n]|\s*] }  # template statement terminator
 
     rule params { <param>+ %% ',' }
     proto token param { <...> }
