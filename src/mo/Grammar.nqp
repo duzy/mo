@@ -473,7 +473,10 @@ grammar MO::Grammar is HLL::Grammar {
 
     # token template_char_atom { <!before <.template_stopper>|<.tsp>>. }
     # token template_char_atom { <!before <.template_stopper>><!before \n'.'>. }
-    token template_char_atom { <!before <.template_stopper>|\n'.'>. }
+    token template_char_atom {
+        | <?before \n'.'>\n
+        | <!before <.template_stopper>>.
+    }
 
     proto rule template_statement       { <...> }
     token template_statement:sym< >     { <.tsp><.tst> }
