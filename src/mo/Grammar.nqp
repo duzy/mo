@@ -330,7 +330,7 @@ grammar MO::Grammar is HLL::Grammar {
         ]
     }
 
-    token initializer { '=' <.ws> <EXPR('f=')> }
+    token initializer { '=' <.ws> [<EXPR('f=')>|<.panic: 'unexpected initializer'>] }
 
     rule statements { <.ws> <statement>* }
 
@@ -406,18 +406,20 @@ grammar MO::Grammar is HLL::Grammar {
     rule def_block:sym<end> { <![{]> ~ 'end' <statements> }
 
     proto rule declaration { <...> }
+    rule declaration:sym<var> { <var_declaration> ';'? }
+    rule declaration:sym<use> { <use_declaration> ';'? }
 
-    rule declaration:sym<var> {
+    rule var_declaration {
         :my $*IN_DECL;
-        <sym>\s { $*IN_DECL := ~$<sym>; }
-        <variable> <initializer>? ';'? { $*IN_DECL := 0; }
+        'var'\s { $*IN_DECL := 'var'; }
+        <variable> <initializer>? { $*IN_DECL := 0; }
     }
 
-    rule declaration:sym<use> {
+    rule use_declaration {
         :my $*IN_DECL;
-        <sym>\s { $*IN_DECL := ~$<sym>; }
+        'use'\s { $*IN_DECL := 'use'; }
         <name> <params=.EXPR>? <namedarg>* %% ','
-        ';'? { $*IN_DECL := 0; }
+        { $*IN_DECL := 0; }
     }
 
     rule namedarg { ':'<name=.ident> '(' ~ ')' <value=.EXPR>  }
@@ -458,6 +460,7 @@ grammar MO::Grammar is HLL::Grammar {
     }
     rule template_starter { ^^ '-'**3..*\n? }
     rule template_stopper { \n? [<.template_starter>'end'|$] }
+
     token template_atoms { <template_atom>* }
 
     proto token template_atom   { <...> }
@@ -466,35 +469,43 @@ grammar MO::Grammar is HLL::Grammar {
     token template_atom:sym<{}> { '${' ~ '}' <statements> }
     token template_atom:sym<^^> { <template_statement> }
     token template_atom:sym<\\> { \\$<char>=. }
-    token template_atom:sym<.>  { [<![$\\]><template_char_atom>]+ }
+    token template_atom:sym<.>  { [<![$\\]><template_char_atom>]+ {say('chars: '~$/)} }
 
-    token template_char_atom { <!before <.template_stopper>|<.tsp>>. }
+    # token template_char_atom { <!before <.template_stopper>|<.tsp>>. }
+    # token template_char_atom { <!before <.template_stopper>><!before \n'.'>. }
+    token template_char_atom { <!before <.template_stopper>|\n'.'>. }
 
-    proto rule template_statement { <...> }
-    token template_statement:sym< > { <.tsp>\n }
-    token template_statement:sym<for> {
-        <.tsp> ['for'\s+<EXPR><.tst>] ~ [<.tsp>'end'<.tst>]
+    proto rule template_statement       { <...> }
+    token template_statement:sym< >     { <.tsp><.tst> }
+    token template_statement:sym<for>   {
+        [<.tsp>'for'\s+<tx('for')><.tst>{say('for: '~$/)}] ~ [<.tsp>'end'<.tst>]
         [ { self.push_scope( ~$<sym>, '$_' ) } <template_atoms> ]
     }
-    token template_statement:sym<if> {
-        <.tsp> ['if'\s+<EXPR><.tst>] ~ [<.tsp>'end'<.tst>]
+    token template_statement:sym<if>    {
+        [<.tsp>'if'\s+<tx('if')><.tst>] ~ [<.tsp>'end'<.tst>]
         [ <template_atoms> <else=.template_else>? ]
     }
-    token template_statement:sym<declaration> { <.tsp><?before 'var'><declaration><.tst> }
-    token template_statement:sym<expr>        { <.tsp><EXPR><.tst> } ## A singular <EXPR> must be the last to try.
+    token template_statement:sym<var>   { <.tsp><?before 'var'><var_declaration><.tst> }
+    token template_statement:sym<expr>  { <.tsp><tx: 'bare'><.tst> } ## A singular <EXPR> must be the last to try.
 
-    proto rule template_else { <...> }
-    token template_else:sym<if> {
-        <.tsp> ['elsif'\s+<EXPR><.tst>] ~ <else=.template_else>? <template_atoms>
-    }
-    token template_else:sym< > {
-        <.tsp> 'else'<.tst> <template_atoms>
-    }
+    proto rule template_else    { <...> }
+    token template_else:sym<if> { [<.tsp>'elsif'\s+<tx: 'elsif'><.tst>] ~ <else=.template_else>? <template_atoms> }
+    token template_else:sym< >  { <.tsp>'else'<.tst> <template_atoms> }
 
-    token eis { [<![\n]>\s]* } # eat inline space
-    token els { <eis>\n }      # eat line space
-    token tsp { ^^'.'<eis> }   # template statement prefix
-    token tst { <eis>[[';'<.eis>\n]|\s*] }  # template statement terminator
+    token eis { [<![\n]>\s]* }  # eat inline space
+    token els { <.eis>\n }      # eat line space
+    token tsp { ^^'.'<.eis> }   # template statement prefix
+    token tst { # template statement terminator
+        <.eis>
+        [
+        | <?before <.template_stopper>>
+        | <?before <.tsp>>
+        | [';'<.eis>]? \n
+        | <?before <.template_char_atom>>
+        | <.panic: "unexpected terminator">
+        ]
+    }
+    token tx($tag) { <EXPR>|<.panic: "unexpected '$tag' expresion"> }
 
     rule params { <param>+ %% ',' }
     proto token param { <...> }

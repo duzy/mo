@@ -679,7 +679,8 @@ class MO::Actions is HLL::Actions {
         }
     }
 
-    method declaration:sym<var>($/, :$init?) {
+    method declaration:sym<var>($/) { make $<var_declaration>.made }
+    method var_declaration($/, :$init?) {
         my @name := nqp::split('::', ~$<variable><name>);
         my $final_name := @name.pop;
         my $name := ~$<variable><sigil> ~ $<variable><twigil> ~ $final_name;
@@ -745,7 +746,8 @@ class MO::Actions is HLL::Actions {
         nqp::istype($ast, QAST::WVal)
     }
 
-    method declaration:sym<use>($/) {
+    method declaration:sym<use>($/) { $<use_declaration>.made }
+    method use_declaration($/) {
         my $params_ast;
         my @params;
         if $<params> {
@@ -910,6 +912,10 @@ class MO::Actions is HLL::Actions {
         make QAST::SVal.new( :node($/), :value(~$/) );
     }
 
+    method template_char_atom($/) {
+        say('char: '~$/);
+    }
+
     method template_statement:sym<for>($/) {
         my $scope := $*W.pop_scope();
         $scope.node( $/ );
@@ -926,25 +932,25 @@ class MO::Actions is HLL::Actions {
             QAST::Op.new( :op<concat>, $result, $<template_atoms>.made ) ) );
 
         make QAST::Stmts.new( :node($/),
-            QAST::Op.new( :op<for>, $<EXPR>.made, $scope ),
+            QAST::Op.new( :op<for>, $<tx>.made, $scope ),
             $result,
         );
     }
 
-    method template_statement:sym<declaration>($/) {
+    method template_statement:sym<var>($/) {
         my $scope := $*W.current_scope;
-        $scope[0].push($<declaration>.made);
+        $scope[0].push($<var_declaration>.made);
     }
     method template_statement:sym<expr>($/) {
         my $scope := $*W.current_scope;
-        $scope[0].push($<EXPR>.made);
+        $scope[0].push($<tx>.made);
     }
     method template_statement:sym<if>($/)          { make template_if($/) }
     method template_else:sym<if>($/)               { make template_if($/) }
     method template_else:sym< >($/)                { make $<template_atoms>.made }
 
     my sub template_if($/) {
-        my $ast := QAST::Op.new( :node($/), :op<if>, $<EXPR>.made,
+        my $ast := QAST::Op.new( :node($/), :op<if>, $<tx>.made,
             $<template_atoms>.made );
         $ast.push($<else>.made) if $<else>;
         make $ast;
@@ -1178,7 +1184,7 @@ class MO::Actions is HLL::Actions {
         $langcode[0].push(QAST::Var.new( :name<result>, :scope<local> ));
 
         if $<variable> {
-            self.'declaration:sym<var>'($/, :init($langcode));
+            self.var_declaration($/, :init($langcode));
         } elsif $<name> {
             my $scope := $*W.current_scope();
             my $name := ~$<name>;
@@ -1217,7 +1223,7 @@ class MO::Actions is HLL::Actions {
     }
 
     method lang_modifier:sym<:stdout>($/) {
-        self.'declaration:sym<var>'($/);
+        self.var_declaration($/);
         my $stmts := $/.made;
         my $var := $stmts[+$stmts.list-1];
         my $scope := $*W.current_scope();
