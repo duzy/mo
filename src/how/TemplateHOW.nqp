@@ -3,10 +3,6 @@ knowhow MO::TemplateHOW {
 
     has @!attributes;
     has %!methods; # methods keyed by name
-    has @!methods; # methods in presented order
-    has @!parents;
-
-    has @!mro;
 
     has int $!composed;
 
@@ -29,90 +25,27 @@ knowhow MO::TemplateHOW {
         $!name := $name;
         @!attributes := [];
         %!methods := {};
-        @!methods := [];
-        @!parents := [];
-
         $!composed := 0;
+
+        my %lit_args;
+        my %obj_args;
+        %lit_args<name> := $name;
+        @!attributes.push(AttributeHow.new(|%lit_args, |%obj_args));
     }
+
+    method name($obj) { $!name }
+    method attributes($obj) { @!attributes }
 
     method find_method($obj, $name, :$no_fallback = 0, :$no_trace = 0) {
-        for @!mro {
-            my %meths := $_.HOW.methods($obj);
-            if nqp::existskey(%meths, $name) {
-                return %meths{$name};
-            }
-        }
-        nqp::null()
+        return %!methods{$name};
     }
 
-    method find_attribute($obj, $name) {
-        for @!attributes {
-            return $_ if $_.name eq $name;
-        }
-        nqp::null()
-    }
-
-    method add_method($obj, $name, $code_obj) {
-        if nqp::existskey(%!methods, $name) {
-            nqp::die("This class already has a method named " ~ $name);
-        }
-        if nqp::isnull($code_obj) || !nqp::defined($code_obj) {
-            nqp::die("Cannot add a null method '$name' to class '$!name'");
-        }
+    method set_code_object($obj, $code_obj) {
         nqp::setmethcacheauth($obj, 0);
-        # %!caches{nqp::where(self)} := {} unless nqp::isnull(%!caches);
-        nqp::push(@!methods, %!methods{$name} := $code_obj);
+        %!methods<!str> := $code_obj;
     }
 
-    method add_attribute($obj, $meta_attr) {
-        my $name := $meta_attr.name;
-        for @!attributes {
-            if $_.name eq $name {
-                nqp::die("This class already has an attribute named " ~ $name);
-            }
-        }
-        nqp::push(@!attributes, $meta_attr);
-    }
-
-    method attributes($obj, :$local = 0) {
-        my @attrs;
-        if $local {
-            for @!attributes {
-                nqp::push(@attrs, $_);
-            }
-        }
-        else {
-            for @!mro {
-                for $_.HOW.attributes($_, :local) {
-                    nqp::push(@attrs, $_);
-                }
-            }
-        }
-        @attrs
-    }
-
-    method methods($obj) {
-        %!methods
-    }
-
-    method parents($obj, :$local = 0) {
-        $local ?? @!parents !! @!mro
-    }
-
-    method name($obj) {
-        $!name
-    }
-
-    # Compose the type (MRO entries).
     method compose($obj) {
-        @!mro := compute_mro($obj);
-
-        # Compose attributes.
-        #for self.attributes($obj) { $_.compose($obj) }
-
-        nqp::settypecache($obj, @!mro);
-
-        self.publish_type_cache($obj);
         self.publish_method_cache($obj);
         self.publish_boolification_spec($obj);
 
@@ -125,11 +58,12 @@ knowhow MO::TemplateHOW {
     }
 
     # Compose the representation (attributes).
-    method compose_repr($obj) {
+    my method compose_repr($obj) {
         # The attribute protocol data.
+        my @mro := [ $obj ];
         my @attribute;
 
-        for @!mro -> $type {
+        for @mro -> $type {
             my @attrs;
             for $type.HOW.attributes($type) -> $attr {
                 my %attr_info;
@@ -137,7 +71,7 @@ knowhow MO::TemplateHOW {
                 %attr_info<type> := $attr.type;
                 if $attr.box_target {
                     # Merely having the key serves as a "yes".
-                    %attr_info<box_target> := 1;
+                    %attr_info<box_target> := 0;
                 }
                 if nqp::can($attr, 'auto_viv_container') {
                     %attr_info<auto_viv_container> := $attr.auto_viv_container;
@@ -157,8 +91,7 @@ knowhow MO::TemplateHOW {
             my @type_info;
             nqp::push(@type_info, $type);
             nqp::push(@type_info, @attrs);
-            nqp::push(@type_info, $type.HOW.parents($type));
-
+            nqp::push(@type_info, []); # parents
             nqp::push(@attribute, @type_info);
         }
 
@@ -167,51 +100,13 @@ knowhow MO::TemplateHOW {
         nqp::composetype($obj, %info);
     }
 
-    # Compute the MRO.
-    my sub compute_mro($class) {
-        my @immediate_parents := $class.HOW.parents($class, :local);
-        my @result;
-
-        
-
-        # Put this class on the start of the list, and we're done.
-        nqp::unshift(@result, $class);
-        @result;
-    }
-
-    my method publish_type_cache($obj) {
-        my @typecache;
-        for @!mro { nqp::push(@typecache, $_); }
-        nqp::settypecache($obj, @typecache)
-    }
-
     my method publish_method_cache($obj) {
-        # Walk MRO and add methods to cache, unless another method
-        # lower in the class hierarchy "shadowed" it.
-        my %cache;
-        my @mro_reversed := reverse(@!mro);
-        for @mro_reversed {
-            for $_.HOW.methods($_) {
-                %cache{nqp::iterkey_s($_)} := nqp::iterval($_);
-            }
-        }
+        my %cache := %!methods;
         nqp::setmethcache($obj, %cache);
         nqp::setmethcacheauth($obj, 1);
     }
 
     my method publish_boolification_spec($obj) {
-        my $bool_meth := self.find_method($obj, 'Bool');
-        if nqp::defined($bool_meth) {
-            nqp::setboolspec($obj, 0, $bool_meth)
-        }
-        else {
-            nqp::setboolspec($obj, 5, nqp::null())
-        }
-    }
-
-    my sub reverse(@in) {
-        my @out;
-        for @in { nqp::unshift(@out, $_) }
-        @out
+        nqp::setboolspec($obj, 5, nqp::null())
     }
 }

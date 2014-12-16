@@ -870,7 +870,7 @@ class MO::Actions is HLL::Actions {
         $scope.node( $/ );
 
         my $code := $*W.install_package_routine($template, '!str', $scope);
-        $template.HOW.add_method($template, '!str', $code);
+        $template.HOW.set_code_object($template, $code);
 
         $*W.pkg_compose($template);
         make $scope;
