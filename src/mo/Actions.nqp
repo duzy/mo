@@ -876,46 +876,31 @@ class MO::Actions is HLL::Actions {
         make $scope;
     }
 
+    method template_atoms_scoped($/) { self.template_atoms($/) }
     method template_atoms($/) {
         my $ast := QAST::SVal.new(:value(''));
         if +$<template_atom> {
             for $<template_atom> {
-                $ast := QAST::Op.new( :op<concat>, $ast, $_.made ) if nqp::defined($_.made);
+                $ast := QAST::Op.new( :op<concat>, $ast, $_.made )
+                    if nqp::defined($_.made);
             }
         }
         make $ast;
     }
 
-    method template_atom:sym<$>($/) {
-        make $<variable>.made;
-    }
-
-    method template_atom:sym<()>($/) {
-        make $<EXPR>.made;
-    }
-
-    method template_atom:sym<{}>($/) {
-        make $<statements>.made;
-    }
-
-    method template_atom:sym<^^>($/) {
-        make $<template_statement>.made;
-    }
-
+    method template_atom:sym<$>($/)  { make $<variable>.made }
+    method template_atom:sym<()>($/) { make $<x>.made }
+    method template_atom:sym<{}>($/) { make $<statements>.made }
+    method template_atom:sym<^^>($/) { make $<template_statement>.made }
     method template_atom:sym<\\>($/) {
         my $s := ~$<char>;
         $s := "\\\n" if $s eq "\n";
         make QAST::SVal.new( :node($/), :value($s) );
     }
 
-    method template_atom:sym<.>($/) {
-        make QAST::SVal.new( :node($/), :value(~$/) );
-    }
+    method template_atom:sym<.>($/)  { make QAST::SVal.new( :node($/), :value(~$/) ) }
 
-    method template_char_atom($/) {
-        say('char: '~$/);
-    }
-
+    method tx($/) { make $<EXPR>.made }
     method template_statement:sym<for>($/) {
         my $scope := $*W.pop_scope();
         $scope.node( $/ );
@@ -929,7 +914,7 @@ class MO::Actions is HLL::Actions {
 
         $scope.push( QAST::Op.new( :op<bindlex>,
             QAST::SVal.new(:value($result.name)),
-            QAST::Op.new( :op<concat>, $result, $<template_atoms>.made ) ) );
+            QAST::Op.new( :op<concat>, $result, $<atoms>.made ) ) );
 
         make QAST::Stmts.new( :node($/),
             QAST::Op.new( :op<for>, $<tx>.made, $scope ),
@@ -942,16 +927,16 @@ class MO::Actions is HLL::Actions {
         $scope[0].push($<var_declaration>.made);
     }
     method template_statement:sym<expr>($/) {
-        my $scope := $*W.current_scope;
-        $scope[0].push($<tx>.made);
+        if $<tx> {
+            my $scope := $*W.current_scope;
+            $scope[0].push($<tx>.made);
+        }
     }
-    method template_statement:sym<if>($/)          { make template_if($/) }
-    method template_else:sym<if>($/)               { make template_if($/) }
-    method template_else:sym< >($/)                { make $<template_atoms>.made }
-
-    my sub template_if($/) {
-        my $ast := QAST::Op.new( :node($/), :op<if>, $<tx>.made,
-            $<template_atoms>.made );
+    method template_statement:sym<if>($/)       { self.template_if($/) }
+    method template_else:sym<if>($/)            { self.template_if($/) }
+    method template_else:sym< >($/)             { make $<atoms>.made }
+    method template_if($/) {
+        my $ast := QAST::Op.new( :node($/), :op<if>, $<tx>.made, $<atoms>.made );
         $ast.push($<else>.made) if $<else>;
         make $ast;
     }
