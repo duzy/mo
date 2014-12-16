@@ -1,7 +1,6 @@
 knowhow MO::TemplateHOW {
     has str $!name;
 
-    has @!attributes;
     has %!methods; # methods keyed by name
 
     has int $!composed;
@@ -22,19 +21,16 @@ knowhow MO::TemplateHOW {
 
     # Construct the meta-class instance.
     method BUILD(:$name = '<template>') {
-        $!name := $name;
-        @!attributes := [];
-        %!methods := {};
         $!composed := 0;
-
-        my %lit_args;
-        my %obj_args;
-        %lit_args<name> := $name;
-        @!attributes.push(AttributeHow.new(|%lit_args, |%obj_args));
+        $!name := $name;
+        %!methods := {};
+        %!methods<!produce> := -> $o, $v {
+            my $cache := nqp::getattr($o, $o, '$.cache');
+            
+        };
     }
 
     method name($obj) { $!name }
-    method attributes($obj) { @!attributes }
 
     method find_method($obj, $name, :$no_fallback = 0, :$no_trace = 0) {
         return %!methods{$name};
@@ -60,38 +56,25 @@ knowhow MO::TemplateHOW {
     # Compose the representation (attributes).
     my method compose_repr($obj) {
         # The attribute protocol data.
-        my @mro := [ $obj ];
         my @attribute;
 
-        for @mro -> $type {
-            my @attrs;
-            for $type.HOW.attributes($type) -> $attr {
-                my %attr_info;
-                %attr_info<name> := $attr.name;
-                %attr_info<type> := $attr.type;
-                if $attr.box_target {
-                    # Merely having the key serves as a "yes".
-                    %attr_info<box_target> := 0;
-                }
-                if nqp::can($attr, 'auto_viv_container') {
-                    %attr_info<auto_viv_container> := $attr.auto_viv_container;
-                }
-                if $attr.positional_delegate {
-                    %attr_info<positional_delegate> := 1;
-                }
-                if $attr.associative_delegate {
-                    %attr_info<associative_delegate> := 1;
-                }
-                nqp::push(@attrs, %attr_info);
-            }
+        if 1 {
+            my %attr_info;
+            %attr_info<name> := '$.cache';
+            %attr_info<type> := nqp::null();
+            %attr_info<box_target> := 0;
+            %attr_info<auto_viv_container> := 0;
+            %attr_info<positional_delegate> := 0;
+            %attr_info<associative_delegate> := 0;
 
-            # Each MRO entry is an array containing the type of the MRO entry,
-            # and following an array of hashes per attribute, and a list of
-            # immediate parents.
+            my @attrs;
+            nqp::push(@attrs, %attr_info);
+
+            my @parents;
             my @type_info;
-            nqp::push(@type_info, $type);
+            nqp::push(@type_info, $obj); # the type itself
             nqp::push(@type_info, @attrs);
-            nqp::push(@type_info, []); # parents
+            nqp::push(@type_info, @parents);
             nqp::push(@attribute, @type_info);
         }
 
