@@ -869,7 +869,7 @@ class MO::Actions is HLL::Actions {
         $scope.push( $<template_atoms>.made );
         $scope.node( $/ );
 
-        my $code := $*W.install_package_routine($template, '!str', $scope);
+        my $code := $*W.install_package_routine($template, ~$<name>~'!gen', $scope);
         $template.HOW.set_code_object($template, $code);
 
         $*W.pkg_compose($template);
@@ -881,8 +881,14 @@ class MO::Actions is HLL::Actions {
         my $ast := QAST::SVal.new(:value(''));
         if +$<template_atom> {
             for $<template_atom> {
-                $ast := QAST::Op.new( :op<concat>, $ast, $_.made )
-                    if nqp::defined($_.made);
+                if nqp::defined($_.made) {
+                    my $scope := $*W.current_scope;
+                    $scope.push( QAST::Op.new( :op<callmethod>, :name<!put>,
+                        QAST::Var.new( :scope<lexical>, :name<me> ), $_.made ) );
+
+                    $ast := QAST::Op.new( :op<concat>, $ast, $_.made )
+                        if nqp::defined($_.made);
+                }
             }
         }
         make $ast;

@@ -24,10 +24,17 @@ knowhow MO::TemplateHOW {
         $!composed := 0;
         $!name := $name;
         %!methods := {};
-        %!methods<!produce> := -> $o, $v {
-            my $cache := nqp::getattr($o, $o, '$.cache');
-            
+        %!methods<!str> := -> $tt, $node {
+            nqp::create($tt).'!gen'($node)
         };
+        %!methods<!put> := -> $t, $v {
+            my $cache := nqp::getattr($t, $t, '$.cache');
+            nqp::bindattr($t, $t, '$.cache', $cache := nqp::list())
+                unless nqp::defined($cache);
+            nqp::push($cache, ~$v);
+        };
+
+        %!methods<generate> := -> $t, $node { $t.'!gen'($node) };
     }
 
     method name($obj) { $!name }
@@ -38,10 +45,14 @@ knowhow MO::TemplateHOW {
 
     method set_code_object($obj, $code_obj) {
         nqp::setmethcacheauth($obj, 0);
-        %!methods<!str> := $code_obj;
+        %!methods<!gen> := $code_obj;
     }
 
     method compose($obj) {
+        my @typecache;
+        @typecache.push($obj);
+        nqp::settypecache($obj, @typecache);
+        
         self.publish_method_cache($obj);
         self.publish_boolification_spec($obj);
 

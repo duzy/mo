@@ -10,6 +10,9 @@ else
     say("xx - test0: "~str test0)
 end
 
+var $t = new(test0)
+say($t.generate($_));
+
 template test1
 --------------------------
 .var $a = list()
