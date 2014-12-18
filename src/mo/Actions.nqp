@@ -911,6 +911,7 @@ class MO::Actions is HLL::Actions {
     method template_statement:sym<for>($/) {
         my $scope := $*W.pop_scope();
         $scope.node( $/ );
+        $scope.push( $<atoms>.made );
         make QAST::Op.new( :op<for>, $<tx>.made, $scope );
     }
 

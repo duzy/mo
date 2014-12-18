@@ -498,7 +498,7 @@ grammar MO::Grammar is HLL::Grammar {
 
     token eis { [<![\n]>\s]* }  # eat inline space
     token els { <.eis>\n }      # eat line space
-    token tsp { \n? ^^'.'<.eis> }   # template statement prefix
+    token tsp { ^^'.'<.eis> }   # template statement prefix
     token tst { # template statement terminator
         <.eis>
         [
