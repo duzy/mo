@@ -452,7 +452,7 @@ grammar MO::Grammar is HLL::Grammar {
                 $*W.install_package_symbol($outerpackage, $name, $type);
                 $*W.install_package_symbol($*EXPORT, $name, $type) if $*W.is_export_name($name);
 
-                my $scope := self.push_scope( ~$<sym>, [ 'me', '$_' ] );
+                my $scope := self.push_scope( ~$<sym>, [ 'me', 'cache', '$_' ] );
                 $scope.annotate('package', $type);
             }
             <template_atoms>

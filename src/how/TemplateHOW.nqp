@@ -25,16 +25,15 @@ knowhow MO::TemplateHOW {
         $!name := $name;
         %!methods := {};
         %!methods<!str> := -> $tt, $node {
-            nqp::create($tt).'!gen'($node)
-        };
-        %!methods<!put> := -> $t, $v {
-            my $cache := nqp::getattr($t, $t, '$.cache');
-            nqp::bindattr($t, $t, '$.cache', $cache := nqp::list())
-                unless nqp::defined($cache);
-            nqp::push($cache, ~$v);
+            my $cache := nqp::list();
+            nqp::create($tt).'!gen'($cache, $node);
+            nqp::join('', $cache)
         };
 
-        %!methods<generate> := -> $t, $node { $t.'!gen'($node) };
+        %!methods<generate> := -> $t, $cache, $node {
+            $t.'!gen'($cache, $node);
+            $cache
+        };
     }
 
     method name($obj) { $!name }

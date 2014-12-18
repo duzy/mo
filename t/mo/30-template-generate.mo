@@ -197,4 +197,3 @@ if +($cache = new(test4).generate(list(), $_)) == 3
 else
    say("xx - 8, test4.generate: "~+$cache)
 end
-

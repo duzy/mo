@@ -866,7 +866,7 @@ class MO::Actions is HLL::Actions {
     method definition:sym<template>($/) {
         my $scope := $*W.pop_scope();
         my $template := $scope.ann('package');
-        $scope.push( $<template_atoms>.made );
+        $scope[0].push( $<template_atoms>.made );
         $scope.node( $/ );
 
         my $code := $*W.install_package_routine($template, ~$<name>~'!gen', $scope);
@@ -878,65 +878,49 @@ class MO::Actions is HLL::Actions {
 
     method template_atoms_scoped($/) { self.template_atoms($/) }
     method template_atoms($/) {
-        my $ast := QAST::SVal.new(:value(''));
+        my $ast := QAST::Stmts.new(:node($/));
         if +$<template_atom> {
             for $<template_atom> {
-                if nqp::defined($_.made) {
-                    my $scope := $*W.current_scope;
-                    $scope.push( QAST::Op.new( :op<callmethod>, :name<!put>,
-                        QAST::Var.new( :scope<lexical>, :name<me> ), $_.made ) );
-
-                    $ast := QAST::Op.new( :op<concat>, $ast, $_.made )
-                        if nqp::defined($_.made);
-                }
+                # if nqp::defined($_.made) {
+                #     $ast.push( QAST::Op.new( :op<callmethod>, :name<push>,
+                #          QAST::Var.new( :scope<lexical>, :name<cache> ), $_.made ) );
+                # }
+                $ast.push( $_.made ) if nqp::defined($_.made);
             }
         }
         make $ast;
     }
 
     method template_atom:sym<$>($/)  { make $<variable>.made }
-    method template_atom:sym<()>($/) { make $<x>.made }
-    method template_atom:sym<{}>($/) { make $<statements>.made }
+    method template_atom:sym<()>($/) { make QAST::Op.new( :op<push>, QAST::Var.new( :scope<lexical>, :name<cache> ), $<x>.made) }
+    method template_atom:sym<{}>($/) { make QAST::Op.new( :op<push>, QAST::Var.new( :scope<lexical>, :name<cache> ), $<statements>.made) }
     method template_atom:sym<^^>($/) { make $<template_statement>.made }
     method template_atom:sym<\\>($/) {
         my $s := ~$<char>;
         $s := "\\\n" if $s eq "\n";
-        make QAST::SVal.new( :node($/), :value($s) );
+        make QAST::Op.new( :op<push>, QAST::Var.new( :scope<lexical>, :name<cache> ),
+            QAST::SVal.new( :node($/), :value($s) ) );
     }
 
-    method template_atom:sym<.>($/)  { make QAST::SVal.new( :node($/), :value(~$/) ) }
+    method template_atom:sym<.>($/)  {
+        make QAST::Op.new( :op<push>, QAST::Var.new( :scope<lexical>, :name<cache> ),
+            QAST::SVal.new( :node($/), :value(~$/) ) );
+    }
 
     method tx($/) { make $<EXPR>.made }
     method template_statement:sym<for>($/) {
         my $scope := $*W.pop_scope();
         $scope.node( $/ );
-
-        my $result := QAST::Var.new(:scope<lexical>, :name(QAST::Node.unique('template_for')));
-        my $outer := $scope.ann('outer');
-        $outer[0].push( QAST::Op.new( :op<bind>,
-            QAST::Var.new(:scope<lexical>, :decl<var>, :name($result.name)),
-            QAST::SVal.new(:value('')),
-        ) );
-
-        $scope.push( QAST::Op.new( :op<bindlex>,
-            QAST::SVal.new(:value($result.name)),
-            QAST::Op.new( :op<concat>, $result, $<atoms>.made ) ) );
-
-        make QAST::Stmts.new( :node($/),
-            QAST::Op.new( :op<for>, $<tx>.made, $scope ),
-            $result,
-        );
+        make QAST::Op.new( :op<for>, $<tx>.made, $scope );
     }
 
     method template_statement:sym<var>($/) {
-        my $scope := $*W.current_scope;
-        $scope[0].push($<var_declaration>.made);
+        make $<var_declaration>.made;
     }
     method template_statement:sym<expr>($/) {
-        if $<tx> {
-            my $scope := $*W.current_scope;
-            $scope[0].push($<tx>.made);
-        }
+        my $ast := QAST::Stmts.new( :node($/) );
+        $ast.push($<tx>.made) if $<tx>;
+        make $ast;
     }
     method template_statement:sym<if>($/)       { self.template_if($/) }
     method template_else:sym<if>($/)            { self.template_if($/) }

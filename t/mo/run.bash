@@ -50,6 +50,7 @@ run $SRCDIR/20-var-initializer
 run $SRCDIR/20-var
 run $SRCDIR/21-can
 run $SRCDIR/30-template
+run $SRCDIR/30-template-generate
 run $SRCDIR/30-template-with
 run $SRCDIR/30-template-if
 run $SRCDIR/30-template-for
