@@ -68,7 +68,7 @@ grammar MO::Grammar is HLL::Grammar {
         '{' ~ '}' <statements>
     }
     token term:sym<return> {:s <sym> [['(' ~ ')' <EXPR>] | <EXPR>]? }
-    token term:sym<str>    {:s <sym>\s $<name>=[<.ident>['::'<.ident>]*] ['with' <EXPR>]? }
+    token term:sym<str>    {:s <sym>\s $<name>=[[<.ident>['::'<.ident>]*]|<.panic: 'expecting template identifier'>] ['with' <EXPR>]? }
     token term:sym<map>    {:s <sym>\s <pred=.map_pred> <list=.EXPR> }
     token term:sym<lang>   { <sym>\s <lang(1)> }
     token term:sym<any>    { <?before <sym>><any=.control> }
