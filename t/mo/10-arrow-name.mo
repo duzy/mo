@@ -6,13 +6,13 @@ else
   say("xx\t\t- ->child == 2")
 end
 
-if ->child[0].name eq "test-child-1"
+if ->child[ 0 ].name eq "test-child-1"
   say(->child[0].okay)
 else
   say("xx\t\t- ->child[0].name")
 end
 
-if ->child[1].name eq "test-child-2"
+if ->child[ 1 ].name eq "test-child-2"
   say(->child[1].okay)
 else
   say("xx\t\t- ->child[1].name")

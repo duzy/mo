@@ -891,7 +891,7 @@ class MO::Actions is HLL::Actions {
         make $ast;
     }
 
-    method template_atom:sym<$>($/)  { make $<variable>.made }
+    method template_atom:sym<$>($/)  { make QAST::Op.new( :op<push>, QAST::Var.new( :scope<lexical>, :name<cache> ), $<variable>.made) }
     method template_atom:sym<()>($/) { make QAST::Op.new( :op<push>, QAST::Var.new( :scope<lexical>, :name<cache> ), $<x>.made) }
     method template_atom:sym<{}>($/) { make QAST::Op.new( :op<push>, QAST::Var.new( :scope<lexical>, :name<cache> ), $<statements>.made) }
     method template_atom:sym<^^>($/) { make $<template_statement>.made }

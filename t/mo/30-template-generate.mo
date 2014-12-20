@@ -22,7 +22,7 @@ end
 
 template test1
 --------------------------
-.var $a = list()
+.var $a = list();
 .for $a
  ...
 .end
@@ -40,7 +40,7 @@ end
 
 template test2
 --------------------------
-.var $a = list()
+.var $a = list();
 .if +$a
  ...
 .end
@@ -58,7 +58,7 @@ end
 
 template test3
 --------------------------
-.var $a = list()
+.var $a = list();
 .if +$a
  ...
 .else

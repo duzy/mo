@@ -133,9 +133,9 @@ grammar MO::Grammar is HLL::Grammar {
     token circumfix:sym<| |> { '|' ~ '|' <EXPR> }
     token circumfix:sym«< >» { '<' ~ '>' <EXPR=.quote> }
 
-    token postcircumfix:sym<( )> { '(' ~ ')' <arglist> <O('%methodop')> }
-    token postcircumfix:sym<[ ]> { '[' ~ ']' <EXPR> <O('%methodop')> }
-    token postcircumfix:sym<{ }> { '{' ~ '}' <EXPR> <O('%methodop')> }
+    token postcircumfix:sym<( )> {:s '(' ~ ')' <arglist> <O('%methodop')> }
+    token postcircumfix:sym<[ ]> {:s '[' ~ ']' <EXPR> <O('%methodop')> }
+    token postcircumfix:sym<{ }> { <!after \s*['any'|'map'|'many']> '{' ~ '}' [:s<EXPR>] <O('%methodop')> }
     token postcircumfix:sym<ang> { <?[<]> <quote_EXPR: ':q'> <O('%methodop')> }
 
     token postfix:sym«.»  { <post_dot> <O('%methodop')> }
@@ -484,7 +484,7 @@ grammar MO::Grammar is HLL::Grammar {
         ['if'\s+<tx:'if'><.tst>] ~ [<.tsp>'end']
         [ <atoms=.template_atoms_scoped> [<.tsp><else=.template_else>]? ]
     }
-    token template_statement:sym<var>   { <var_declaration> }
+    token template_statement:sym<var>   { <var_declaration> [<?before <.eis>';'>|<.panic: 'template variable declaration must be terminated with ";"'>] }
     token template_statement:sym<expr>  { <tx:'bare'> } ## A singular <EXPR> must be the last to try.
 
     proto rule template_else    { <...> }
