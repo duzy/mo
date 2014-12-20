@@ -114,8 +114,8 @@
 (defvar mo-re-local-function-name     "\\([a-z_][A-Za-z_0-9]*\\)(")
 (defvar mo-re-lang-name               "lang\s+\\([a-z_][A-Za-z_0-9]*\\)")
 (defvar mo-re-method-name             "method\s+\\([A-Za-z_][A-Za-z_0-9]*\\)\s*:")
-(defvar mo-re-reference-export-name   "\\([A-Z][A-Za-z_0-9]*\\)")
-(defvar mo-re-reference-local-name    "\\([a-z_][A-Za-z_0-9]*\\)")
+(defvar mo-re-export-reference-name   "\\([A-Z][A-Za-z_0-9]*\\)")
+(defvar mo-re-local-reference-name    "\\([a-z_][A-Za-z_0-9]*\\)")
 
 (defun mo-ppre (re) (format "\\<\\(%s\\)\\>[^_]" (regexp-opt re)))
 (defun mo-idre () nil)
@@ -142,8 +142,8 @@
      (cons mo-re-colon-keyword             '(1 mo-constant-face)) ;;  :keyword
      (cons mo-re-export-function-name      '(1 mo-function-name-bold-face))
      (cons mo-re-local-function-name       '(1 mo-function-name-face))
-     (cons mo-re-reference-export-name     '(1 mo-reference-bold-face))
-     (cons mo-re-reference-local-name      '(1 mo-reference-face))
+     (cons mo-re-export-reference-name     '(1 mo-reference-bold-face))
+     (cons mo-re-local-reference-name      '(1 mo-reference-face))
      ))
   "Minimal highlighting expressions for MO mode")
 

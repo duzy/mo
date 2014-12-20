@@ -45,13 +45,13 @@
      (cons (mo-template-codeblock-re mo-re-local-function-name)         '(1 mo-function-name-face))
      (cons (mo-template-statement-re mo-re-local-function-name)         '(1 mo-function-name-face))
 
-     (cons (mo-template-expresion-re mo-re-reference-export-name)       '(1 mo-reference-bold-face))
-     (cons (mo-template-codeblock-re mo-re-reference-export-name)       '(1 mo-reference-bold-face))
-     (cons (mo-template-statement-re mo-re-reference-export-name)       '(1 mo-reference-bold-face))
+     (cons (mo-template-expresion-re mo-re-export-reference-name)       '(1 mo-reference-bold-face))
+     (cons (mo-template-codeblock-re mo-re-export-reference-name)       '(1 mo-reference-bold-face))
+     (cons (mo-template-statement-re mo-re-export-reference-name)       '(1 mo-reference-bold-face))
 
-     (cons (mo-template-expresion-re mo-re-reference-local-name)        '(1 mo-reference-face))
-     (cons (mo-template-codeblock-re mo-re-reference-local-name)        '(1 mo-reference-face))
-     (cons (mo-template-statement-re mo-re-reference-local-name)        '(1 mo-reference-face))
+     (cons (mo-template-expresion-re mo-re-local-reference-name)        '(1 mo-reference-face))
+     (cons (mo-template-codeblock-re mo-re-local-reference-name)        '(1 mo-reference-face))
+     (cons (mo-template-statement-re mo-re-local-reference-name)        '(1 mo-reference-face))
 
      (list "^\\(\\.\\)[^;\n]*\\([\n;]?\\)"      '(1 mo-constant-bold-face) '(2 mo-constant-face))
      (list "\\(\\$(\\).*?\\()\\)"               '(1 mo-constant-face)      '(2 mo-constant-face))
