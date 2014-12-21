@@ -83,7 +83,7 @@ template test4
 std::$(.type) $(.name);
 .elsif .type eq 'strings'
 std::list<std::string> $(.name);
-.   var $a = list()
+.   var $a = list();
 .   for $a
  ...
 .   end

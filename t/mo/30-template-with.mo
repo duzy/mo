@@ -22,7 +22,7 @@ else
     say("xx\t - $v");
 end
 
-$v = str T0 with ->child[1]
+$v = str T0 with ->child[ 1 ]
 if $v eq 'test-child-2'
     say("ok\t - $v");
 else
