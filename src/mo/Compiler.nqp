@@ -1,7 +1,7 @@
 #use HLL;
 
 class MO::Compiler is HLL::Compiler {
-    method my_command_line(@args, *%adverbs) {
+    method command_line(@args, *%adverbs) {
         my $program-name := @args[0];
         my $res  := self.process_args(@args);
         my %opts := $res.options;
@@ -71,6 +71,5 @@ sub MAIN(@ARGS) {
     #     nqp::say(nqp::join(' ', $res.arguments()));
     # }
 
-    #$mocomp.command_line(@ARGS, :encoding('utf8'));
-    $mocomp.my_command_line(@ARGS, :encoding('utf8'));
+    $mocomp.command_line(@ARGS, :encoding('utf8'));
 }
