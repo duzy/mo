@@ -12,7 +12,6 @@ knowhow MO::NodeHOW {
 
     sub method_name($node) { nqp::getattr($node, $type, '$..') }
     sub method_type($node) { nqp::getattr($node, $type, '$.?') }
-    sub method_text($node) { nqp::join('$..', nqp::getattr($node, $type, '*')) }
     sub method_attributes($node) { nqp::getattr($node, $type, '$.*') }
     sub method_get($node, $name) { nqp::getattr($node, $type, '$.'~$name) }
     sub method_set($node, $name, $value) { MO::NodeHOW.node_bindattr($node, $name, $value) }
@@ -20,6 +19,16 @@ knowhow MO::NodeHOW {
     sub method_parent($node) { nqp::getattr($node, $type, '$.^') }
     sub method_children($node, $name = nqp::null()) {
         nqp::getattr($node, $type, nqp::isnull($name) ?? '*' !! $name)
+    }
+    sub method_text($node) {
+        my $all := nqp::getattr($node, $type, '*');
+        my $cache := nqp::list();
+        if nqp::defined($all) {
+            for $all {
+                $cache.push($_) if nqp::isstr($_);
+            }
+        }
+        nqp::join('', $cache)
     }
 
     sub method_remove($node, $target) {
