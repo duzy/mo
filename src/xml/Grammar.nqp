@@ -54,16 +54,15 @@ grammar XML::Grammar is HLL::Grammar {
     }
 
     token cdata {
-        '<![CDATA[' ~ ']]>' [<!before ']]>'>.]*
+        '<![CDATA[' ~ ']]>' <content=.cdata_content>
     }
 
     token entity {
         '&' [ '#' $<code>=<![ 0..9 a..f A..F ]>+ | $<name>=<![;]>+ ] ';'
     }
 
-    token content {
-        [[<![<&$]>.]|<entity>]+
-    }
+    token content { [[<![<&$]>.]|<entity>]+ }
+    token cdata_content { [<!before ']]>'>.]* }
 
     rule attribute {
         <name=.attribute_name> '=' <value>

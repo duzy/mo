@@ -98,6 +98,7 @@ class XML::Actions is HLL::Actions {
         $*W.pop_node();
     }
 
+    method cdata_content($/) { self.content($/) }
     method content($/) {
         my $ast;
         my $cur := $*W.current;
@@ -116,8 +117,7 @@ class XML::Actions is HLL::Actions {
     method entity($/) {
     }
 
-    method cdata($/) {
-    }
+    method cdata($/) { make $<content>.made }
 
     method comment($/) {
     }
