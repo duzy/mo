@@ -1008,7 +1008,7 @@ class MO::Actions is HLL::Actions {
         if $<colon> {
             my $build := $scope;
             $build.name( $meth.name~':rule' );
-            $build.push( $<statements>.made );
+            $build.push( wrap_return_handler($build, $<statements>.made) );
 
             my $rulehash := self.class_rule_hash($class, $ctor);
 
@@ -1027,7 +1027,7 @@ class MO::Actions is HLL::Actions {
 
             $ctor.push( self.build_rule_init($/, $build, $rulehash) );
         } else {
-            $meth.push( $<statements>.made );
+            $meth.push( wrap_return_handler($meth, $<statements>.made) );
         }
 
         $ctor.push( $meth );
