@@ -68,7 +68,7 @@
 (defvar mo-template-syntax-table
   (let ((mo-template-syntax-table (make-syntax-table)))
     (modify-syntax-entry ?\" "." mo-syntax-table) ;; disable string quote
-    (modify-syntax-entry ?\' "." mo-syntax-table) ;; disable string quote
+    ;;(modify-syntax-entry ?\' "." mo-syntax-table) ;; disable string quote
     mo-template-syntax-table)
   "Syntax table for MO mode. See `Table of Syntax Classes'")
 
