@@ -399,16 +399,6 @@ class MO::Actions is HLL::Actions {
         );
 
         make $compunit;
-
-        make QAST::CompUnit.new(
-            :hll('mo'),
-
-            QAST::Block.new(
-                QAST::Stmts.new(
-                    QAST::Op.new( :op<say>, QAST::SVal.new( :value('foo') ) )
-                )
-            )
-        );
     }
 
     method statements($/) {
