@@ -24,6 +24,7 @@ MO_SOURCES := \
   src/mo/World.nqp \
   src/mo/Builtin.nqp \
   \
+  src/mo/moop.nqp \
   src/mo/$(vm)/Ops.nqp \
   src/mo/ModuleLoader.nqp \
 
@@ -42,6 +43,5 @@ MAKEFILE_SOURCES := \
   src/makefile/Compiler.nqp \
   src/makefile/World.nqp \
   src/makefile/Builtin.nqp \
-
 
 include Make.$(vm)

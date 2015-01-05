@@ -13,7 +13,15 @@ function run() {
     elif [ -f "$1.mo" ] ; then
         $PROVE "$RUNNER $(dirname $1)/test.xml" "$1.mo"
     fi
-    $RUNNER --target=pir $(dirname $1)/test.xml $1.mo > $1.pir
+
+    case $vm in
+        moar)
+            $RUNNER --target=mbc $(dirname $1)/test.xml $1.mo > $1.mbc
+            ;;
+        parrot)
+            $RUNNER --target=pir $(dirname $1)/test.xml $1.mo > $1.pir
+            ;;
+    esac
 }
 
 #run $SRCDIR/hello.xml $SRCDIR/hello.mo

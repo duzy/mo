@@ -110,15 +110,18 @@ class XML::Actions is HLL::Actions {
     }
 
     method value:sym<quote>($/) {
-        my $str := nqp::join('', $<quote_EXPR><quote_delimited><quote_atom>);
+        # my $str := nqp::join('', $<quote_EXPR><quote_delimited><quote_atom>);
+
+        my @atoms;
+        for $<quote_EXPR><quote_delimited><quote_atom> { @atoms.push(~$_); }
+
+        my $str := nqp::join('', @atoms);
         make QAST::SVal.new( :node($/), :value($str) );
     }
 
-    method entity($/) {
-    }
+    method entity($/) {  }
 
     method cdata($/) { make $<content>.made }
 
-    method comment($/) {
-    }
+    method comment($/) { }
 }

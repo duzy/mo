@@ -36,7 +36,9 @@ knowhow MO::NodeHOW {
         my int $i := 0;
         for @children -> $child {
             if nqp::where($child) == nqp::where($target) {
-               return nqp::splice(@children, [], $i, 1);
+               # return nqp::splice(@children, [], $i, 1);
+               my $a := nqp::splice(@children, [], $i, 1);
+               return $a;
             }
             $i := $i + 1;
         }
@@ -74,7 +76,7 @@ knowhow MO::NodeHOW {
         $type;
     }
 
-    method name() { 'Node' }
+    method name($o = nqp::null()) { 'Node' }
 
     # method type_check($o, $t) {
     #     #nqp::say('type_check: '~$t~', '~$type);

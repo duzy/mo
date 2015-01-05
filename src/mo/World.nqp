@@ -158,7 +158,7 @@ class MO::World is HLL::World {
                 return %sym<ast> if nqp::existskey(%sym, 'ast');
                 return QAST::WVal.new( :node($/), :value(%sym<value>) )
                     if nqp::existskey(%sym, 'value');
-            } elsif is_sigil($first[0]) && $first[1] eq '.' {
+            } elsif is_sigil(nqp::substr($first, 0, 1)) && nqp::substr($first, 1, 1) eq '.' { # } elsif is_sigil($first[0]) && $first[1] eq '.' {
                 my $class := self.get_package;
                 my $how := $class.HOW;
                 unless nqp::can($how, 'find_attribute') && nqp::can($how, 'add_attribute') {
@@ -187,7 +187,7 @@ class MO::World is HLL::World {
 
         # Multi-part name
         elsif +@name >= 2 {
-            if !+%sym && nqp::existskey(%builtins, $first) {
+            if 0 < +%sym && nqp::existskey(%builtins, $first) {
                 %sym := %builtins{$first};
             }
 
@@ -215,7 +215,7 @@ class MO::World is HLL::World {
         }
 
         if $panic {
-            if is_sigil(@name[+@name-1][0]) {
+            if is_sigil(nqp::substr(@name[+@name-1], 0, 1)) { # if is_sigil(@name[+@name-1][0]) {
                 $/.CURSOR.panic('undefined variable '~nqp::join('::', @name));
             } else {
                 $/.CURSOR.panic('undefined symbol '~nqp::join('::', @name));
@@ -229,7 +229,7 @@ class MO::World is HLL::World {
 
     method is_export_name($name) {
         my int $pos := 0;
-        if is_sigil($name[0]) { # <sigil>
+        if is_sigil(nqp::substr($name, 0, 1)) { # if is_sigil($name[0]) { # <sigil>
             # $pos := 0 <= nqp::index('.', $name[1]) ?? 2 !! 1; # <twigil>
             $pos := 1; # just skip <sigil> but <twigil>
         }
@@ -279,7 +279,9 @@ class MO::World is HLL::World {
 
             # $_[0] is the module name
             # $_[1] is the module context
-            @result.push(nqp::ctxlexpad($_[1])) for @module;
+            for @module {
+                @result.push(nqp::ctxlexpad($_[1])) if nqp::defined($_[1]) ;
+            }
         }
         @result
     }

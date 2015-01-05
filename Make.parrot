@@ -138,7 +138,7 @@ run-examples: examples/run.bash $(MO_PBC)
 	@$(BASH) $<
 
 run-apps: run-app-android-build run-app-protocol
-run-app-android-build: apps/android-build/run.bash $(MO_PBC)
-	@$(BASH) $<
-run-app-protocol: apps/protocol/run.bash $(MO_PBC)
-	@$(BASH) $<
+run-app-android-build: apps/android-build/run.bash $(MO_PBC)	; @$(BASH) $<
+run-app-protocol: apps/protocol/run.bash $(MO_PBC)		; @$(BASH) $<
+run-app-gtor: apps/gtor/run.bash $(MO_PBC)			; @$(BASH) $<
+run-app-useall: apps/useall/run.bash $(MO_PBC)			; @$(BASH) $<
