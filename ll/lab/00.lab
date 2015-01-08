@@ -1,0 +1,87 @@
+with :load("something.xml");
+
+std.out("this is $(.node.name) from something.xml");
+
+with {}
+-------
+-------
+
+var v = 1, v = 2;
+
+type c(a1, a2)
+--------------
+     field name = 0;
+     field type = "?";
+
+     .name = 100 + len(.type);
+
+     func foo(a, b, c)
+     -----------------
+         std.out( "something $(1+2)" );
+     -----------------
+
+     meth foo(a, b, c)
+     -----------------
+         case .name
+         ----------
+             foo(a, b, c);
+         ----------
+         .bar(a);
+         .bar(b);
+         .bar(c);
+         ..name(); # accessing parent scope
+         
+     -----------------
+
+     meth bar(a)
+     -----------
+         
+     -----------
+------------
+
+func foo(a, b, c)
+-----------------
+    
+-----------------
+
+temp t
+------------------------
+any text would go here...
+.   case a == 0
+
+.   end
+blah, blah, blah...
+------------------------
+
+temp t :exec("bash")
+------------------------
+# This is a common Bash script block
+.....case 1
+echo "okay, go this branch"
+.........
+echo "hmmm, this is discarded"
+.....end
+------------------------
+
+
+
+case a == 1
+-----------
+    case b == 0
+    -----------
+        
+    -----------
+-----------
+    
+-----------
+
+case v
+------: 1
+    
+------: 2
+    
+------: 3
+    
+------
+    
+------
