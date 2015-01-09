@@ -2,11 +2,22 @@
 
 namespace lab
 {
+    namespace ast
+    {
+        
+    }
+
+    template < class Iterator >
+    struct grammar : boost::qi::grammar<Iterator>
+    {
+    };
+
     class parser
     {
     public:
         parser()
         {
+            
         }
 
         virtual ~parser() = default;
