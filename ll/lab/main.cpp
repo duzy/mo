@@ -1,6 +1,7 @@
 #include "parser.h"
 
 int main() {
-    lab::
+    lab::parser parser;
+    auto ast = parser.parse("00.lab");
     return 0;
 }

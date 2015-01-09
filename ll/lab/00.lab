@@ -1,15 +1,16 @@
-with :load("something.xml");
+with :load("something.xml"); # apply to global scope
 
-std.out("this is $(.node.name) from something.xml");
+std.outln("this is $(.node.name) from something.xml");
 
-with {}
--------
--------
+with { name:'foo', value:100 }
+------------------------------
+    std.out("this is $(.name) from an in-mem node\n");
+------------------------------
 
 var v = 1, v = 2;
 
 type c(a1, a2)
---------------
+-------------- this is a special case of one line comment
      field name = 0;
      field type = "?";
 
@@ -41,7 +42,8 @@ type c(a1, a2)
 
 func foo(a, b, c)
 -----------------
-    
+    any  { 1 < _ } [1, 2, 3, 4, 5, 6, 7, 8, 9]
+    many { 1 < _ } [1, 2, 3, 4, 5, 6, 7, 8, 9]
 -----------------
 
 temp t
@@ -77,11 +79,11 @@ case a == 1
 
 case v
 ------: 1
-    
+    std.outln("this is case 1");
 ------: 2
-    
+    std.outln("this is case 2");
 ------: 3
-    
+    std.outln("this is case 3");
 ------
-    
+    std.outln("this is case anyting else");
 ------
