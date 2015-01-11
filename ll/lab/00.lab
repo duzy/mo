@@ -7,37 +7,36 @@ with { name:'foo', value:100 }
     std.out("this is $(.name) from an in-mem node\n");
 ------------------------------
 
-var v = 1, v = 2;
+var v = 1, vv = 2;
 
 type c(a1, a2)
 -------------- this is a special case of one line comment
-     field name = 0;
-     field type = "?";
+    field name = 0;
+    field type = "?";
 
-     .name = 100 + len(.type);
+    .name = 100 + len(.type);
 
-     func foo(a, b, c)
-     -----------------
-         std.out( "something $(1+2)" );
-     -----------------
+    func foo(a, b, c)
+    -----------------
+        std.out( "something $(1+2)" );
+    -----------------
 
-     meth foo(a, b, c)
-     -----------------
-         case .name
-         ----------
-             foo(a, b, c);
-         ----------
-         .bar(a);
-         .bar(b);
-         .bar(c);
-         ..name(); # accessing parent scope
-         
-     -----------------
+    meth foo(a, b, c)
+    -----------------
+        case .name
+        ----------
+            foo(a, b, c);
+        ----------
+        .bar(a);
+        .bar(b);
+        .bar(c);
+        ..name(); # accessing parent scope
+    -----------------
 
-     meth bar(a)
-     -----------
-         
-     -----------
+    meth bar(a)
+    -----------
+        
+    -----------
 ------------
 
 func foo(a, b, c)
@@ -65,8 +64,6 @@ echo "hmmm, this is discarded"
 .....end
 ------------------------
 
-
-
 case a == 1
 -----------
     case b == 0
@@ -87,3 +84,17 @@ case v
 ------
     std.outln("this is case anyting else");
 ------
+
+
+"some/file/a" : "something"
+--------------------------
+    case v
+    --------
+        std.outln("blah blah blah...");
+    --------
+--------------------------
+
+"some/file/b" : "something"
+--------------------------:exec("bash")
+    echo "blah blah blah"
+--------------------------

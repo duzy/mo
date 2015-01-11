@@ -8,3 +8,5 @@ main: main.o
 	$(COMPILE.cc) $< -o $@
 
 main.o: main.cpp parser.h
+
+test: main ; @./main
