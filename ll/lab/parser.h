@@ -4,6 +4,7 @@
 #include <boost/spirit/include/phoenix_operator.hpp>
 #include <boost/spirit/include/phoenix_fusion.hpp>
 #include <boost/spirit/include/phoenix_stl.hpp>
+#include <boost/spirit/include/phoenix_object.hpp>
 #include <boost/fusion/include/adapt_struct.hpp>
 //#include <boost/variant/recursive_variant.hpp>
 //#include <boost/foreach.hpp>
@@ -25,86 +26,146 @@ BOOST_FUSION_ADAPT_STRUCT(lab::ast::node, (std::string, name));
 
 namespace lab
 {
-    template < class Iterator >
-    struct grammar : boost::spirit::qi::grammar<Iterator, ast::node(), boost::spirit::qi::locals<std::string>, boost::spirit::ascii::space_type>
+    template
+    <
+        class Iterator,
+        class Locals = boost::spirit::qi::locals<std::string>,
+        class SpaceType = boost::spirit::ascii::space_type
+    >
+    struct grammar : boost::spirit::qi::grammar<Iterator, ast::node(), Locals, SpaceType>
     {
         grammar() : grammar::base_type(top, "lab")
         {
             using boost::spirit::qi::int_;
+            using boost::spirit::qi::double_;
             using boost::spirit::qi::char_;
             using boost::spirit::qi::lit;
+            using boost::spirit::qi::string;
             using boost::spirit::qi::alpha;
             using boost::spirit::qi::alnum;
             using boost::spirit::qi::lexeme;
             using boost::spirit::qi::on_error;
             using boost::spirit::qi::fail;
+            using boost::spirit::ascii::space;
+            using boost::spirit::eol;
+            using boost::spirit::eoi;
+            using boost::spirit::eps; // eps[ error() ]
+            using boost::spirit::repeat;
+            using boost::spirit::inf;
+            using boost::spirit::skip;
             using boost::spirit::lazy;
-            //using boost::spirit::ascii::char_;
-            //using boost::spirit::ascii::string;
-            //using namespace boost::spirit::qi::labels;
 
+            using namespace boost::spirit::qi::labels;
+
+            using boost::phoenix::construct;
             using boost::phoenix::val;
 
-            top %= *( stmt | expr ) ;
+            top %= stmts > eoi;
 
-            stmt = decl | ctrl ;
+            stmt %= decl | ctrl | expr ;
+            stmts %= *( stmt | comment | ';' ) ;
 
-            ctrl = with | ctrl_case ;
+            decl %= def_var | def_func | def_type | def_temp ;
 
-            with = lit("with") > with_X ;
+            ctrl %= with | _case ;
 
-            with_X
-                = with_newnode
-                | with_attribute
-                | with_variable
+            with %= "with" > expr > ( ';' | sblock ) ;
+
+            _case %= "case" ;
+
+            comment = lexeme[ "#" >> *(char_ - eol) >> eol ];
+
+            prop %= ':' > identifier >> -arglist;
+
+            identifier = lexeme[ alpha >> *alnum ];
+            name = identifier >> *( '.' >> identifier );
+
+            expr %= nodector
+                | value
+                | prop
+                | call
+                | variable
                 ;
 
-            with_newnode
-                = lit("{")
-                > lit("}")
-                ;
+            value %= quote | number ;
 
-            with_attribute = lexeme
-                [ ":" >> name ]
-                ;
+            quote = (
+                ( '\'' >> *(char_ - '\'') >> '\'' ) |
+                ( '"' >> *(char_ - '"') >> '"' ) ) ;
 
-            ctrl_case = lit("case") ;
+            number = double_ | int_;
 
-            comment = "#" ;
+            nodector %= "{" > ( ( identifier > ":" > expr ) % "," ) > "}" ;
 
-            prop = ":" >> name >> -( "(" >> ( expr % "," ) >> ")" );
-
-            name = lexeme[ alpha >> *alnum ];
-
-            expr = expr_call ;
+            arglist = '(' >> ( expr % ',' ) >> ')' ;
+            call = name > arglist ;
 
 
+            dashes = repeat(3, inf)[ '-' ];
+            sblock = dashes > stmts > dashes ;
+
+
+            def_var = "var" > ((identifier >> -( '=' > expr )) % ',') > ';';
+            def_type = "type" > identifier ;
+            def_temp = "temp" > identifier ;
 
             top         .name("top");
             stmt        .name("stmt");
+            stmts       .name("stmts");
+            def_var     .name("var-def");
+            def_func    .name("func-def");
+            def_type    .name("type-def");
+            def_temp    .name("temp-def");
             expr        .name("expr");
+            with        .name("with");
+            prop        .name("prop");
+            variable    .name("variable");
+            nodector    .name("nodector");
+            arglist     .name("arglist");
+            call        .name("call");
+            identifier  .name("identifier");
+            name        .name("name");
+            value       .name("value");
+            dashes      .name("dashes");
+            sblock      .name("statement-block");
 
             on_error<fail>
             (
-             top, std::cout << val("error") << std::endl
+                top, std::cout
+                << val("error: ") << _4 << ", at: "
+                << construct<std::string>(_3, _2) 
+                << std::endl
             );
         }
 
-        boost::spirit::qi::rule< Iterator, ast::node(), boost::spirit::qi::locals<std::string>, boost::spirit::ascii::space_type > top;
-        boost::spirit::qi::rule< Iterator > stmt;
-        boost::spirit::qi::rule< Iterator > decl;
-        boost::spirit::qi::rule< Iterator > ctrl;
-        boost::spirit::qi::rule< Iterator > with;
-        boost::spirit::qi::rule< Iterator > with_X;
-        boost::spirit::qi::rule< Iterator > with_newnode;
-        boost::spirit::qi::rule< Iterator > with_attribute;
-        boost::spirit::qi::rule< Iterator > with_variable;
-        boost::spirit::qi::rule< Iterator > ctrl_case;
-        boost::spirit::qi::rule< Iterator > expr;
-        boost::spirit::qi::rule< Iterator > expr_call;
-        boost::spirit::qi::rule< Iterator > comment;
-        boost::spirit::qi::rule< Iterator > prop;
-        boost::spirit::qi::rule< Iterator > name;
+        template <class Spec = void()>
+        using rule = boost::spirit::qi::rule<Iterator, Spec, Locals, SpaceType>;
+
+        rule< ast::node() > top;
+        rule<> stmt;
+        rule<> stmts;
+        rule<> decl;
+        rule<> def_var;
+        rule<> def_func;
+        rule<> def_type;
+        rule<> def_temp;
+        rule<> ctrl;
+        rule< ast::node() > with;
+        rule<> _case;
+        rule<> expr;
+        rule<> nodector;
+        rule<> arglist;
+        rule<> call;
+        rule<> comment;
+        rule<> prop;
+        rule<> identifier;
+        rule<> name;
+        rule<> value;
+        rule<> quote;
+        rule<> number;
+        rule<> variable;
+        rule<> dashes;
+        rule<> sblock;
     };
 
     ast::node parse_file(const std::string & filename)
@@ -117,13 +178,13 @@ namespace lab
                   std::istream_iterator<char>(),
                   std::back_inserter(source));
 
-        grammar<std::string::const_iterator> g;
+        grammar<std::string::const_iterator> gmr;
         ast::node prog;
 
         using boost::spirit::ascii::space;
         std::string::const_iterator iter = source.begin();
         std::string::const_iterator end = source.end();
-        auto status = boost::spirit::qi::phrase_parse(iter, end, g, space, prog);
+        auto status = boost::spirit::qi::phrase_parse(iter, end, gmr, space, prog);
         if (status && iter == end) {
             // okay
         } else {

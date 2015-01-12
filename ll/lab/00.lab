@@ -1,16 +1,18 @@
-with :load("something.xml"); # apply to global scope
-
-std.outln("this is $(.node.name) from something.xml");
-
 with { name:'foo', value:100 }
 ------------------------------
     std.out("this is $(.name) from an in-mem node\n");
 ------------------------------
 
+with { name : 'bar' } --- std.outln("$(.name)")  ---
+
+with :load("something.xml"); # apply to global scope
+
+std.outln("this is $(.node.name) from something.xml");
+
 var v = 1, vv = 2;
 
 type c(a1, a2)
--------------- this is a special case of one line comment
+-------------- # this is a special case of one line comment
     field name = 0;
     field type = "?";
 
