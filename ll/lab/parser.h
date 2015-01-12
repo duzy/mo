@@ -69,9 +69,9 @@ namespace lab
 
             ctrl %= with | _case ;
 
-            with %= "with" > expr > ( ';' | sblock ) ;
+            with %= lexeme["with" > space] > expr > ( ';' | sblock ) ;
 
-            _case %= "case" ;
+            _case %= lexeme["case" > space] ;
 
             comment = lexeme[ "#" >> *(char_ - eol) >> eol ];
 
@@ -107,20 +107,38 @@ namespace lab
 
             params = '(' > -( identifier % ',' ) > ')' ;
 
-            def_var = "var" > ((identifier >> -( '=' > expr )) % ',') > ';';
+            def_var
+                = lexeme["var" > space] > ((identifier >> -( '=' > expr )) % ',') > ';'
+                ;
+
+            def_field
+                = lexeme["field" > space] > ((identifier >> -( '=' > expr )) % ',') > ';'
+                ;
+
+            def_method
+                = lexeme["method" > space] > identifier > params
+                > dashes > stmts > dashes
+                ;
+
             def_type
-                = "type" > identifier >> -params
+                = lexeme["type" > space] > identifier >> -params
                 > dashes
+                > *( def_field | def_method | stmt | comment | ';' )
                 > dashes
                 ;
 
-            def_temp = "temp" > identifier ;
+            def_temp
+                = lexeme["temp" > space] > identifier
+                ;
+
 
             top         .name("top");
             stmt        .name("stmt");
             stmts       .name("stmts");
             def_var     .name("var-def");
             def_func    .name("func-def");
+            def_field   .name("field-def");
+            def_method  .name("method-def");
             def_type    .name("type-def");
             def_temp    .name("temp-def");
             expr        .name("expr");
@@ -154,6 +172,8 @@ namespace lab
         rule<> decl;
         rule<> def_var;
         rule<> def_func;
+        rule<> def_field;
+        rule<> def_method;
         rule<> def_type;
         rule<> def_temp;
         rule<> params;
