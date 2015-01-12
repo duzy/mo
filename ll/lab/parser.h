@@ -105,8 +105,15 @@ namespace lab
             sblock = dashes > stmts > dashes ;
 
 
+            params = '(' > -( identifier % ',' ) > ')' ;
+
             def_var = "var" > ((identifier >> -( '=' > expr )) % ',') > ';';
-            def_type = "type" > identifier ;
+            def_type
+                = "type" > identifier >> -params
+                > dashes
+                > dashes
+                ;
+
             def_temp = "temp" > identifier ;
 
             top         .name("top");
@@ -149,6 +156,7 @@ namespace lab
         rule<> def_func;
         rule<> def_type;
         rule<> def_temp;
+        rule<> params;
         rule<> ctrl;
         rule< ast::node() > with;
         rule<> _case;
@@ -181,10 +189,16 @@ namespace lab
         grammar<std::string::const_iterator> gmr;
         ast::node prog;
 
-        using boost::spirit::ascii::space;
         std::string::const_iterator iter = source.begin();
         std::string::const_iterator end = source.end();
+
+#if 1
+        using boost::spirit::ascii::space;
         auto status = boost::spirit::qi::phrase_parse(iter, end, gmr, space, prog);
+#else
+        auto status = boost::spirit::qi::parse(iter, end, gmr, prog);
+#endif
+
         if (status && iter == end) {
             // okay
         } else {
