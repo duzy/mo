@@ -37,6 +37,7 @@ namespace lab
             boost::spirit::eol_type             eol;
             skip = space // tab/space/CR/LF
                 | lexeme[ "#" >> *(char_ - eol) >> eol ]
+                | lexeme[ "#*" >> *(char_ - "*#") >> "*#" ]
                 ;
         }
         boost::spirit::qi::rule<Iterator> skip;
@@ -103,11 +104,11 @@ namespace lab
             nodector
                 %= "{"
                 > ( ( identifier > ":" > expr ) % "," )
-                > "}"
+                >  "}"
                 ;
 
             arglist
-                = '('
+                =  '('
                 >> ( expr % ',' )
                 >> ')'
                 ;
@@ -192,7 +193,6 @@ namespace lab
             boost::spirit::eps_type             eps; // eps[ error() ]
             boost::spirit::inf_type             inf;
             boost::spirit::skip_type            skip;
-
 
             stmts %= +stmt ;
             stmt
@@ -346,8 +346,7 @@ namespace lab
 
             boost::spirit::eoi_type eoi;
 
-            // top = body > eoi;
-            top = body ;
+            top = body ; // = body > eoi;
 
             on_error<fail>
             (
