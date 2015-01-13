@@ -13,8 +13,8 @@ var v = 1, vv = 2;
 
 type c(a1, a2)
 -------------- # this is a special case of one line comment
-    field name = 0;
-    field type = "?";
+    var .name = 0;
+    var .type = "?";
 
     .name = 100 + len(.type);
 
@@ -23,7 +23,7 @@ type c(a1, a2)
         std.out( "something $(1+2)" );
     -----------------
 
-    meth foo(a, b, c)
+    func .foo(a, b, c)
     -----------------
         case .name
         ----------
@@ -35,7 +35,7 @@ type c(a1, a2)
         ..name(); # accessing parent scope
     -----------------
 
-    meth bar(a)
+    func .bar(a)
     -----------
         
     -----------

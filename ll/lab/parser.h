@@ -1,4 +1,4 @@
-//#include <boost/config/warning_disable.hpp>
+#include <boost/config/warning_disable.hpp>
 #include <boost/spirit/include/qi.hpp>
 #include <boost/spirit/include/phoenix_core.hpp>
 #include <boost/spirit/include/phoenix_operator.hpp>
@@ -26,133 +26,328 @@ BOOST_FUSION_ADAPT_STRUCT(lab::ast::node, (std::string, name));
 
 namespace lab
 {
+    template < class Iterator >
+    struct skipper : boost::spirit::qi::grammar<Iterator>
+    {
+        skipper() : skipper::base_type(skip, "skipper")
+        {
+            boost::spirit::ascii::space_type    space;
+            boost::spirit::qi::char_type        char_;
+            boost::spirit::qi::lexeme_type      lexeme;
+            boost::spirit::eol_type             eol;
+            skip = space // tab/space/CR/LF
+                | lexeme[ "#" >> *(char_ - eol) >> eol ]
+                ;
+        }
+        boost::spirit::qi::rule<Iterator> skip;
+    };
+
+    template < class Iterator, class Locals, class SpaceType = skipper<Iterator> >
+    struct expression : boost::spirit::qi::grammar<Iterator, ast::node(), Locals, SpaceType>
+    {
+        expression() : expression::base_type(expr, "expression")
+        {
+            using boost::spirit::qi::on_error;
+            using boost::spirit::qi::fail;
+
+            boost::spirit::qi::int_type         int_;
+            boost::spirit::qi::double_type      double_;
+            boost::spirit::qi::char_type        char_;
+            boost::spirit::qi::lit_type         lit;
+            boost::spirit::qi::string_type      string;
+            boost::spirit::qi::alpha_type       alpha;
+            boost::spirit::qi::alnum_type       alnum;
+            boost::spirit::qi::lexeme_type      lexeme;
+            boost::spirit::ascii::space_type    space;
+
+            expr
+                %= nodector
+                | value
+                | prop
+                | funcall
+                | variable
+                ;
+
+            identifier
+                = !keywords
+                >> lexeme[ ( alpha | '.' ) >> *alnum ]
+                ;
+
+            name
+                = identifier
+                >> *( '.' >> identifier )
+                ;
+
+            value
+                %= quote
+                | number
+                ;
+
+            quote
+                = (
+                    ( '\'' >> *(char_ - '\'') >> '\'' ) |
+                    ( '"' >> *(char_ - '"') >> '"' )
+                  )
+                ;
+
+            number
+                = double_
+                | int_
+                ;
+
+            prop %= ':'
+                > identifier
+                >> -arglist
+                ;
+
+            nodector
+                %= "{"
+                > ( ( identifier > ":" > expr ) % "," )
+                > "}"
+                ;
+
+            arglist
+                = '('
+                >> ( expr % ',' )
+                >> ')'
+                ;
+
+            funcall
+                = name
+                > arglist
+                ;
+
+            keywords.add
+                ("me")
+                ("const")
+                ("var")
+                ("temp")
+                ("type")
+                ("func")
+                ("case")
+                ("with")
+                ("any")
+                ("many")
+                ;
+        }
+
+        template <class Spec = void()>
+        using rule = boost::spirit::qi::rule<Iterator, Spec, Locals, SpaceType>;
+
+        rule< ast::node() > expr;
+            
+        rule<> equality;
+        rule<> relational;
+        rule<> logical;
+        rule<> additive;
+        rule<> multiplicative;
+            
+        rule<> primary;
+        rule<> unary;
+
+        rule<> identifier ;
+
+        rule<> nodector;
+        rule<> arglist;
+        rule<> funcall;
+        rule<> prop;
+        rule<> name;
+        rule<> value;
+        rule<> quote;
+        rule<> number;
+        rule<> variable;
+
+        boost::spirit::qi::symbols<char>
+            equality_op,
+            relational_op,
+            logical_op,
+            additive_op,
+            multiplicative_op,
+            unary_op ;
+
+        boost::spirit::qi::symbols<char>
+            keywords ;
+    };
+
+    template < class Iterator, class Locals, class SpaceType = skipper<Iterator> >
+    struct statement : boost::spirit::qi::grammar<Iterator, ast::node(), Locals, SpaceType>
+    {
+        statement() : statement::base_type(stmts, "statement")
+        {
+            using boost::spirit::qi::on_error;
+            using boost::spirit::qi::fail;
+            using boost::spirit::lazy;
+
+            using boost::phoenix::construct;
+            using boost::phoenix::val;
+
+            using namespace boost::spirit::qi::labels;
+
+            boost::spirit::qi::char_type        char_;
+            boost::spirit::qi::lit_type         lit;
+            boost::spirit::qi::lexeme_type      lexeme;
+            boost::spirit::ascii::space_type    space;
+            boost::spirit::repeat_type          repeat;
+            boost::spirit::eol_type             eol;
+            boost::spirit::eps_type             eps; // eps[ error() ]
+            boost::spirit::inf_type             inf;
+            boost::spirit::skip_type            skip;
+
+
+            stmts %= +stmt ;
+            stmt
+                %= decl
+                | ctrl
+                | assignment
+                | expr
+                | ';'
+                ;
+
+            decl
+                %=decl_var
+                | decl_const
+                | decl_func
+                | decl_type
+                | decl_temp
+                ;
+
+            assignment
+                = identifier
+                > '='
+                > expr
+                > ';'
+                ;
+
+            ctrl
+                %= with
+                | _case
+                ;
+
+            with
+                %= lexeme["with" > space]
+                > expr
+                > ( ';' | sblock )
+                ;
+
+            _case
+                %= lexeme["case" > space]
+                ;
+
+
+            dashes = repeat(3, inf)[ '-' ];
+            sblock
+                = dashes
+                > stmts
+                > dashes
+                ;
+
+
+            identifier = expr.identifier.alias();
+            params = '(' > -( identifier % ',' ) > ')' ;
+
+            decl_var
+                = lexeme["var" >> space]
+                > ( ( identifier >> -( '=' > expr ) ) % ',')
+                > ';'
+                ;
+
+            decl_const
+                = lexeme["const" >> space]
+                > ( ( identifier >> -( '=' > expr ) ) % ',')
+                > ';'
+                ;
+
+            decl_func
+                = lexeme["func" >> space]
+                > identifier > params
+                > sblock
+                ;
+
+            decl_type
+                = lexeme["type" >> space]
+                > identifier >> -params
+                > sblock
+                ;
+
+            decl_temp
+                = lexeme["temp" >> space]
+                > identifier
+                > dashes
+                // > temp
+                > dashes
+                ;
+
+            BOOST_SPIRIT_DEBUG_NODES(
+                (stmt)
+                (stmts)
+                (decl_var)
+                (decl_func)
+                (decl_type)
+                (decl_temp)
+                (assignment)
+                (ctrl)
+                (with)
+                (dashes)
+                (sblock)
+            );
+
+            on_error<fail>
+            (
+                stmts, std::cout
+                << val("bad statement: ") << _4 << ", at: "
+                << construct<std::string>(_3, _2) 
+                << std::endl
+            );
+        }
+
+        template <class Spec = void()>
+        using rule = boost::spirit::qi::rule<Iterator, Spec, Locals, SpaceType>;
+
+        rule< ast::node() > stmts;
+        rule<> stmt;
+        rule<> decl;
+        rule<> decl_var;
+        rule<> decl_const;
+        rule<> decl_func;
+        rule<> decl_type;
+        rule<> decl_temp;
+        rule<> params;
+        rule<> ctrl;
+        rule<> with;
+        rule<> _case;
+
+        rule<> assignment;
+
+        rule<> identifier;
+
+        rule<> dashes;
+        rule<> sblock;
+
+        expression<Iterator, Locals, SpaceType> expr;
+    };
+
     template
     <
         class Iterator,
         class Locals = boost::spirit::qi::locals<std::string>,
-        class SpaceType = boost::spirit::ascii::space_type
+        class SpaceType = skipper<Iterator>
     >
     struct grammar : boost::spirit::qi::grammar<Iterator, ast::node(), Locals, SpaceType>
     {
         grammar() : grammar::base_type(top, "lab")
         {
-            using boost::spirit::qi::int_;
-            using boost::spirit::qi::double_;
-            using boost::spirit::qi::char_;
-            using boost::spirit::qi::lit;
-            using boost::spirit::qi::string;
-            using boost::spirit::qi::alpha;
-            using boost::spirit::qi::alnum;
-            using boost::spirit::qi::lexeme;
             using boost::spirit::qi::on_error;
             using boost::spirit::qi::fail;
-            using boost::spirit::ascii::space;
-            using boost::spirit::eol;
-            using boost::spirit::eoi;
-            using boost::spirit::eps; // eps[ error() ]
-            using boost::spirit::repeat;
-            using boost::spirit::inf;
-            using boost::spirit::skip;
-            using boost::spirit::lazy;
-
-            using namespace boost::spirit::qi::labels;
 
             using boost::phoenix::construct;
             using boost::phoenix::val;
 
-            top %= stmts > eoi;
+            using namespace boost::spirit::qi::labels;
 
-            stmt %= decl | ctrl | expr ;
-            stmts %= *( stmt | comment | ';' ) ;
+            boost::spirit::eoi_type eoi;
 
-            decl %= def_var | def_func | def_type | def_temp ;
-
-            ctrl %= with | _case ;
-
-            with %= lexeme["with" > space] > expr > ( ';' | sblock ) ;
-
-            _case %= lexeme["case" > space] ;
-
-            comment = lexeme[ "#" >> *(char_ - eol) >> eol ];
-
-            prop %= ':' > identifier >> -arglist;
-
-            identifier = lexeme[ alpha >> *alnum ];
-            name = identifier >> *( '.' >> identifier );
-
-            expr %= nodector
-                | value
-                | prop
-                | call
-                | variable
-                ;
-
-            value %= quote | number ;
-
-            quote = (
-                ( '\'' >> *(char_ - '\'') >> '\'' ) |
-                ( '"' >> *(char_ - '"') >> '"' ) ) ;
-
-            number = double_ | int_;
-
-            nodector %= "{" > ( ( identifier > ":" > expr ) % "," ) > "}" ;
-
-            arglist = '(' >> ( expr % ',' ) >> ')' ;
-            call = name > arglist ;
-
-
-            dashes = repeat(3, inf)[ '-' ];
-            sblock = dashes > stmts > dashes ;
-
-
-            params = '(' > -( identifier % ',' ) > ')' ;
-
-            def_var
-                = lexeme["var" > space] > ((identifier >> -( '=' > expr )) % ',') > ';'
-                ;
-
-            def_field
-                = lexeme["field" > space] > ((identifier >> -( '=' > expr )) % ',') > ';'
-                ;
-
-            def_method
-                = lexeme["method" > space] > identifier > params
-                > dashes > stmts > dashes
-                ;
-
-            def_type
-                = lexeme["type" > space] > identifier >> -params
-                > dashes
-                > *( def_field | def_method | stmt | comment | ';' )
-                > dashes
-                ;
-
-            def_temp
-                = lexeme["temp" > space] > identifier
-                ;
-
-
-            top         .name("top");
-            stmt        .name("stmt");
-            stmts       .name("stmts");
-            def_var     .name("var-def");
-            def_func    .name("func-def");
-            def_field   .name("field-def");
-            def_method  .name("method-def");
-            def_type    .name("type-def");
-            def_temp    .name("temp-def");
-            expr        .name("expr");
-            with        .name("with");
-            prop        .name("prop");
-            variable    .name("variable");
-            nodector    .name("nodector");
-            arglist     .name("arglist");
-            call        .name("call");
-            identifier  .name("identifier");
-            name        .name("name");
-            value       .name("value");
-            dashes      .name("dashes");
-            sblock      .name("statement-block");
+            // top = body > eoi;
+            top = body ;
 
             on_error<fail>
             (
@@ -163,37 +358,8 @@ namespace lab
             );
         }
 
-        template <class Spec = void()>
-        using rule = boost::spirit::qi::rule<Iterator, Spec, Locals, SpaceType>;
-
-        rule< ast::node() > top;
-        rule<> stmt;
-        rule<> stmts;
-        rule<> decl;
-        rule<> def_var;
-        rule<> def_func;
-        rule<> def_field;
-        rule<> def_method;
-        rule<> def_type;
-        rule<> def_temp;
-        rule<> params;
-        rule<> ctrl;
-        rule< ast::node() > with;
-        rule<> _case;
-        rule<> expr;
-        rule<> nodector;
-        rule<> arglist;
-        rule<> call;
-        rule<> comment;
-        rule<> prop;
-        rule<> identifier;
-        rule<> name;
-        rule<> value;
-        rule<> quote;
-        rule<> number;
-        rule<> variable;
-        rule<> dashes;
-        rule<> sblock;
+        boost::spirit::qi::rule<Iterator, ast::node(), Locals, SpaceType> top;
+        statement<Iterator, Locals, SpaceType> body;
     };
 
     ast::node parse_file(const std::string & filename)
@@ -213,7 +379,8 @@ namespace lab
         std::string::const_iterator end = source.end();
 
 #if 1
-        using boost::spirit::ascii::space;
+        //boost::spirit::ascii::space_type space; // using boost::spirit::ascii::space;
+        skipper<std::string::const_iterator> space;
         auto status = boost::spirit::qi::phrase_parse(iter, end, gmr, space, prog);
 #else
         auto status = boost::spirit::qi::parse(iter, end, gmr, prog);
