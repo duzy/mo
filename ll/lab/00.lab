@@ -1,3 +1,12 @@
+fun #* comment *# ();
+
+fun(1, 2, 3, fun('a', 'b', 'c'));
+
+.name;
+
+:tag(value);
+:tag(1, 2, 3);
+
 'this is a non-escape string';
 
 "this is an escape string";
@@ -11,8 +20,9 @@
 1 == 1;
 1 != 2;
 
-fun(1, 2, 3);
-
 std.out("blah, blah, blah...");
 
 std #* inline comment *# .out ( "blah, blah, blah..." );
+
+123.123;
+

@@ -117,58 +117,53 @@ namespace lab
                 ;
 
             ////////////////////
-            expr = logical_or.alias();
+            expr
+                = logical_or.alias()
+                > -invoke
+                ;
 
-            logical_or
+            logical_or  // ||
                 =  logical_and
                 >> *(logical_or_op > logical_and)
                 ;
 
-            logical_and
+            logical_and // &&
                 =  equality
                 >> *(logical_and_op > equality)
                 ;
 
-            equality
+            equality    // ==, !=
                 =  relational
                 >> *(equality_op > relational)
                 ;
 
-            relational
+            relational  // <, <=, >, >=
                 =  additive
                 >> *(relational_op > additive)
                 ;
 
-            additive
+            additive    // +, -
                 =  multiplicative
                 >> *(additive_op > multiplicative)
                 ;
 
-            multiplicative
+            multiplicative // *, /
                 =  unary
                 >> *(multiplicative_op > unary)
                 ;
 
-            unary
+            unary       // +, -, !
                 = primary
-                | (unary_op > unary)
+                | ( unary_op > unary )
                 ;
 
             primary
-                =   name
-                |   value
-                |   prop
-                |   '(' > expr > ')'
+                = '(' > expr > ')'
+                | name
+                | value
+                | prop
+                | dotted
                 ;
-
-            /*
-                |  nodector
-                |  name
-                |  value
-                |  prop
-                |  invoke
-                |  dotted
-            */
 
             identifier
                 = !keywords
@@ -196,9 +191,10 @@ namespace lab
                 | int_
                 ;
 
-            prop %= ':'
+            prop
+                %= ':'
                 >  identifier
-                >> -( '(' >> arglist >> ')' )
+                > -( '(' > -arglist > ')' )
                 ;
 
             nodector
@@ -211,10 +207,10 @@ namespace lab
                 =  expr % ','
                 ;
 
-            invoke // after name
-                =  '('
-                >> arglist
-                >> ')'
+            invoke
+                = '('
+                > -arglist
+                > ')'
                 ;
 
             dotted
@@ -223,6 +219,8 @@ namespace lab
 
             BOOST_SPIRIT_DEBUG_NODES(
                 (expr)
+                (invoke)
+                (arglist)
             );
 
             on_error<fail>
@@ -246,6 +244,7 @@ namespace lab
         rule<> additive;
         rule<> multiplicative;
         rule<> unary;
+
         rule<> primary;
 
         rule<> identifier ;
@@ -295,43 +294,40 @@ namespace lab
             boost::spirit::ascii::space_type    space;
             boost::spirit::repeat_type          repeat;
             boost::spirit::eol_type             eol;
+            boost::spirit::eoi_type             eoi;
             boost::spirit::eps_type             eps; // eps[ error() ]
             boost::spirit::inf_type             inf;
             boost::spirit::skip_type            skip;
 
             identifier = expr.identifier.alias();
 
-            stmts %= +stmt ;
+            stmts
+                %= +stmt
+                ;
+
             stmt
-                %=decl
-                | func
-                | type
-                | speak
-                | with
-                | see
-                | assignment
-                | expr
-                | ';'
+                %= decl
+                |  func
+                |  type
+                |  speak
+                |  with
+                |  see
+                |  expr
+                |  assignment
+                |  ';'
                 ;
 
             assignment
-                = expr.name
-                > '='
-                > expr
-                > ';'
+                =  expr.name
+                >  '='
+                >  expr
+                >  ';'
                 ;
-
-            /*
-            funcall
-                = expr.name 
-                > expr.invoke
-                ;
-            */
 
             with
                 %= lexeme["with" > space]
-                > expr
-                > ( ';' | sblock )
+                >  expr
+                >  ( ';' | sblock )
                 ;
 
             see
@@ -339,7 +335,10 @@ namespace lab
                 ;
 
 
-            dashes = repeat(3, inf)[ '-' ];
+            dashes
+                = repeat(3, inf)[ lit('-') ]
+                ;
+
             sblock
                 = dashes
                 > stmts
@@ -347,7 +346,11 @@ namespace lab
                 ;
 
 
-            params = '(' > -( identifier % ',' ) > ')' ;
+            params
+                = '('
+                > -( identifier % ',' )
+                > ')'
+                ;
 
             decl
                 = lexeme["decl" >> space]
@@ -436,15 +439,14 @@ namespace lab
             using boost::phoenix::construct;
             using boost::phoenix::val;
 
-            //using namespace boost::spirit::qi::labels;
-
-            boost::spirit::qi::_1_type          _1;
-            boost::spirit::qi::_2_type          _2;
-            boost::spirit::qi::_3_type          _3;
-            boost::spirit::qi::_4_type          _4;
+            boost::spirit::qi::_1_type          _1; // qi::labels
+            boost::spirit::qi::_2_type          _2; // qi::labels
+            boost::spirit::qi::_3_type          _3; // qi::labels
+            boost::spirit::qi::_4_type          _4; // qi::labels
             boost::spirit::eoi_type             eoi;
 
-            top = body ; // = body > eoi;
+            top = body > eoi ;
+            body = stmt ;
 
             on_error<fail>
             (
@@ -455,8 +457,13 @@ namespace lab
             );
         }
 
-        boost::spirit::qi::rule<Iterator, ast::node(), Locals, SpaceType> top;
-        statement<Iterator, Locals, SpaceType> body;
+        template <class Spec = void()>
+        using rule = boost::spirit::qi::rule<Iterator, Spec, Locals, SpaceType>;
+
+        rule<ast::node()> top;
+        rule<> body;
+
+        statement<Iterator, Locals, SpaceType> stmt;
     };
 
     ast::node parse_file(const std::string & filename)
