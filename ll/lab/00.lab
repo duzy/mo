@@ -1,102 +1,19 @@
-with { name:'foo', value:100 }
-------------------------------
-    std.out("this is $(.name) from an in-mem node\n");
-------------------------------
+'this is a non-escape string';
 
-with { name : 'bar' } --- std.outln("$(.name)")  ---
+"this is an escape string";
 
-with :load("something.xml"); # apply to global scope
+fun(1, 2, 3);
 
-std.outln("this is $(.node.name) from something.xml");
+std.out("blah, blah, blah...");
 
-var v = 1, vv = 2;
+std #* inline comment *# .out ( "blah, blah, blah..." );
 
-type c(a1, a2)
--------------- # this is a special case of one line comment
-    var .name = 0;
-    var .type = "?";
+1 + 2;
 
-    .name = 100 + len(.type);
+(1 + 2) * 3;
 
-    func foo(a, b, c)
-    -----------------
-        std.out( "something $(1+2)" );
-    -----------------
+!true;
 
-    func .foo(a, b, c)
-    -----------------
-        case .name
-        ----------
-            foo(a, b, c);
-        ----------
-        .bar(a);
-        .bar(b);
-        .bar(c);
-        ..name(); # accessing parent scope
-    -----------------
+1 == 1;
+1 != 2;
 
-    func .bar(a)
-    -----------
-        
-    -----------
-------------
-
-func foo(a, b, c)
------------------
-    any  { 1 < _ } [1, 2, 3, 4, 5, 6, 7, 8, 9]
-    many { 1 < _ } [1, 2, 3, 4, 5, 6, 7, 8, 9]
------------------
-
-temp t
-------------------------
-any text would go here...
-.   case a == 0
-
-.   end
-blah, blah, blah...
-------------------------
-
-temp t :exec("bash")
-------------------------
-# This is a common Bash script block
-.....case 1
-echo "okay, go this branch"
-.........
-echo "hmmm, this is discarded"
-.....end
-------------------------
-
-case a == 1
------------
-    case b == 0
-    -----------
-        
-    -----------
------------
-    
------------
-
-case v
-------: 1
-    std.outln("this is case 1");
-------: 2
-    std.outln("this is case 2");
-------: 3
-    std.outln("this is case 3");
-------
-    std.outln("this is case anyting else");
-------
-
-
-"some/file/a" : "something"
---------------------------
-    case v
-    --------
-        std.outln("blah blah blah...");
-    --------
---------------------------
-
-"some/file/b" : "something"
---------------------------:exec("bash")
-    echo "blah blah blah"
---------------------------

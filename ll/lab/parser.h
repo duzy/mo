@@ -35,7 +35,8 @@ namespace lab
             boost::spirit::qi::char_type        char_;
             boost::spirit::qi::lexeme_type      lexeme;
             boost::spirit::eol_type             eol;
-            skip = space // tab/space/CR/LF
+            skip
+                = space // tab/space/CR/LF
                 | lexeme[ "#" >> *(char_ - eol) >> eol ]
                 | lexeme[ "#*" >> *(char_ - "*#") >> "*#" ]
                 ;
@@ -51,6 +52,13 @@ namespace lab
             using boost::spirit::qi::on_error;
             using boost::spirit::qi::fail;
 
+            using boost::phoenix::construct;
+            using boost::phoenix::val;
+
+            boost::spirit::qi::_1_type          _1;
+            boost::spirit::qi::_2_type          _2;
+            boost::spirit::qi::_3_type          _3;
+            boost::spirit::qi::_4_type          _4;
             boost::spirit::qi::int_type         int_;
             boost::spirit::qi::double_type      double_;
             boost::spirit::qi::char_type        char_;
@@ -59,29 +67,36 @@ namespace lab
             boost::spirit::qi::alpha_type       alpha;
             boost::spirit::qi::alnum_type       alnum;
             boost::spirit::qi::lexeme_type      lexeme;
+            boost::spirit::qi::raw_type         raw;
             boost::spirit::ascii::space_type    space;
 
             expr
+                %= -prefix
+                > term
+                > -postfix
+                ;
+
+            expr
                 %= nodector
-                | value
-                | prop
-                | funcall
-                | variable
+                |  name
+                |  value
+                |  prop
+                |  invoke
+                |  dotted
                 ;
 
             identifier
                 = !keywords
-                >> lexeme[ ( alpha | '.' ) >> *alnum ]
+                >> lexeme[ ( alpha | '_' ) >> *( alnum | '_' ) ]
                 ;
 
             name
-                = identifier
-                >> *( '.' >> identifier )
+                = identifier //+( '.' >> identifier )
                 ;
 
             value
                 %= quote
-                | number
+                |  number
                 ;
 
             quote
@@ -97,8 +112,8 @@ namespace lab
                 ;
 
             prop %= ':'
-                > identifier
-                >> -arglist
+                >  identifier
+                >> -( '(' >> arglist >> ')' )
                 ;
 
             nodector
@@ -108,28 +123,40 @@ namespace lab
                 ;
 
             arglist
+                =  expr % ','
+                ;
+
+            invoke // after name
                 =  '('
-                >> ( expr % ',' )
+                >> arglist
                 >> ')'
                 ;
 
-            funcall
-                = name
-                > arglist
+            dotted
+                = '.' > identifier
                 ;
 
             keywords.add
-                ("me")
-                ("const")
-                ("var")
-                ("temp")
-                ("type")
-                ("func")
-                ("case")
-                ("with")
-                ("any")
-                ("many")
+                ("decl")  // declare variables, constants, fields
+                ("speak") // 
+                ("type")  // 
+                ("func")  // 
+                ("see")   // 
+                ("with")  // 
+                ("any")   // loop on a list or range
                 ;
+
+            BOOST_SPIRIT_DEBUG_NODES(
+                (expr)
+            );
+
+            on_error<fail>
+            (
+                expr, std::cout
+                << val("bad expression: ") << _4 << ", at: "
+                << construct<std::string>(_3, _2) 
+                << std::endl
+            );
         }
 
         template <class Spec = void()>
@@ -150,13 +177,13 @@ namespace lab
 
         rule<> nodector;
         rule<> arglist;
-        rule<> funcall;
+        rule<> invoke;
+        rule<> dotted;
         rule<> prop;
         rule<> name;
         rule<> value;
         rule<> quote;
         rule<> number;
-        rule<> variable;
 
         boost::spirit::qi::symbols<char>
             equality_op,
@@ -182,8 +209,10 @@ namespace lab
             using boost::phoenix::construct;
             using boost::phoenix::val;
 
-            using namespace boost::spirit::qi::labels;
-
+            boost::spirit::qi::_1_type          _1; // qi::labels
+            boost::spirit::qi::_2_type          _2; // qi::labels
+            boost::spirit::qi::_3_type          _3; // qi::labels
+            boost::spirit::qi::_4_type          _4; // qi::labels
             boost::spirit::qi::char_type        char_;
             boost::spirit::qi::lit_type         lit;
             boost::spirit::qi::lexeme_type      lexeme;
@@ -194,34 +223,34 @@ namespace lab
             boost::spirit::inf_type             inf;
             boost::spirit::skip_type            skip;
 
+            identifier = expr.identifier.alias();
+
             stmts %= +stmt ;
             stmt
-                %= decl
-                | ctrl
+                %=decl
+                | func
+                | type
+                | speak
+                | with
+                | see
                 | assignment
                 | expr
                 | ';'
                 ;
 
-            decl
-                %=decl_var
-                | decl_const
-                | decl_func
-                | decl_type
-                | decl_temp
-                ;
-
             assignment
-                = identifier
+                = expr.name
                 > '='
                 > expr
                 > ';'
                 ;
 
-            ctrl
-                %= with
-                | _case
+            /*
+            funcall
+                = expr.name 
+                > expr.invoke
                 ;
+            */
 
             with
                 %= lexeme["with" > space]
@@ -229,8 +258,8 @@ namespace lab
                 > ( ';' | sblock )
                 ;
 
-            _case
-                %= lexeme["case" > space]
+            see
+                %= lexeme["see" > space]
                 ;
 
 
@@ -242,51 +271,44 @@ namespace lab
                 ;
 
 
-            identifier = expr.identifier.alias();
             params = '(' > -( identifier % ',' ) > ')' ;
 
-            decl_var
-                = lexeme["var" >> space]
+            decl
+                = lexeme["decl" >> space]
                 > ( ( identifier >> -( '=' > expr ) ) % ',')
                 > ';'
                 ;
 
-            decl_const
-                = lexeme["const" >> space]
-                > ( ( identifier >> -( '=' > expr ) ) % ',')
-                > ';'
-                ;
-
-            decl_func
+            func
                 = lexeme["func" >> space]
                 > identifier > params
                 > sblock
                 ;
 
-            decl_type
+            type
                 = lexeme["type" >> space]
                 > identifier >> -params
                 > sblock
                 ;
 
-            decl_temp
-                = lexeme["temp" >> space]
-                > identifier
+            speak
+                = lexeme["speak" >> space]
+                > ( identifier % '>' )
                 > dashes
                 // > temp
                 > dashes
                 ;
 
             BOOST_SPIRIT_DEBUG_NODES(
-                (stmt)
                 (stmts)
-                (decl_var)
-                (decl_func)
-                (decl_type)
-                (decl_temp)
+                (stmt)
+                (decl)
+                (func)
+                (type)
+                (speak)
                 (assignment)
-                (ctrl)
                 (with)
+                (see)
                 (dashes)
                 (sblock)
             );
@@ -306,18 +328,14 @@ namespace lab
         rule< ast::node() > stmts;
         rule<> stmt;
         rule<> decl;
-        rule<> decl_var;
-        rule<> decl_const;
-        rule<> decl_func;
-        rule<> decl_type;
-        rule<> decl_temp;
+        rule<> func;
+        rule<> type;
+        rule<> speak;
         rule<> params;
-        rule<> ctrl;
         rule<> with;
-        rule<> _case;
+        rule<> see;
 
         rule<> assignment;
-
         rule<> identifier;
 
         rule<> dashes;
@@ -342,9 +360,13 @@ namespace lab
             using boost::phoenix::construct;
             using boost::phoenix::val;
 
-            using namespace boost::spirit::qi::labels;
+            //using namespace boost::spirit::qi::labels;
 
-            boost::spirit::eoi_type eoi;
+            boost::spirit::qi::_1_type          _1;
+            boost::spirit::qi::_2_type          _2;
+            boost::spirit::qi::_3_type          _3;
+            boost::spirit::qi::_4_type          _4;
+            boost::spirit::eoi_type             eoi;
 
             top = body ; // = body > eoi;
 
