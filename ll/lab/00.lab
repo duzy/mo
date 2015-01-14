@@ -2,12 +2,6 @@
 
 "this is an escape string";
 
-fun(1, 2, 3);
-
-std.out("blah, blah, blah...");
-
-std #* inline comment *# .out ( "blah, blah, blah..." );
-
 1 + 2;
 
 (1 + 2) * 3;
@@ -17,3 +11,8 @@ std #* inline comment *# .out ( "blah, blah, blah..." );
 1 == 1;
 1 != 2;
 
+fun(1, 2, 3);
+
+std.out("blah, blah, blah...");
+
+std #* inline comment *# .out ( "blah, blah, blah..." );

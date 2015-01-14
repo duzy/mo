@@ -70,20 +70,105 @@ namespace lab
             boost::spirit::qi::raw_type         raw;
             boost::spirit::ascii::space_type    space;
 
-            expr
-                %= -prefix
-                > term
-                > -postfix
+            logical_or_op.add
+                ("||")
+                ;
+            
+            logical_and_op.add
+                ("&&")
                 ;
 
-            expr
-                %= nodector
+            equality_op.add
+                ("==")
+                ("!=")
+                ;
+
+            relational_op.add
+                ("<")
+                ("<=")
+                (">")
+                (">=")
+                ;
+
+            additive_op.add
+                ("+")
+                ("-")
+                ;
+            
+            multiplicative_op.add
+                ("*")
+                ("/")
+                ;
+
+            unary_op.add
+                ("+")
+                ("-")
+                ("!")
+                ;
+
+            keywords.add
+                ("decl")  // declare variables, constants, fields
+                ("speak") // 
+                ("type")  // 
+                ("func")  // 
+                ("see")   // 
+                ("with")  // 
+                ("any")   // loop on a list or range
+                ;
+
+            ////////////////////
+            expr = logical_or.alias();
+
+            logical_or
+                =  logical_and
+                >> *(logical_or_op > logical_and)
+                ;
+
+            logical_and
+                =  equality
+                >> *(logical_and_op > equality)
+                ;
+
+            equality
+                =  relational
+                >> *(equality_op > relational)
+                ;
+
+            relational
+                =  additive
+                >> *(relational_op > additive)
+                ;
+
+            additive
+                =  multiplicative
+                >> *(additive_op > multiplicative)
+                ;
+
+            multiplicative
+                =  unary
+                >> *(multiplicative_op > unary)
+                ;
+
+            unary
+                = primary
+                | (unary_op > unary)
+                ;
+
+            primary
+                =   name
+                |   value
+                |   prop
+                |   '(' > expr > ')'
+                ;
+
+            /*
+                |  nodector
                 |  name
                 |  value
                 |  prop
                 |  invoke
                 |  dotted
-                ;
+            */
 
             identifier
                 = !keywords
@@ -136,16 +221,6 @@ namespace lab
                 = '.' > identifier
                 ;
 
-            keywords.add
-                ("decl")  // declare variables, constants, fields
-                ("speak") // 
-                ("type")  // 
-                ("func")  // 
-                ("see")   // 
-                ("with")  // 
-                ("any")   // loop on a list or range
-                ;
-
             BOOST_SPIRIT_DEBUG_NODES(
                 (expr)
             );
@@ -166,12 +241,12 @@ namespace lab
             
         rule<> equality;
         rule<> relational;
-        rule<> logical;
+        rule<> logical_or;
+        rule<> logical_and;
         rule<> additive;
         rule<> multiplicative;
-            
-        rule<> primary;
         rule<> unary;
+        rule<> primary;
 
         rule<> identifier ;
 
@@ -188,7 +263,8 @@ namespace lab
         boost::spirit::qi::symbols<char>
             equality_op,
             relational_op,
-            logical_op,
+            logical_or_op,
+            logical_and_op,
             additive_op,
             multiplicative_op,
             unary_op ;
