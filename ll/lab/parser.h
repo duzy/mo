@@ -359,7 +359,7 @@ namespace lab
             sblock
                 =  dashes_a
                 > -stmts
-                >> dashes_b
+                >  dashes_b
                 ;
 
             params
