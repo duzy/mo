@@ -1,6 +1,14 @@
-fun #* comment *# ();
+fun #* comment *#  (); 
 
 fun(1, 2, 3, fun('a', 'b', 'c'));
+
+speak template > bash > python
+--------
+speak "blah, blah, blah"
+--------
+
+func foo() --- ; ---
+
 
 .name;
 
@@ -25,4 +33,3 @@ std.out("blah, blah, blah...");
 std #* inline comment *# .out ( "blah, blah, blah..." );
 
 123.123;
-

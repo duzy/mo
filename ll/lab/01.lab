@@ -13,7 +13,7 @@ std.outln("this is $(.node.name) from something.xml");
 
 decl v = 1, vv = 2;
 
-type c(a1, a2)
+type c (a1, a2)
 -------------- # this is a special case of one line comment
     decl .name = 0;
     decl .type = "?";

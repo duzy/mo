@@ -5,6 +5,7 @@
 #include <boost/spirit/include/phoenix_fusion.hpp>
 #include <boost/spirit/include/phoenix_stl.hpp>
 #include <boost/spirit/include/phoenix_object.hpp>
+#include <boost/spirit/include/phoenix_bind.hpp>
 #include <boost/fusion/include/adapt_struct.hpp>
 //#include <boost/variant/recursive_variant.hpp>
 //#include <boost/foreach.hpp>
@@ -37,8 +38,8 @@ namespace lab
             boost::spirit::eol_type             eol;
             skip
                 = space // tab/space/CR/LF
-                | lexeme[ "#" >> *(char_ - eol) >> eol ]
                 | lexeme[ "#*" >> *(char_ - "*#") >> "*#" ]
+                | lexeme[ "#"  >> *(char_ - eol)  >> eol ]
                 ;
         }
         boost::spirit::qi::rule<Iterator> skip;
@@ -118,8 +119,18 @@ namespace lab
 
             ////////////////////
             expr
-                = logical_or.alias()
-                > -invoke
+                %= *prefix
+                >>  infix
+                >> *postfix
+                ;
+
+            postfix
+                %= invoke
+                |  dotted
+                ;
+
+            infix
+                =  logical_or.alias()
                 ;
 
             logical_or  // ||
@@ -213,14 +224,20 @@ namespace lab
                 > ')'
                 ;
 
+            assign
+                = '='
+                > expr
+                ;
+
             dotted
                 = '.' > identifier
                 ;
 
             BOOST_SPIRIT_DEBUG_NODES(
                 (expr)
-                (invoke)
                 (arglist)
+                (invoke)
+                (assign)
             );
 
             on_error<fail>
@@ -236,6 +253,9 @@ namespace lab
         using rule = boost::spirit::qi::rule<Iterator, Spec, Locals, SpaceType>;
 
         rule< ast::node() > expr;
+        rule<> prefix;
+        rule<> infix;
+        rule<> postfix;
             
         rule<> equality;
         rule<> relational;
@@ -247,17 +267,18 @@ namespace lab
 
         rule<> primary;
 
-        rule<> identifier ;
+        rule< std::string() > identifier ;
 
         rule<> nodector;
         rule<> arglist;
-        rule<> invoke;
-        rule<> dotted;
         rule<> prop;
         rule<> name;
         rule<> value;
         rule<> quote;
         rule<> number;
+        rule<> dotted;
+        rule<> invoke;
+        rule<> assign;
 
         boost::spirit::qi::symbols<char>
             equality_op,
@@ -281,6 +302,7 @@ namespace lab
             using boost::spirit::qi::fail;
             using boost::spirit::lazy;
 
+            using boost::phoenix::bind;
             using boost::phoenix::construct;
             using boost::phoenix::val;
 
@@ -306,22 +328,14 @@ namespace lab
                 ;
 
             stmt
-                %= decl
+                %= ';' // empty statement
+                |  decl
                 |  func
                 |  type
                 |  speak
                 |  with
                 |  see
-                |  expr
-                |  assignment
-                |  ';'
-                ;
-
-            assignment
-                =  expr.name
-                >  '='
-                >  expr
-                >  ';'
+                |  ( expr > ';' )
                 ;
 
             with
@@ -335,47 +349,69 @@ namespace lab
                 ;
 
 
-            dashes
-                = repeat(3, inf)[ lit('-') ]
+            dashes_a
+                =  lexeme[ repeat(3, inf)[ '-' ] ]
+                ;
+            dashes_b
+                =  lexeme[ repeat(3, inf)[ '-' ] ]
                 ;
 
             sblock
-                = dashes
-                > stmts
-                > dashes
+                =  dashes_a
+                > -stmts
+                >> dashes_b
                 ;
-
 
             params
-                = '('
-                > -( identifier % ',' )
-                > ')'
+                =  '('
+                >  -( identifier % ',' )
+                >  ')'
                 ;
 
+            auto a_decl_id = [](const std::string & s){ std::clog<<"decl: "<<s<<std::endl; };
+            auto a_func_id = [](const std::string & s){ std::clog<<"func: "<<s<<std::endl; };
+            auto a_type_id = [](const std::string & s){ std::clog<<"type: "<<s<<std::endl; };
+            auto a_speak_ids = [](const std::vector<std::string> & s){ std::clog<<"speak: "<<s.size()<<std::endl; };
+
             decl
-                = lexeme["decl" >> space]
-                > ( ( identifier >> -( '=' > expr ) ) % ',')
-                > ';'
+                =  lexeme["decl" >> space]
+                >  (
+                       (
+                           identifier[ a_decl_id ]
+                           >> -( '=' > expr )
+                       ) % ','
+                   )
+                >  ';'
                 ;
 
             func
-                = lexeme["func" >> space]
-                > identifier > params
-                > sblock
+                =  lexeme["func" >> space]
+                >  identifier[ a_func_id ]
+                >  params
+                >  sblock
                 ;
 
             type
-                = lexeme["type" >> space]
-                > identifier >> -params
-                > sblock
+                =  lexeme["type" >> space]
+                >  identifier[ a_type_id ]
+                >> -params
+                >  sblock
                 ;
 
             speak
-                = lexeme["speak" >> space]
-                > ( identifier % '>' )
-                > dashes
-                // > temp
-                > dashes
+                =  lexeme["speak" >> space]
+                >  ( identifier % '>' )[ a_speak_ids ]
+                >  speak_source
+                ;
+
+            speak_dashes_a = repeat(3, inf)[ '-' ];
+            speak_dashes_b = eol >> speak_dashes_a;
+            speak_source
+                = lexeme
+                [ speak_dashes_a >> -eol
+                  >> *(char_ - speak_dashes_b)
+                  >> speak_dashes_b
+                ]
                 ;
 
             BOOST_SPIRIT_DEBUG_NODES(
@@ -385,10 +421,13 @@ namespace lab
                 (func)
                 (type)
                 (speak)
-                (assignment)
+                (speak_dashes_a)
+                (speak_dashes_b)
+                (speak_source)
                 (with)
                 (see)
-                (dashes)
+                (dashes_a)
+                (dashes_b)
                 (sblock)
             );
 
@@ -404,21 +443,24 @@ namespace lab
         template <class Spec = void()>
         using rule = boost::spirit::qi::rule<Iterator, Spec, Locals, SpaceType>;
 
+        rule< std::string() > identifier;
+
         rule< ast::node() > stmts;
         rule<> stmt;
         rule<> decl;
         rule<> func;
         rule<> type;
         rule<> speak;
+        rule<> speak_source;
         rule<> params;
         rule<> with;
         rule<> see;
 
-        rule<> assignment;
-        rule<> identifier;
-
-        rule<> dashes;
+        rule<> dashes_a;
+        rule<> dashes_b;
         rule<> sblock;
+
+        boost::spirit::qi::rule<Iterator> speak_dashes_a, speak_dashes_b;
 
         expression<Iterator, Locals, SpaceType> expr;
     };
