@@ -3,12 +3,21 @@ fun #* comment *#  ();
 fun(1, 2, 3, fun('a', 'b', 'c'));
 
 speak template > bash > python
---------
+------------------------------
 speak "blah, blah, blah"
---------
+------------------------------
+
+type T1
+-------
+    std.out("blah, blah, ...");
+-------
 
 func foo() --- ; ---
 
+type T2
+-------
+    
+-------
 
 .name;
 
@@ -33,3 +42,19 @@ std.out("blah, blah, blah...");
 std #* inline comment *# .out ( "blah, blah, blah..." );
 
 123.123;
+
+a = 123;
+
+{};
+{ name:'foo', value:100 }.get("name");
+
+with {} --- ---
+
+with {}
+------------------------------
+------------------------------
+
+with { name:'foo', value:100 }
+------------------------------
+    std.out("this is $(.name) from an in-mem node\n");
+------------------------------
