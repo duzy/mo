@@ -197,12 +197,9 @@ namespace lab
                 |  nodector
                 ;
 
-            idchar
-                = alnum | '_'
-                ;
             identifier
                 = !keywords
-                >> lexeme[ ( alpha | '_' ) >> *idchar ]
+                >> lexeme[ ( alpha | '_' ) >> *(alnum | '_') ]
                 ;
 
             name
@@ -293,7 +290,6 @@ namespace lab
 
         rule<> primary;
 
-        rule< std::string() > idchar ;
         rule< std::string() > identifier ;
 
         rule<> nodector;
@@ -382,7 +378,7 @@ namespace lab
                 ;
 
             decl
-                =  lexeme[ "decl" >> !expr.idchar ]
+                =  lexeme[ "decl" >> !(alnum | '_')/*expr.idchar*/ ]
                 >  (
                        (
                            expr.identifier[ debug::a_decl_id ]
@@ -393,31 +389,31 @@ namespace lab
                 ;
 
             func
-                =  lexeme[ "func" >> !expr.idchar ]
+                =  lexeme[ "func" >> !(alnum | '_')/*expr.idchar*/ ]
                 >  expr.identifier[ debug::a_func_id ]
                 >  params
                 >  sblock
                 ;
 
             type
-                =  lexeme[ "type" >> !expr.idchar ]
+                =  lexeme[ "type" >> !(alnum | '_')/*expr.idchar*/ ]
                 >  expr.identifier[ debug::a_type_id ]
                 > -params
                 >  sblock
                 ;
 
             with
-                =  lexeme[ "with" >> !expr.idchar ]
+                =  lexeme[ "with" >> !(alnum | '_')/*expr.idchar*/ ]
                 >  expr
                 >  ( sblock | ';' )
                 ;
 
             see
-                =  lexeme[ "see" >> !expr.idchar ]
+                =  lexeme[ "see" >> !(alnum | '_')/*expr.idchar*/ ]
                 ;
 
             speak
-                =  lexeme[ "speak" >> !expr.idchar ]
+                =  lexeme[ "speak" >> !(alnum | '_')/*expr.idchar*/ ]
                 >  ( expr.identifier % '>' )[ debug::a_speak_ids ]
                 >  speak_source
                 ;
