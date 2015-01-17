@@ -9,6 +9,7 @@
 #include <boost/fusion/include/adapt_struct.hpp>
 //#include <boost/variant/recursive_variant.hpp>
 //#include <boost/foreach.hpp>
+#include <boost/bind.hpp>
 #include <iostream>
 #include <fstream>
 
@@ -29,12 +30,20 @@ namespace lab
 {
     namespace debug
     {
+        void a(const std::string & s) {
+            std::clog<<s<<std::endl;
+        }
+
+        void a_name(const std::string & s) {
+            std::clog<<"name: "<<s<<std::endl;
+        }
+
         void a_decl_id(const std::string & s) {
             std::clog<<"decl: "<<s<<std::endl;
         }
 
-        void a_func_id(const std::string & s) {
-            std::clog<<"func: "<<s<<std::endl;
+        void a_proc_id(const std::string & s) {
+            std::clog<<"proc: "<<s<<std::endl;
         }
         
         void a_type_id(const std::string & s) {
@@ -64,7 +73,7 @@ namespace lab
         boost::spirit::qi::rule<Iterator> skip;
     };
 
-    template < class Iterator, class Locals, class SpaceType = skipper<Iterator> >
+    template < class Iterator, class Locals, class SpaceType >
     struct expression : boost::spirit::qi::grammar<Iterator, ast::node(), Locals, SpaceType>
     {
         expression() : expression::base_type(expr, "expression")
@@ -130,7 +139,7 @@ namespace lab
                 "decl",  // declare variables, constants, fields
                 "speak", // 
                 "type",  // 
-                "func",  // 
+                "proc",  // 
                 "see",   // 
                 "with",  // 
                 "any"    // loop on a list or range
@@ -138,15 +147,20 @@ namespace lab
 
             ////////////////////
             expr
-                %= *prefix
-                >>  infix
-                >> *postfix
+                %= !keywords
+                >> -prefix      [ boost::bind(debug::a, "prefix") ]
+                >>  infix       [ boost::bind(debug::a, "infix") ]
+                >> -postfix     [ boost::bind(debug::a, "postfix") ]
                 ;
 
             postfix
                 %= assign
-                |  invoke
-                |  dotted
+                | (
+                    (
+                        invoke | dotted
+                    )
+                    >> -postfix
+                  )
                 ;
 
             infix
@@ -184,26 +198,29 @@ namespace lab
                 ;
 
             unary       // +, -, !
-                = primary
+                = primary       [ boost::bind(debug::a, "unary.primary") ]
                 | ( unary_op > unary )
                 ;
 
             primary
                 =  '(' > expr > ')'
-                |  name
-                |  value
-                |  prop
-                |  dotted
-                |  nodector
+                |  name         [ boost::bind(debug::a, "primary.name") ]
+                |  value        [ boost::bind(debug::a, "primary.value") ]
+                |  prop         [ boost::bind(debug::a, "primary.prop") ]
+                |  dotted       [ boost::bind(debug::a, "primary.dotted") ]
+                |  nodector     [ boost::bind(debug::a, "primary.nodector") ]
                 ;
 
+            idchar
+                =  alnum | '_'
+                ;
             identifier
                 = !keywords
-                >> lexeme[ ( alpha | '_' ) >> *(alnum | '_') ]
+                >> lexeme[ ( alpha | '_' ) >> *(alnum | '_') /*idchar*/ ]
                 ;
 
             name
-                = identifier //+( '.' >> identifier )
+                = identifier    [ debug::a_name ] //+( '.' >> identifier )
                 ;
 
             value
@@ -256,11 +273,27 @@ namespace lab
 
             BOOST_SPIRIT_DEBUG_NODES(
                 (expr)
+                (prefix)
+                (infix)
+                (postfix)
+                (logical_or)
+                (logical_and)
+                (equality)
+                (relational)
+                (additive)
+                (multiplicative)
+                (unary)
                 (primary)
+                (name)
+                (value)
+                (prop)
+                (dotted)
+                (nodector)
+                (quote)
+                (number)
                 (arglist)
                 (invoke)
                 (assign)
-                (nodector)
             );
 
             on_error<fail>
@@ -290,6 +323,7 @@ namespace lab
 
         rule<> primary;
 
+        rule< char > idchar ;
         rule< std::string() > identifier ;
 
         rule<> nodector;
@@ -316,7 +350,7 @@ namespace lab
             keywords ;
     };
 
-    template < class Iterator, class Locals, class SpaceType = skipper<Iterator> >
+    template < class Iterator, class Locals, class SpaceType >
     struct statement : boost::spirit::qi::grammar<Iterator, ast::node(), Locals, SpaceType>
     {
         statement() : statement::base_type(stmts, "statement")
@@ -347,13 +381,13 @@ namespace lab
             boost::spirit::skip_type            skip;
 
             stmts
-                %= +stmt
+                %= +stmt[ boost::bind(debug::a, "stmt") ]
                 ;
 
             stmt
                 %= ';' // empty statement
                 |  decl
-                |  func
+                |  proc
                 |  type
                 |  see
                 |  with
@@ -388,9 +422,9 @@ namespace lab
                 >  ';'
                 ;
 
-            func
-                =  lexeme[ "func" >> !(alnum | '_')/*expr.idchar*/ ]
-                >  expr.identifier[ debug::a_func_id ]
+            proc
+                =  lexeme[ "proc" >> !(alnum | '_')/*expr.idchar*/ ]
+                >  expr.identifier[ debug::a_proc_id ]
                 >  params
                 >  sblock
                 ;
@@ -405,7 +439,7 @@ namespace lab
             with
                 =  lexeme[ "with" >> !(alnum | '_')/*expr.idchar*/ ]
                 >  expr
-                >  ( sblock | ';' )
+                >  ( sblock | ';' )[ boost::bind(debug::a, "with") ]
                 ;
 
             see
@@ -433,7 +467,7 @@ namespace lab
                 (stmts)
                 (stmt)
                 (decl)
-                (func)
+                (proc)
                 (type)
                 (params)
                 (speak)
@@ -460,7 +494,7 @@ namespace lab
         rule< ast::node() > stmts;
         rule<> stmt;
         rule<> decl;
-        rule<> func;
+        rule<> proc;
         rule<> type;
         rule<> speak;
         rule<> params;

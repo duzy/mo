@@ -1,6 +1,10 @@
-fun #* comment *#  (); 
+with { #* nothing but comment *# }
+----------------------------------
+----------------------------------
 
-fun(1, 2, 3, fun('a', 'b', 'c'));
+fun1 #* comment *#  (); 
+
+fun2(1, 2, 3, fun3('a', 'b', 'c'));
 
 speak template > bash > python
 ------------------------------
@@ -12,7 +16,7 @@ type T1
     std.out("blah, blah, ...");
 -------
 
-func foo() --- ; ---
+proc foo() --- ; ---
 
 type T2
 -------
@@ -50,7 +54,7 @@ a = 123;
 
 with {} --- ---
 
-with {}
+with { #* nothing but comment *# }
 ------------------------------
 ------------------------------
 
