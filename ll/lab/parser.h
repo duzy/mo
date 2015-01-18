@@ -19,7 +19,26 @@ namespace lab
     {
         struct node
         {
-            std::string name;
+        };
+
+        struct op : node
+        {
+        };
+
+        struct proc : node
+        {
+        };
+
+        struct type : node
+        {
+        };
+
+        struct with : node
+        {
+        };
+
+        struct see : node
+        {
         };
     }
 }
@@ -98,6 +117,8 @@ namespace lab
             boost::spirit::qi::lexeme_type      lexeme;
             boost::spirit::qi::raw_type         raw;
             boost::spirit::ascii::space_type    space;
+            boost::spirit::inf_type             inf;
+            boost::spirit::repeat_type          repeat;
 
             logical_or_op.add
                 ("||")
@@ -148,9 +169,9 @@ namespace lab
             ////////////////////
             expr
                 %= !keywords
-                >> -prefix      [ boost::bind(debug::a, "prefix") ]
-                >>  infix       [ boost::bind(debug::a, "infix") ]
-                >> -postfix     [ boost::bind(debug::a, "postfix") ]
+                >> -prefix
+                >>  infix
+                >> -postfix
                 ;
 
             postfix
@@ -189,7 +210,7 @@ namespace lab
 
             additive    // +, -
                 =  multiplicative
-                >> *(additive_op > multiplicative)
+                >> *(!dashes >> additive_op > multiplicative)
                 ;
 
             multiplicative // *, /
@@ -198,17 +219,21 @@ namespace lab
                 ;
 
             unary       // +, -, !
-                = primary       [ boost::bind(debug::a, "unary.primary") ]
-                | ( unary_op > unary )
+                = primary
+                | ( !dashes >> unary_op > unary )
                 ;
 
             primary
                 =  '(' > expr > ')'
-                |  name         [ boost::bind(debug::a, "primary.name") ]
-                |  value        [ boost::bind(debug::a, "primary.value") ]
-                |  prop         [ boost::bind(debug::a, "primary.prop") ]
-                |  dotted       [ boost::bind(debug::a, "primary.dotted") ]
-                |  nodector     [ boost::bind(debug::a, "primary.nodector") ]
+                |  name
+                |  value
+                |  prop
+                |  dotted
+                |  nodector
+                ;
+
+            dashes
+                =  lexeme[ repeat(3, inf)[ '-' ] ]
                 ;
 
             idchar
@@ -220,7 +245,7 @@ namespace lab
                 ;
 
             name
-                = identifier    [ debug::a_name ] //+( '.' >> identifier )
+                = identifier
                 ;
 
             value
@@ -337,6 +362,8 @@ namespace lab
         rule<> invoke;
         rule<> assign;
 
+        boost::spirit::qi::rule<Iterator> dashes;
+
         boost::spirit::qi::symbols<char>
             equality_op,
             relational_op,
@@ -381,7 +408,7 @@ namespace lab
             boost::spirit::skip_type            skip;
 
             stmts
-                %= +stmt[ boost::bind(debug::a, "stmt") ]
+                %= +stmt
                 ;
 
             stmt
@@ -392,17 +419,13 @@ namespace lab
                 |  see
                 |  with
                 |  speak
-                |  ( !dashes >> expr > ';' )
-                ;
-
-            dashes
-                =  lexeme[ repeat(3, inf)[ '-' ] ]
+                |  ( expr > ';' )
                 ;
 
             sblock
-                =  dashes
+                =  expr.dashes
                 > -stmts
-                >  dashes
+                >  expr.dashes
                 ;
 
             params
@@ -415,7 +438,7 @@ namespace lab
                 =  lexeme[ "decl" >> !(alnum | '_')/*expr.idchar*/ ]
                 >  (
                        (
-                           expr.identifier[ debug::a_decl_id ]
+                           expr.identifier
                            >> -( '=' > expr )
                        ) % ','
                    )
@@ -424,14 +447,14 @@ namespace lab
 
             proc
                 =  lexeme[ "proc" >> !(alnum | '_')/*expr.idchar*/ ]
-                >  expr.identifier[ debug::a_proc_id ]
+                >  expr.identifier
                 >  params
                 >  sblock
                 ;
 
             type
                 =  lexeme[ "type" >> !(alnum | '_')/*expr.idchar*/ ]
-                >  expr.identifier[ debug::a_type_id ]
+                >  expr.identifier
                 > -params
                 >  sblock
                 ;
@@ -439,27 +462,31 @@ namespace lab
             with
                 =  lexeme[ "with" >> !(alnum | '_')/*expr.idchar*/ ]
                 >  expr
-                >  ( sblock | ';' )[ boost::bind(debug::a, "with") ]
+                >  ( sblock | ';' )
                 ;
 
             see
                 =  lexeme[ "see" >> !(alnum | '_')/*expr.idchar*/ ]
+                >  expr
+                >  sblock
                 ;
 
             speak
                 =  lexeme[ "speak" >> !(alnum | '_')/*expr.idchar*/ ]
-                >  ( expr.identifier % '>' )[ debug::a_speak_ids ]
+                >  ( expr.identifier % '>' )
                 >  speak_source
                 ;
 
             speak_stopper
-                = eol >> dashes
+                = eol >> expr.dashes
                 ;
             speak_source
                 = lexeme
-                [ dashes >> -eol
-                  >> *(char_ - speak_stopper)
-                  >> speak_stopper
+                [
+                 expr.dashes
+                 >> -eol
+                 >> *(char_ - speak_stopper)
+                 >> speak_stopper
                 ]
                 ;
 
@@ -475,7 +502,6 @@ namespace lab
                 (speak_source)
                 (with)
                 (see)
-                (dashes)
                 (sblock)
             );
 
@@ -503,7 +529,7 @@ namespace lab
 
         rule<> sblock;
 
-        boost::spirit::qi::rule<Iterator> dashes, speak_stopper;
+        boost::spirit::qi::rule<Iterator> speak_stopper;
         boost::spirit::qi::rule<Iterator, Locals> speak_source;
 
         expression<Iterator, Locals, SpaceType> expr;
