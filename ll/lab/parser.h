@@ -7,9 +7,10 @@
 #include <boost/spirit/include/phoenix_object.hpp>
 #include <boost/spirit/include/phoenix_bind.hpp>
 #include <boost/fusion/include/adapt_struct.hpp>
-//#include <boost/variant/recursive_variant.hpp>
+#include <boost/variant/recursive_variant.hpp>
 //#include <boost/foreach.hpp>
 #include <boost/bind.hpp>
+#include <boost/optional.hpp>
 #include <iostream>
 #include <fstream>
 
@@ -17,33 +18,137 @@ namespace lab
 {
     namespace ast
     {
-        struct node
+        struct empty {};
+        struct decl;
+        struct proc;
+        struct type;
+        struct see;
+        struct with;
+        struct speak;
+        struct expr;
+        
+        typedef boost::variant<
+            empty
+            , boost::recursive_wrapper<decl>
+            , boost::recursive_wrapper<proc>
+            , boost::recursive_wrapper<type>
+            , boost::recursive_wrapper<see>
+            , boost::recursive_wrapper<with>
+            , boost::recursive_wrapper<speak>
+            , boost::recursive_wrapper<expr>
+            >
+        stmt;
+        
+        struct stmts : std::list<stmt> {};
+
+        struct block
+        {
+            std::string _name;
+            stmts _stmts;
+        };
+
+        enum class opcode : int
+        {
+            null,
+
+                br,   // conditional branch
+                swi,  // switch
+                call,  // call a procedure (function)
+
+                add,
+                sub,
+                mul,
+                div,
+                mod,
+                pow,
+                log,
+                exp,
+
+                sin,
+                cos,
+                tan,
+                sec,
+                asin,
+                acos,
+                atan,
+                asec,
+                sinh,
+                cosh,
+                tanh,
+                sech,
+
+                neg,
+                abs,
+
+                gcd,
+                lcm,
+
+                cast,
+        };
+
+        /**
+         *
+         */
+        struct op
+        {
+            opcode code;
+            std::string name;
+        };
+
+        struct expr
         {
         };
 
-        struct op : node
+        struct declsym
         {
+            std::string _name;
+            boost::optional<expr> _expr;
         };
 
-        struct proc : node
+        struct decl : std::list<declsym> {};
+
+        struct proc
         {
+            std::string _name;
+            std::list<std::string> _params;
+            block _block;
         };
 
-        struct type : node
+        struct type {};
+        struct see {};
+        struct with {};
+        struct speak
         {
-        };
-
-        struct with : node
-        {
-        };
-
-        struct see : node
-        {
+            std::list<std::string> _langs;
+            std::string _source;
         };
     }
 }
 
-BOOST_FUSION_ADAPT_STRUCT(lab::ast::node, (std::string, name));
+BOOST_FUSION_ADAPT_STRUCT(
+    lab::ast::block,
+    (std::string, _name)
+    (lab::ast::stmts, _stmts)
+)
+
+BOOST_FUSION_ADAPT_STRUCT(
+    lab::ast::declsym,
+    (std::string, _name)
+    (boost::optional<lab::ast::expr>, _expr)
+)
+
+BOOST_FUSION_ADAPT_STRUCT(
+    lab::ast::speak,
+    (std::list<std::string>, _langs)
+    (std::string, _source)
+)
+
+BOOST_FUSION_ADAPT_STRUCT(
+    lab::ast::proc,
+    (std::string, _name)
+    (std::list<std::string>, _params)
+    (lab::ast::block, _block)
+)
 
 namespace lab
 {
@@ -93,7 +198,7 @@ namespace lab
     };
 
     template < class Iterator, class Locals, class SpaceType >
-    struct expression : boost::spirit::qi::grammar<Iterator, ast::node(), Locals, SpaceType>
+    struct expression : boost::spirit::qi::grammar<Iterator, ast::expr(), Locals, SpaceType>
     {
         expression() : expression::base_type(expr, "expression")
         {
@@ -333,7 +438,7 @@ namespace lab
         template <class Spec = void()>
         using rule = boost::spirit::qi::rule<Iterator, Spec, Locals, SpaceType>;
 
-        rule< ast::node() > expr;
+        rule< ast::expr() > expr;
         rule<> prefix;
         rule<> infix;
         rule<> postfix;
@@ -378,10 +483,12 @@ namespace lab
     };
 
     template < class Iterator, class Locals, class SpaceType >
-    struct statement : boost::spirit::qi::grammar<Iterator, ast::node(), Locals, SpaceType>
+    struct statement : boost::spirit::qi::grammar<Iterator, ast::stmts(), Locals, SpaceType>
     {
         statement() : statement::base_type(stmts, "statement")
         {
+            using boost::spirit::qi::as;
+            using boost::spirit::qi::attr_cast;
             using boost::spirit::qi::on_error;
             using boost::spirit::qi::fail;
             using boost::spirit::lazy;
@@ -407,6 +514,8 @@ namespace lab
             boost::spirit::inf_type             inf;
             boost::spirit::skip_type            skip;
 
+            as<std::list<std::string>> as_string_list;
+
             stmts
                 %= +stmt
                 ;
@@ -422,7 +531,7 @@ namespace lab
                 |  ( expr > ';' )
                 ;
 
-            sblock
+            block
                 =  expr.dashes
                 > -stmts
                 >  expr.dashes
@@ -449,31 +558,31 @@ namespace lab
                 =  lexeme[ "proc" >> !(alnum | '_')/*expr.idchar*/ ]
                 >  expr.identifier
                 >  params
-                >  sblock
+                >  block
                 ;
 
             type
                 =  lexeme[ "type" >> !(alnum | '_')/*expr.idchar*/ ]
                 >  expr.identifier
                 > -params
-                >  sblock
+                >  block
                 ;
 
             with
                 =  lexeme[ "with" >> !(alnum | '_')/*expr.idchar*/ ]
                 >  expr
-                >  ( sblock | ';' )
+                >  ( block | ';' )
                 ;
 
             see
                 =  lexeme[ "see" >> !(alnum | '_')/*expr.idchar*/ ]
                 >  expr
-                >  sblock
+                >  block
                 ;
 
             speak
                 =  lexeme[ "speak" >> !(alnum | '_')/*expr.idchar*/ ]
-                >  ( expr.identifier % '>' )
+                >  as_string_list[ expr.identifier % '>' ]
                 >  speak_source
                 ;
 
@@ -502,7 +611,7 @@ namespace lab
                 (speak_source)
                 (with)
                 (see)
-                (sblock)
+                (block)
             );
 
             on_error<fail>
@@ -517,20 +626,20 @@ namespace lab
         template <class Spec = void()>
         using rule = boost::spirit::qi::rule<Iterator, Spec, Locals, SpaceType>;
 
-        rule< ast::node() > stmts;
-        rule<> stmt;
-        rule<> decl;
-        rule<> proc;
-        rule<> type;
-        rule<> speak;
-        rule<> params;
-        rule<> with;
-        rule<> see;
+        rule< ast::stmts() > stmts;
+        rule< ast::stmt() > stmt;
+        rule< ast::decl() > decl;
+        rule< ast::proc() > proc;
+        rule< ast::type() > type;
+        rule< ast::speak() > speak;
+        rule< std::list<std::string>() > params;
+        rule< ast::with() > with;
+        rule< ast::see() > see;
 
-        rule<> sblock;
+        rule< ast::block() > block;
 
         boost::spirit::qi::rule<Iterator> speak_stopper;
-        boost::spirit::qi::rule<Iterator, Locals> speak_source;
+        boost::spirit::qi::rule<Iterator, Locals, std::string()> speak_source;
 
         expression<Iterator, Locals, SpaceType> expr;
     };
@@ -541,7 +650,7 @@ namespace lab
         class Locals = boost::spirit::qi::locals<std::string>,
         class SpaceType = skipper<Iterator>
     >
-    struct grammar : boost::spirit::qi::grammar<Iterator, ast::node(), Locals, SpaceType>
+    struct grammar : boost::spirit::qi::grammar<Iterator, ast::stmts(), Locals, SpaceType>
     {
         grammar() : grammar::base_type(top, "lab")
         {
@@ -572,13 +681,13 @@ namespace lab
         template <class Spec = void()>
         using rule = boost::spirit::qi::rule<Iterator, Spec, Locals, SpaceType>;
 
-        rule<ast::node()> top;
+        rule< ast::stmts() > top;
         rule<> body;
 
         statement<Iterator, Locals, SpaceType> stmt;
     };
 
-    ast::node parse_file(const std::string & filename)
+    ast::stmts parse_file(const std::string & filename)
     {
         std::ifstream in(filename.c_str(), std::ios_base::in);
         in.unsetf(std::ios::skipws); // No white space skipping!
@@ -589,7 +698,7 @@ namespace lab
                   std::back_inserter(source));
 
         grammar<std::string::const_iterator> gmr;
-        ast::node prog;
+        ast::stmts prog;
 
         std::string::const_iterator iter = source.begin();
         std::string::const_iterator end = source.end();

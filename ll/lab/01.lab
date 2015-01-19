@@ -52,13 +52,13 @@ func foo(a, b, c)
     any :one { 1 < _ } [1, 2, 3, 4, 5, 6, 7, 8, 9]
 -----------------
 
-decl a speak "template" --- blah blah blah $(_)... ---
-decl b = speak "template" --- blah blah blah... ---
+decl a speak template --- blah blah blah $(_)... ---
+decl b = speak template --- blah blah blah... ---
 
 std.outln(a(_));
 std.outln(b);
 
-speak "template"
+speak template
 ------------------------
 any text would go here...
 .   if a == 0
@@ -67,12 +67,12 @@ any text would go here...
 blah, blah, blah...
 ------------------------
 
-with { name:'foo' } speak "template"
+with { name:'foo' } speak template
 --------------------------------------
 $(.name)...
 --------------------------------------
 
-speak "template" > "bash"
+speak template > bash
 -------------------------
 # This is a common Bash script block
 .....if 1
@@ -103,7 +103,7 @@ see v
     std.outln("this is case anyting else");
 ------
 
-speak "rule"
+speak rule
 --------------------------------------------------
     "some/file/a" : "something"
     --------------------------
