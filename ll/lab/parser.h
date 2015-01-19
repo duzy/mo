@@ -474,21 +474,20 @@ namespace lab
         using rule = boost::spirit::qi::rule<Iterator, Spec, Locals, SpaceType>;
 
         rule< ast::expr() > expr;
-        rule<> prefix;
-        rule<> infix;
-        rule<> postfix;
-            
-        rule<> equality;
-        rule<> relational;
-        rule<> logical_or;
-        rule<> logical_and;
-        rule<> additive;
-        rule<> multiplicative;
-        rule<> unary;
+        rule< /*ast::expr()*/ > prefix;
+        rule< ast::expr() > infix;
+        rule< ast::expr() > postfix;
 
+        rule< ast::expr() > logical_or;
+        rule< ast::expr() > logical_and;
+        rule< ast::expr() > equality;
+        rule< ast::expr() > relational;
+        rule< ast::expr() > additive;
+        rule< ast::expr() > multiplicative;
+        rule<> unary;
         rule<> primary;
 
-        rule< char > idchar ;
+        rule< char() > idchar ;
         rule< std::string() > identifier ;
 
         rule<> nodector;
@@ -536,11 +535,15 @@ namespace lab
             boost::spirit::qi::_2_type          _2; // qi::labels
             boost::spirit::qi::_3_type          _3; // qi::labels
             boost::spirit::qi::_4_type          _4; // qi::labels
+            boost::spirit::qi::_a_type          _a;
+            boost::spirit::qi::_r1_type         _r1;
             boost::spirit::qi::char_type        char_;
             boost::spirit::qi::lit_type         lit;
             boost::spirit::qi::alpha_type       alpha;
             boost::spirit::qi::alnum_type       alnum;
+            boost::spirit::qi::attr_type        attr;
             boost::spirit::qi::lexeme_type      lexeme;
+            boost::spirit::qi::omit_type      omit;
             boost::spirit::ascii::space_type    space;
             boost::spirit::repeat_type          repeat;
             boost::spirit::eol_type             eol;
@@ -556,19 +559,19 @@ namespace lab
                 ;
 
             stmt
-                %= ';' // empty statement
-                |  decl
+                %= decl
                 |  proc
                 |  type
                 |  see
                 |  with
                 |  speak
-                |  ( expr > ';' )
+                |  ( expr > omit[ char_(';') ] )
+                |  ( attr(ast::empty()) >> omit[ char_(';') ] ) // empty statement
                 ;
 
             block
                 =  expr.dashes
-                > -stmts
+                >> attr( std::string() ) > -stmts
                 >  expr.dashes
                 ;
 
@@ -593,26 +596,26 @@ namespace lab
                 =  lexeme[ "proc" >> !(alnum | '_')/*expr.idchar*/ ]
                 >  expr.identifier
                 >  params
-                >  block
+                >  block(std::string("proc"))
                 ;
 
             type
                 =  lexeme[ "type" >> !(alnum | '_')/*expr.idchar*/ ]
                 >  expr.identifier
                 > -params
-                >  block
+                >  block(std::string("type"))
                 ;
 
             with
                 =  lexeme[ "with" >> !(alnum | '_')/*expr.idchar*/ ]
                 >  expr
-                >  ( block | ';' )
+                >  ( block(std::string("with")) | ';' )
                 ;
 
             see
                 =  lexeme[ "see" >> !(alnum | '_')/*expr.idchar*/ ]
                 >  expr
-                >  block
+                >  block(std::string("see"))
                 ;
 
             speak
@@ -671,7 +674,7 @@ namespace lab
         rule< ast::with() > with;
         rule< ast::see() > see;
 
-        rule< ast::block() > block;
+        rule< ast::block(std::string) > block;
 
         boost::spirit::qi::rule<Iterator> speak_stopper;
         boost::spirit::qi::rule<Iterator, Locals, std::string()> speak_source;
@@ -701,8 +704,7 @@ namespace lab
             boost::spirit::qi::_4_type          _4; // qi::labels
             boost::spirit::eoi_type             eoi;
 
-            top = body > eoi ;
-            body = stmt ;
+            top = stmt > eoi ;
 
             on_error<fail>
             (
@@ -717,7 +719,6 @@ namespace lab
         using rule = boost::spirit::qi::rule<Iterator, Spec, Locals, SpaceType>;
 
         rule< ast::stmts() > top;
-        rule<> body;
 
         statement<Iterator, Locals, SpaceType> stmt;
     };
