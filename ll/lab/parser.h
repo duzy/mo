@@ -114,9 +114,25 @@ namespace lab
             block _block;
         };
 
-        struct type {};
-        struct see {};
-        struct with {};
+        struct type
+        {
+            std::string _name;
+            boost::optional<std::list<std::string>> _params;
+            block _block;
+        };
+
+        struct with
+        {
+            expr _expr;
+            boost::optional<block> _block;
+        };
+
+        struct see
+        {
+            expr _expr;
+            block _block;
+        };
+
         struct speak
         {
             std::list<std::string> _langs;
@@ -124,12 +140,6 @@ namespace lab
         };
     }
 }
-
-BOOST_FUSION_ADAPT_STRUCT(
-    lab::ast::block,
-    (std::string, _name)
-    (lab::ast::stmts, _stmts)
-)
 
 BOOST_FUSION_ADAPT_STRUCT(
     lab::ast::declsym,
@@ -148,6 +158,31 @@ BOOST_FUSION_ADAPT_STRUCT(
     (std::string, _name)
     (std::list<std::string>, _params)
     (lab::ast::block, _block)
+)
+
+BOOST_FUSION_ADAPT_STRUCT(
+    lab::ast::type,
+    (std::string, _name)
+    (boost::optional<std::list<std::string>>, _params)
+    (lab::ast::block, _block)
+)
+
+BOOST_FUSION_ADAPT_STRUCT(
+    lab::ast::with,
+    (lab::ast::expr, _expr)
+    (boost::optional<lab::ast::block>, _block)
+)
+
+BOOST_FUSION_ADAPT_STRUCT(
+    lab::ast::see,
+    (lab::ast::expr, _expr)
+    (lab::ast::block, _block)
+)
+
+BOOST_FUSION_ADAPT_STRUCT(
+    lab::ast::block,
+    (std::string, _name)
+    (lab::ast::stmts, _stmts)
 )
 
 namespace lab
