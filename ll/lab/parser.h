@@ -97,6 +97,7 @@ namespace lab
         {
             opcode _operator;
             operand _operand;
+            //std::list<operand> _rest;
         };
 
         struct expr
