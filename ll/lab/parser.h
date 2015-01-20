@@ -51,6 +51,7 @@ namespace lab
         {
             op_nil,
 
+            // unary
             op_unary_plus,
             op_unary_minus,
             op_unary_not,
@@ -327,10 +328,14 @@ namespace lab
 
             ////////////////////
             expr
+                /*
                 %= !keywords
                 >> prefix
+                */
+                %= logical_or
                 ;
 
+            /*
             prefix
                 =  infix
                 ;
@@ -339,6 +344,7 @@ namespace lab
                 =  logical_or
                 >> -postfix
                 ;
+            */
 
             postfix
                 = assign
@@ -394,11 +400,9 @@ namespace lab
                 |  quote
                 |  double_
                 |  int_
-                /*
                 |  prop
                 |  dotted
                 |  nodector
-                */
                 ;
 
             dashes
