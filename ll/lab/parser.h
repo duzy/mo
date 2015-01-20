@@ -47,56 +47,57 @@ namespace lab
             stmts _stmts;
         };
 
-        enum class opcode : int
+        enum class opcode
         {
-            null,
+            nil,
+
+                unary_plus,
+                unary_minus,
+                unary_not,
+
+            // multiplicative
+                mul,
+                div,
+
+            // additive
+                add,
+                sub,
+
+            // relational
+                lt, // less then
+                le, // less or equal
+                gt, // greater then
+                ge, // greater or equal
+
+            // equality
+                eq,
+                ne,
+
+            // logical and/or
+                a,
+                o,
 
                 br,   // conditional branch
                 swi,  // switch
                 call,  // call a procedure (function)
-
-                add,
-                sub,
-                mul,
-                div,
-                mod,
-                pow,
-                log,
-                exp,
-
-                sin,
-                cos,
-                tan,
-                sec,
-                asin,
-                acos,
-                atan,
-                asec,
-                sinh,
-                cosh,
-                tanh,
-                sech,
-
-                neg,
-                abs,
-
-                gcd,
-                lcm,
-
-                cast,
         };
 
-        /**
-         *
-         */
-        struct op
+        struct identifier
         {
-            opcode code;
             std::string name;
         };
 
+        typedef boost::variant<
+            int, unsigned int, float, double, std::string
+            , boost::recursive_wrapper<expr>
+            >
+        operand;
+
         struct expr
         {
+            opcode _operator;
+            operand _operand;
+            std::list<boost::recursive_wrapper<expr>> _rest;
         };
 
         struct declsym
@@ -185,6 +186,13 @@ BOOST_FUSION_ADAPT_STRUCT(
     (lab::ast::stmts, _stmts)
 )
 
+BOOST_FUSION_ADAPT_STRUCT(
+    lab::ast::expr,
+    (lab::ast::opcode, _operator)
+    (lab::ast::operand, _operand)
+    (std::list<boost::recursive_wrapper<lab::ast::expr>>, _rest)
+)
+
 namespace lab
 {
     namespace debug
@@ -261,39 +269,39 @@ namespace lab
             boost::spirit::repeat_type          repeat;
 
             logical_or_op.add
-                ("||")
+                ("||", ast::opcode::o)
                 ;
             
             logical_and_op.add
-                ("&&")
+                ("&&", ast::opcode::a)
                 ;
 
             equality_op.add
-                ("==")
-                ("!=")
+                ("==", ast::opcode::eq)
+                ("!=", ast::opcode::ne)
                 ;
 
             relational_op.add
-                ("<")
-                ("<=")
-                (">")
-                (">=")
+                ("<",  ast::opcode::lt)
+                ("<=", ast::opcode::le)
+                (">",  ast::opcode::gt)
+                (">=", ast::opcode::ge)
                 ;
 
             additive_op.add
-                ("+")
-                ("-")
+                ("+", ast::opcode::add)
+                ("-", ast::opcode::sub)
                 ;
             
             multiplicative_op.add
-                ("*")
-                ("/")
+                ("*", ast::opcode::mul)
+                ("/", ast::opcode::div)
                 ;
 
             unary_op.add
-                ("+")
-                ("-")
-                ("!")
+                ("+", ast::opcode::unary_plus)
+                ("-", ast::opcode::unary_minus)
+                ("!", ast::opcode::unary_not)
                 ;
 
             keywords =
@@ -311,21 +319,27 @@ namespace lab
                 %= !keywords
                 >> -prefix
                 >>  infix
+                ;
+
+            /*
+            prefix
+                = ?
+                ;
+            */
+
+            infix
+                =  logical_or
                 >> -postfix
                 ;
 
             postfix
-                %= assign
+                = assign
                 | (
                     (
                         invoke | dotted
                     )
                     >> -postfix
                   )
-                ;
-
-            infix
-                =  logical_or.alias()
                 ;
 
             logical_or  // ||
@@ -359,17 +373,24 @@ namespace lab
                 ;
 
             unary       // +, -, !
+                /*
                 = primary
                 | ( !dashes >> unary_op > unary )
+                */
+                = ( !dashes >> unary_op > unary )
                 ;
 
             primary
                 =  '(' > expr > ')'
                 |  name
-                |  value
+                |  quote
+                |  double_
+                |  int_
+                /*
                 |  prop
                 |  dotted
                 |  nodector
+                */
                 ;
 
             dashes
@@ -388,21 +409,11 @@ namespace lab
                 = identifier
                 ;
 
-            value
-                %= quote
-                |  number
-                ;
-
             quote
                 = (
                     ( '\'' >> *(char_ - '\'') >> '\'' ) |
                     ( '"' >> *(char_ - '"') >> '"' )
                   )
-                ;
-
-            number
-                = double_
-                | int_
                 ;
 
             prop
@@ -450,12 +461,10 @@ namespace lab
                 (unary)
                 (primary)
                 (name)
-                (value)
                 (prop)
                 (dotted)
                 (nodector)
                 (quote)
-                (number)
                 (arglist)
                 (invoke)
                 (assign)
@@ -474,7 +483,7 @@ namespace lab
         using rule = boost::spirit::qi::rule<Iterator, Spec, Locals, SpaceType>;
 
         rule< ast::expr() > expr;
-        rule< /*ast::expr()*/ > prefix;
+        rule< ast::expr() > prefix;
         rule< ast::expr() > infix;
         rule< ast::expr() > postfix;
 
@@ -484,26 +493,25 @@ namespace lab
         rule< ast::expr() > relational;
         rule< ast::expr() > additive;
         rule< ast::expr() > multiplicative;
-        rule<> unary;
-        rule<> primary;
+
+        rule< ast::operand() > unary;
+        rule< ast::operand() > primary;
 
         rule< char() > idchar ;
         rule< std::string() > identifier ;
 
         rule<> nodector;
-        rule<> arglist;
+        rule< std::list<ast::expr>() > arglist;
         rule<> prop;
-        rule<> name;
-        rule<> value;
-        rule<> quote;
-        rule<> number;
+        rule< std::string() > name;
+        rule< std::string() > quote;
         rule<> dotted;
         rule<> invoke;
         rule<> assign;
 
         boost::spirit::qi::rule<Iterator> dashes;
 
-        boost::spirit::qi::symbols<char>
+        boost::spirit::qi::symbols<char, ast::opcode>
             equality_op,
             relational_op,
             logical_or_op,

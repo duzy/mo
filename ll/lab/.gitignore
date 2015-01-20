@@ -1,3 +1,5 @@
-/*.bc
-/*.o
-/*.out
+*.bc
+*.o
+*.out
+*.mbc
+/main
