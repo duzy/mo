@@ -47,39 +47,39 @@ namespace lab
             stmts _stmts;
         };
 
-        enum class opcode
+        enum opcode
         {
-            nil,
+            op_nil,
 
-                unary_plus,
-                unary_minus,
-                unary_not,
+            op_unary_plus,
+            op_unary_minus,
+            op_unary_not,
 
             // multiplicative
-                mul,
-                div,
+            op_mul,
+            op_div,
 
             // additive
-                add,
-                sub,
+            op_add,
+            op_sub,
 
             // relational
-                lt, // less then
-                le, // less or equal
-                gt, // greater then
-                ge, // greater or equal
+            op_lt, // less then
+            op_le, // less or equal
+            op_gt, // greater then
+            op_ge, // greater or equal
 
             // equality
-                eq,
-                ne,
+            op_eq,
+            op_ne,
 
             // logical and/or
-                a,
-                o,
+            op_a,
+            op_o,
 
-                br,   // conditional branch
-                swi,  // switch
-                call,  // call a procedure (function)
+            op_br,   // conditional branch
+            op_swi,  // switch
+            op_call,  // call a procedure (function)
         };
 
         struct identifier
@@ -93,11 +93,16 @@ namespace lab
             >
         operand;
 
-        struct expr
+        struct op
         {
             opcode _operator;
             operand _operand;
-            std::list<boost::recursive_wrapper<expr>> _rest;
+        };
+
+        struct expr
+        {
+            operand _operand;
+            std::list<op> _rest;
         };
 
         struct declsym
@@ -188,9 +193,14 @@ BOOST_FUSION_ADAPT_STRUCT(
 
 BOOST_FUSION_ADAPT_STRUCT(
     lab::ast::expr,
+    (lab::ast::operand, _operand)
+    (std::list<lab::ast::op>, _rest)
+)
+
+BOOST_FUSION_ADAPT_STRUCT(
+    lab::ast::op,
     (lab::ast::opcode, _operator)
     (lab::ast::operand, _operand)
-    (std::list<boost::recursive_wrapper<lab::ast::expr>>, _rest)
 )
 
 namespace lab
@@ -269,39 +279,39 @@ namespace lab
             boost::spirit::repeat_type          repeat;
 
             logical_or_op.add
-                ("||", ast::opcode::o)
+                ("||", ast::op_o)
                 ;
             
             logical_and_op.add
-                ("&&", ast::opcode::a)
+                ("&&", ast::op_a)
                 ;
 
             equality_op.add
-                ("==", ast::opcode::eq)
-                ("!=", ast::opcode::ne)
+                ("==", ast::op_eq)
+                ("!=", ast::op_ne)
                 ;
 
             relational_op.add
-                ("<",  ast::opcode::lt)
-                ("<=", ast::opcode::le)
-                (">",  ast::opcode::gt)
-                (">=", ast::opcode::ge)
+                ("<",  ast::op_lt)
+                ("<=", ast::op_le)
+                (">",  ast::op_gt)
+                (">=", ast::op_ge)
                 ;
 
             additive_op.add
-                ("+", ast::opcode::add)
-                ("-", ast::opcode::sub)
+                ("+", ast::op_add)
+                ("-", ast::op_sub)
                 ;
             
             multiplicative_op.add
-                ("*", ast::opcode::mul)
-                ("/", ast::opcode::div)
+                ("*", ast::op_mul)
+                ("/", ast::op_div)
                 ;
 
             unary_op.add
-                ("+", ast::opcode::unary_plus)
-                ("-", ast::opcode::unary_minus)
-                ("!", ast::opcode::unary_not)
+                ("+", ast::op_unary_plus)
+                ("-", ast::op_unary_minus)
+                ("!", ast::op_unary_not)
                 ;
 
             keywords =
@@ -317,15 +327,12 @@ namespace lab
             ////////////////////
             expr
                 %= !keywords
-                >> -prefix
-                >>  infix
+                >> prefix
                 ;
 
-            /*
             prefix
-                = ?
+                =  infix
                 ;
-            */
 
             infix
                 =  logical_or
@@ -483,6 +490,7 @@ namespace lab
         using rule = boost::spirit::qi::rule<Iterator, Spec, Locals, SpaceType>;
 
         rule< ast::expr() > expr;
+
         rule< ast::expr() > prefix;
         rule< ast::expr() > infix;
         rule< ast::expr() > postfix;
