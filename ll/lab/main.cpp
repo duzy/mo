@@ -1,4 +1,5 @@
 #include "parser.h"
+#include "compiler.h"
 
 template<class T>
 struct is
@@ -8,15 +9,16 @@ struct is
     template<class A> bool operator()(const A &) { return false; }
 };
 
-struct stmt_visitor
+struct stmt_dumper
 {
     typedef void result_type;
 
     int _indent;
 
-    stmt_visitor() : _indent(0) {}
+    stmt_dumper() : _indent(0) {}
 
     std::string indent() const { return 0 < _indent ? std::string(_indent, ' ') : std::string(); }
+    void indent(int n) { _indent += n; }
 
     void operator()(int v)
     {
@@ -51,15 +53,15 @@ struct stmt_visitor
             return;
         }
         std::clog<<indent()<<"expr: ("<<e._operators.size()<<" ops)"<<std::endl;
-        _indent += 4;
+        indent(4);
         boost::apply_visitor(*this, e._operand);
         for (auto op : e._operators) {
             std::clog<<indent()<<"op: "<<op._operator<<std::endl;
-            _indent += 4;
+            indent(4);
             boost::apply_visitor(*this, op._operand);
-            _indent -= 4;
+            indent(-4);
         }
-        _indent -= 4;
+        indent(-4);
     }
 
     void operator()(const lab::ast::none &)
@@ -104,12 +106,19 @@ struct stmt_visitor
     }
 };
 
-int main() {
+int main()
+{
     auto stmts = lab::parse_file("00.lab");
-    stmt_visitor visit;
-    std::clog<<"stmts: "<<stmts.size()<<std::endl;
+    stmt_dumper visit;
+    // std::clog<<"stmts: "<<stmts.size()<<std::endl;
     for (auto stmt : stmts) {
         boost::apply_visitor(visit, stmt);
     }
+
+    lab::compiler::Init();
+    lab::compiler compiler;
+    compiler.compile(stmts);
+
+    lab::compiler::Shutdown();
     return 0;
 }

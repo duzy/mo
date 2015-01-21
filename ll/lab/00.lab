@@ -1,11 +1,12 @@
 proc foo(a) --- ---
 
-foo(1); # invocation
+#foo(1); # invocation
 
-->name;
-->name.foo();
-->name.name.foo();
+#->name;
+#->name.foo();
+#->name.name.foo();
 
-.name;
-.name.foo();
-.name->name.foo();
+#.name;
+#.name.foo();
+#.name->name.foo();
+

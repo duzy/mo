@@ -1,3 +1,5 @@
+#ifndef __LAB_PARSE_H____DUZY__
+#define __LAB_PARSE_H____DUZY__ 1
 #include <boost/config/warning_disable.hpp>
 #include <boost/spirit/include/qi.hpp>
 #include <boost/spirit/include/phoenix_core.hpp>
@@ -6,221 +8,12 @@
 #include <boost/spirit/include/phoenix_stl.hpp>
 #include <boost/spirit/include/phoenix_object.hpp>
 #include <boost/spirit/include/phoenix_bind.hpp>
-#include <boost/fusion/include/adapt_struct.hpp>
-#include <boost/variant/recursive_variant.hpp>
 //#include <boost/foreach.hpp>
 #include <boost/bind.hpp>
-#include <boost/optional.hpp>
 #include <iostream>
 #include <fstream>
 
-namespace lab
-{
-    namespace ast
-    {
-        struct none {};
-        struct decl;
-        struct proc;
-        struct type;
-        struct see;
-        struct with;
-        struct speak;
-        struct expr;
-        struct op;
-        
-        typedef boost::variant<
-            none
-            , boost::recursive_wrapper<decl>
-            , boost::recursive_wrapper<proc>
-            , boost::recursive_wrapper<type>
-            , boost::recursive_wrapper<see>
-            , boost::recursive_wrapper<with>
-            , boost::recursive_wrapper<speak>
-            , boost::recursive_wrapper<expr>
-            >
-        stmt;
-        
-        struct stmts : std::list<stmt> {};
-
-        struct block
-        {
-            std::string _name;
-            stmts _stmts;
-        };
-
-        enum opcode
-        {
-            op_nil,
-
-            // get a reference to attribute
-            op_attr,
-
-            // filtering children
-            op_select,
-
-            // call a procedure (function)
-            op_call,
-
-            // unary
-            op_unary_plus,
-            op_unary_minus,
-            op_unary_not,
-            op_unary_dot,
-            op_unary_arrow,
-
-            // multiplicative
-            op_mul,
-            op_div,
-
-            // additive
-            op_add,
-            op_sub,
-
-            // relational
-            op_lt, // less then
-            op_le, // less or equal
-            op_gt, // greater then
-            op_ge, // greater or equal
-
-            // equality
-            op_eq,
-            op_ne,
-
-            // logical and/or
-            op_a,
-            op_o,
-
-            // assign
-            op_set,
-
-            op_br,   // conditional branch
-            op_swi,  // switch
-        };
-
-        struct identifier
-        {
-            std::string name;
-        };
-
-        typedef boost::variant<
-            none, int, unsigned int, float, double, std::string
-            , boost::recursive_wrapper<expr>
-            >
-        operand;
-
-        struct op
-        {
-            opcode _operator;
-            operand _operand;
-        };
-
-        struct expr
-        {
-            operand _operand;
-            std::list<op> _operators;
-
-            expr() : _operand(), _operators() {}
-            explicit expr(const operand & o) : _operand(o), _operators() {}
-            explicit expr(const op & o) : _operand(), _operators({ o }) {}
-        };
-
-        struct declsym
-        {
-            std::string _name;
-            boost::optional<expr> _expr;
-        };
-
-        struct decl : std::list<declsym> {};
-
-        struct proc
-        {
-            std::string _name;
-            std::list<std::string> _params;
-            block _block;
-        };
-
-        struct type
-        {
-            std::string _name;
-            boost::optional<std::list<std::string>> _params;
-            block _block;
-        };
-
-        struct with
-        {
-            expr _expr;
-            boost::optional<block> _block;
-        };
-
-        struct see
-        {
-            expr _expr;
-            block _block;
-        };
-
-        struct speak
-        {
-            std::list<std::string> _langs;
-            std::string _source;
-        };
-    }
-}
-
-BOOST_FUSION_ADAPT_STRUCT(
-    lab::ast::declsym,
-    (std::string, _name)
-    (boost::optional<lab::ast::expr>, _expr)
-)
-
-BOOST_FUSION_ADAPT_STRUCT(
-    lab::ast::speak,
-    (std::list<std::string>, _langs)
-    (std::string, _source)
-)
-
-BOOST_FUSION_ADAPT_STRUCT(
-    lab::ast::proc,
-    (std::string, _name)
-    (std::list<std::string>, _params)
-    (lab::ast::block, _block)
-)
-
-BOOST_FUSION_ADAPT_STRUCT(
-    lab::ast::type,
-    (std::string, _name)
-    (boost::optional<std::list<std::string>>, _params)
-    (lab::ast::block, _block)
-)
-
-BOOST_FUSION_ADAPT_STRUCT(
-    lab::ast::with,
-    (lab::ast::expr, _expr)
-    (boost::optional<lab::ast::block>, _block)
-)
-
-BOOST_FUSION_ADAPT_STRUCT(
-    lab::ast::see,
-    (lab::ast::expr, _expr)
-    (lab::ast::block, _block)
-)
-
-BOOST_FUSION_ADAPT_STRUCT(
-    lab::ast::block,
-    (std::string, _name)
-    (lab::ast::stmts, _stmts)
-)
-
-BOOST_FUSION_ADAPT_STRUCT(
-    lab::ast::expr,
-    (lab::ast::operand, _operand)
-    (std::list<lab::ast::op>, _operators)
-)
-
-BOOST_FUSION_ADAPT_STRUCT(
-    lab::ast::op,
-    (lab::ast::opcode, _operator)
-    (lab::ast::operand, _operand)
-)
+#include "ast.h"
 
 namespace lab
 {
@@ -732,7 +525,7 @@ namespace lab
             boost::spirit::qi::_4_type          _4; // qi::labels
             boost::spirit::eoi_type             eoi;
 
-            top = stmt > eoi ;
+            top = body > eoi ;
 
             on_error<fail>
             (
@@ -743,37 +536,21 @@ namespace lab
             );
         }
 
-        template <class Spec = void()>
-        using rule = boost::spirit::qi::rule<Iterator, Spec, Locals, SpaceType>;
-
-        rule< ast::stmts() > top;
-
-        statement<Iterator, Locals, SpaceType> stmt;
+        boost::spirit::qi::rule<Iterator, ast::stmts(), Locals, SpaceType> top;
+        statement<Iterator, Locals, SpaceType> body;
     };
 
-    ast::stmts parse_file(const std::string & filename)
+    template <class Iterator>
+    ast::stmts parse(Iterator in_beg, Iterator in_end)
     {
-        std::ifstream in(filename.c_str(), std::ios_base::in);
-        in.unsetf(std::ios::skipws); // No white space skipping!
-
         std::string source; // We will read the contents here.
-        std::copy(std::istream_iterator<char>(in),
-                  std::istream_iterator<char>(),
-                  std::back_inserter(source));
+        std::copy(in_beg, in_end, std::back_inserter(source));
 
-        grammar<std::string::const_iterator> gmr;
         ast::stmts prog;
-
-        std::string::const_iterator iter = source.begin();
-        std::string::const_iterator end = source.end();
-
-#if 1
-        //boost::spirit::ascii::space_type space; // using boost::spirit::ascii::space;
+        grammar<std::string::const_iterator> gmr;
         skipper<std::string::const_iterator> space;
+        std::string::const_iterator iter = source.begin(), end = source.end();
         auto status = boost::spirit::qi::phrase_parse(iter, end, gmr, space, prog);
-#else
-        auto status = boost::spirit::qi::parse(iter, end, gmr, prog);
-#endif
 
         if (status && iter == end) {
             // okay
@@ -782,4 +559,14 @@ namespace lab
         }
         return prog;
     }
+
+    ast::stmts parse_file(const std::string & filename)
+    {
+        std::ifstream in(filename.c_str(), std::ios_base::in);
+        in.unsetf(std::ios::skipws); // No white space skipping!
+        std::istream_iterator<char> beg(in), end;
+        return parse(beg, end);
+    }
 }
+
+#endif//__LAB_PARSE_H____DUZY__
