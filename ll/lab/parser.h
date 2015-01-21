@@ -55,6 +55,9 @@ namespace lab
             // get a reference to attribute
             op_attr,
 
+            // filtering children
+            op_select,
+
             // call a procedure (function)
             op_call,
 
@@ -363,27 +366,6 @@ namespace lab
                 %= assign
                 ;
 
-            /*
-            prefix
-                =  infix
-                ;
-
-            infix
-                =  logical_or
-                >> -postfix
-                ;
-
-            postfix
-                = assign
-                | (
-                    (
-                        invoke | dotted
-                    )
-                    >> -postfix
-                  )
-                ;
-            */
-
             assign
                 =  logical_or
                 >> *(assign_op > logical_or)
@@ -420,18 +402,17 @@ namespace lab
                 ;
 
             unary
-                = invoke
+                = postfix
                 | as_op[ !dashes >> unary_op > unary ]
                 ;
 
-            invoke
-                = dotted
-                >> *(omit['('] >> attr(ast::op_call) >> -invoke > omit[')'])
-                ;
-
-            dotted
+            postfix
                 = primary
-                >> *(omit['.'] >> attr(ast::op_attr) > dotted)
+                >> *(
+                    (omit['('] >> attr(ast::op_call) >> -postfix > omit[')'])   |
+                    (omit['.'] >> attr(ast::op_attr) > postfix)                 |
+                    (omit["->"] >> attr(ast::op_select) > postfix)
+                    )
                 ;
 
             primary
@@ -502,7 +483,6 @@ namespace lab
                 (nodector)
                 (quote)
                 (arglist)
-                (invoke)
                 (assign)
             );
 
@@ -524,7 +504,6 @@ namespace lab
         rule< ast::expr() > infix;
         rule< ast::expr() > postfix;
 
-        rule< ast::expr() > invoke;
         rule< ast::expr() > dotted;
         rule< ast::expr() > list;
 

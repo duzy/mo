@@ -2,6 +2,10 @@ proc foo(a) --- ---
 
 foo(1); # invocation
 
-#.name.foo();
-#.name;
-#->name;
+->name;
+->name.foo();
+->name.name.foo();
+
+.name;
+.name.foo();
+.name->name.foo();
