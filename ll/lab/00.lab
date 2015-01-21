@@ -1,1 +1,7 @@
-a = (1 + 2 + 3) * 3;
+proc foo(a) --- ---
+
+foo(1); # invocation
+
+#.name.foo();
+#.name;
+#->name;

@@ -18,7 +18,7 @@ namespace lab
 {
     namespace ast
     {
-        struct empty {};
+        struct none {};
         struct decl;
         struct proc;
         struct type;
@@ -26,9 +26,10 @@ namespace lab
         struct with;
         struct speak;
         struct expr;
+        struct op;
         
         typedef boost::variant<
-            empty
+            none
             , boost::recursive_wrapper<decl>
             , boost::recursive_wrapper<proc>
             , boost::recursive_wrapper<type>
@@ -51,10 +52,18 @@ namespace lab
         {
             op_nil,
 
+            // get a reference to attribute
+            op_attr,
+
+            // call a procedure (function)
+            op_call,
+
             // unary
             op_unary_plus,
             op_unary_minus,
             op_unary_not,
+            op_unary_dot,
+            op_unary_arrow,
 
             // multiplicative
             op_mul,
@@ -78,9 +87,11 @@ namespace lab
             op_a,
             op_o,
 
+            // assign
+            op_set,
+
             op_br,   // conditional branch
             op_swi,  // switch
-            op_call,  // call a procedure (function)
         };
 
         struct identifier
@@ -89,7 +100,7 @@ namespace lab
         };
 
         typedef boost::variant<
-            int, unsigned int, float, double, std::string
+            none, int, unsigned int, float, double, std::string
             , boost::recursive_wrapper<expr>
             >
         operand;
@@ -98,13 +109,16 @@ namespace lab
         {
             opcode _operator;
             operand _operand;
-            //std::list<operand> _rest;
         };
 
         struct expr
         {
             operand _operand;
-            std::list<op> _rest;
+            std::list<op> _operators;
+
+            expr() : _operand(), _operators() {}
+            explicit expr(const operand & o) : _operand(o), _operators() {}
+            explicit expr(const op & o) : _operand(), _operators({ o }) {}
         };
 
         struct declsym
@@ -196,7 +210,7 @@ BOOST_FUSION_ADAPT_STRUCT(
 BOOST_FUSION_ADAPT_STRUCT(
     lab::ast::expr,
     (lab::ast::operand, _operand)
-    (std::list<lab::ast::op>, _rest)
+    (std::list<lab::ast::op>, _operators)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
@@ -257,6 +271,8 @@ namespace lab
     {
         expression() : expression::base_type(expr, "expression")
         {
+            using boost::spirit::qi::as;
+            using boost::spirit::qi::attr_cast;
             using boost::spirit::qi::on_error;
             using boost::spirit::qi::fail;
 
@@ -267,18 +283,28 @@ namespace lab
             boost::spirit::qi::_2_type          _2;
             boost::spirit::qi::_3_type          _3;
             boost::spirit::qi::_4_type          _4;
+            boost::spirit::qi::_val_type        _val;
             boost::spirit::qi::int_type         int_;
             boost::spirit::qi::double_type      double_;
             boost::spirit::qi::char_type        char_;
+            boost::spirit::qi::attr_type        attr;
             boost::spirit::qi::lit_type         lit;
             boost::spirit::qi::string_type      string;
             boost::spirit::qi::alpha_type       alpha;
             boost::spirit::qi::alnum_type       alnum;
             boost::spirit::qi::lexeme_type      lexeme;
+            boost::spirit::qi::omit_type        omit;
             boost::spirit::qi::raw_type         raw;
             boost::spirit::ascii::space_type    space;
             boost::spirit::inf_type             inf;
             boost::spirit::repeat_type          repeat;
+
+            as<ast::expr> as_expr;
+            as<ast::op> as_op;
+
+            assign_op.add
+                ("=", ast::op_set)
+                ;
 
             logical_or_op.add
                 ("||", ast::op_o)
@@ -314,6 +340,8 @@ namespace lab
                 ("+", ast::op_unary_plus)
                 ("-", ast::op_unary_minus)
                 ("!", ast::op_unary_not)
+                (".", ast::op_unary_dot)
+                ("->", ast::op_unary_arrow)
                 ;
 
             keywords =
@@ -332,7 +360,7 @@ namespace lab
                 %= !keywords
                 >> prefix
                 */
-                %= logical_or
+                %= assign
                 ;
 
             /*
@@ -344,7 +372,6 @@ namespace lab
                 =  logical_or
                 >> -postfix
                 ;
-            */
 
             postfix
                 = assign
@@ -354,6 +381,12 @@ namespace lab
                     )
                     >> -postfix
                   )
+                ;
+            */
+
+            assign
+                =  logical_or
+                >> *(assign_op > logical_or)
                 ;
 
             logical_or  // ||
@@ -386,12 +419,19 @@ namespace lab
                 >> *(multiplicative_op > unary)
                 ;
 
-            unary       // +, -, !
-                /*
+            unary
+                = invoke
+                | as_op[ !dashes >> unary_op > unary ]
+                ;
+
+            invoke
+                = dotted
+                >> *(omit['('] >> attr(ast::op_call) >> -invoke > omit[')'])
+                ;
+
+            dotted
                 = primary
-                | ( !dashes >> unary_op > unary )
-                */
-                = ( !dashes >> unary_op > unary )
+                >> *(omit['.'] >> attr(ast::op_attr) > dotted)
                 ;
 
             primary
@@ -401,7 +441,6 @@ namespace lab
                 |  double_
                 |  int_
                 |  prop
-                |  dotted
                 |  nodector
                 ;
 
@@ -434,23 +473,8 @@ namespace lab
                 > -( '(' > -arglist > ')' )
                 ;
 
-            assign
-                = '='
-                > expr
-                ;
-
-            dotted
-                = '.' > identifier
-                ;
-
             arglist
                 =  expr % ','
-                ;
-
-            invoke
-                =  '('
-                > -arglist
-                >  ')'
                 ;
 
             nodector
@@ -500,31 +524,35 @@ namespace lab
         rule< ast::expr() > infix;
         rule< ast::expr() > postfix;
 
+        rule< ast::expr() > invoke;
+        rule< ast::expr() > dotted;
+        rule< ast::expr() > list;
+
+        rule< ast::expr() > assign;
         rule< ast::expr() > logical_or;
         rule< ast::expr() > logical_and;
         rule< ast::expr() > equality;
         rule< ast::expr() > relational;
         rule< ast::expr() > additive;
         rule< ast::expr() > multiplicative;
+        rule< ast::expr() > unary;
 
-        rule< ast::operand() > unary;
         rule< ast::operand() > primary;
 
-        rule< char() > idchar ;
         rule< std::string() > identifier ;
+        rule< char() > idchar ;
 
         rule<> nodector;
         rule< std::list<ast::expr>() > arglist;
         rule<> prop;
+
         rule< std::string() > name;
         rule< std::string() > quote;
-        rule<> dotted;
-        rule<> invoke;
-        rule<> assign;
 
         boost::spirit::qi::rule<Iterator> dashes;
 
         boost::spirit::qi::symbols<char, ast::opcode>
+            assign_op,
             equality_op,
             relational_op,
             logical_or_op,
@@ -587,7 +615,7 @@ namespace lab
                 |  with
                 |  speak
                 |  ( expr > omit[ char_(';') ] )
-                |  ( attr(ast::empty()) >> omit[ char_(';') ] ) // empty statement
+                |  ( attr(ast::none()) >> omit[ char_(';') ] ) // empty statement
                 ;
 
             block
