@@ -1,10 +1,10 @@
 #ifndef __LAB_COMPILER_H____DUZY__
 #define __LAB_COMPILER_H____DUZY__ 1
-#include "ast.h"
 #include <llvm/ExecutionEngine/GenericValue.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/IRBuilder.h>
+#include "ast.h"
 
 namespace lab
 {
