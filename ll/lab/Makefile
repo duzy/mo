@@ -1,4 +1,4 @@
-LLVM := /open/llvm
+LLVM := $(or $(wildcard /open/llvm),$(wildcard ~/tools/ll/llvm))
 LLVM_CONFIG := $(LLVM)/Debug+Asserts/bin/llvm-config
 CXXFLAGS := -std=c++11 -I$(LLVM)/include
 LOADLIBS := $(shell $(LLVM_CONFIG) --ldflags)
@@ -15,7 +15,7 @@ main: main.o compiler.o
 %.o: %.cpp
 	$(COMPILE.cc) $< -o $@
 
-main.o: main.cpp parser.h ast.h
-compiler.o: compiler.cpp ast.h
+main.o: main.cpp parser.h ast.h compiler.h
+compiler.o: compiler.cpp ast.h compiler.h
 
 test: main ; @./main

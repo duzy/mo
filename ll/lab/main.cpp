@@ -115,9 +115,12 @@ int main()
         boost::apply_visitor(visit, stmt);
     }
 
+    std::clog << std::string(12, '-') << std::endl;
+
     lab::compiler::Init();
     lab::compiler compiler;
-    compiler.compile(stmts);
+
+    compiler.eval(stmts);
 
     lab::compiler::Shutdown();
     return 0;

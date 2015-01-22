@@ -1,4 +1,4 @@
-proc foo(a) --- ---
+#proc foo(a) --- ---
 
 #foo(1); # invocation
 
@@ -10,3 +10,4 @@ proc foo(a) --- ---
 #.name.foo();
 #.name->name.foo();
 
+return 1;
