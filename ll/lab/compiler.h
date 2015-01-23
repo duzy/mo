@@ -1,12 +1,12 @@
-#ifndef __LAB_COMPILER_H____DUZY__
-#define __LAB_COMPILER_H____DUZY__ 1
+#ifndef __LYRE_COMPILER_H____DUZY__
+#define __LYRE_COMPILER_H____DUZY__ 1
 #include <llvm/ExecutionEngine/GenericValue.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/IRBuilder.h>
 #include "ast.h"
 
-namespace lab
+namespace lyre
 {
     struct compiler
     {
@@ -33,10 +33,12 @@ namespace lab
         bool operator()(const ast::speak & s);
 
     private:
+        friend struct expr_compiler;
         llvm::LLVMContext context;
         std::unique_ptr<llvm::Module> module;
+        std::unique_ptr<llvm::IRBuilder<>> builder0; // the entry block builder
         std::unique_ptr<llvm::IRBuilder<>> builder; // the current block builder
     };
 }
 
-#endif//__LAB_COMPILER_H____DUZY__
+#endif//__LYRE_COMPILER_H____DUZY__

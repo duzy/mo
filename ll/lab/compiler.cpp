@@ -8,9 +8,63 @@
 #include <llvm/Support/raw_ostream.h>
 #include "compiler.h"
 
-namespace lab
+namespace lyre
 {
     using namespace llvm;
+
+    struct expr_compiler
+    {
+        compiler *comp;
+
+        llvm::Value *compile(const ast::expr & v);
+        llvm::Value *operator()(const ast::expr & v);
+        llvm::Value *operator()(const ast::none & v);
+        llvm::Value *operator()(const std::string & v);
+        llvm::Value *operator()(int v);
+        llvm::Value *operator()(unsigned int v);
+        llvm::Value *operator()(float v);
+        llvm::Value *operator()(double v);
+    };
+
+    llvm::Value *expr_compiler::compile(const ast::expr & v)
+    {
+        return nullptr;
+    }
+
+    llvm::Value *expr_compiler::operator()(const ast::expr & v)
+    {
+        return nullptr;
+    }
+
+    llvm::Value *expr_compiler::operator()(const ast::none & v)
+    {
+        return nullptr;
+    }
+
+    llvm::Value *expr_compiler::operator()(const std::string & v)
+    {
+        return comp->builder->CreateGlobalString(v);
+    }
+
+    llvm::Value *expr_compiler::operator()(int v)
+    {
+        return nullptr;
+    }
+
+    llvm::Value *expr_compiler::operator()(unsigned int v)
+    {
+        return nullptr;
+    }
+
+    llvm::Value *expr_compiler::operator()(float v)
+    {
+        return nullptr;
+    }
+
+    llvm::Value *expr_compiler::operator()(double v)
+    {
+        return nullptr;
+    }
 
     static bool llvm_init_done = false;
 
@@ -29,6 +83,8 @@ namespace lab
     compiler::compiler()
         : context()
         , module(nullptr)
+        , builder(nullptr)
+        , builder0(nullptr)
     {
     }
 
@@ -89,53 +145,83 @@ namespace lab
         ));
 
         auto block = BasicBlock::Create(context, "EntryBlock", start);
-        auto b0 = ( builder = make_unique<IRBuilder<>>(block) ).get();
+        auto b0 = (builder0 = make_unique<IRBuilder<>>(block)).get();
+        if (stmts.empty()) {
+            return nullptr != builder0->CreateRet(builder->getInt32(0));
+        }
 
+        block = BasicBlock::Create(context, "RootBlock", start);
+        builder = make_unique<IRBuilder<>>(block);
         for (auto stmt : stmts)
             if (!boost::apply_visitor(*this, stmt))
                 return false;
 
-        auto inst = b0->CreateRet(builder->getInt32(0));
-        return inst != nullptr;
+        return nullptr != b0->CreateRet(builder->getInt32(0));
     }
 
     bool compiler::operator()(const ast::expr & s)
     {
+        // TODO: accepts invocation only...
+        std::clog << "expr: " << std::endl;
         return false;
     }
 
     bool compiler::operator()(const ast::none &)
     {
+        std::clog << "none: " << std::endl;
         return false;
     }
 
-    bool compiler::operator()(const ast::decl & s)
+    bool compiler::operator()(const ast::decl & decl)
     {
+        /*
+        IRBuilder<> TmpB(&TheFunction->getEntryBlock(),
+                         TheFunction->getEntryBlock().begin());
+        return TmpB.CreateAlloca(Type::getDoubleTy(getGlobalContext()), 0,
+                                 VarName.c_str());
+        */
+        for (auto sym : decl) {
+            /**
+             *  var = alloca typeof(sym._expr)
+             *  init = sym._expr
+             */
+            auto type = Type::getDoubleTy(context);
+            auto alloca = builder0->CreateAlloca(type, nullptr, sym._name.c_str());
+            if (sym._expr) {
+                expr_compiler comp{ this };
+                auto value = comp.compile(boost::get<ast::expr>(sym._expr));
+            }
+        }
         return false;
     }
 
     bool compiler::operator()(const ast::proc & s)
     {
+        std::clog << "proc: " << std::endl;
         return false;
     }
 
     bool compiler::operator()(const ast::type & s)
     {
+        std::clog << "type: " << std::endl;
         return false;
     }
 
     bool compiler::operator()(const ast::see & s)
     {
+        std::clog << "see: " << std::endl;
         return false;
     }
 
     bool compiler::operator()(const ast::with & s)
     {
+        std::clog << "with: " << std::endl;
         return false;
     }
 
     bool compiler::operator()(const ast::speak & s)
     {
+        std::clog << "speak: " << std::endl;
         return false;
     }
 }

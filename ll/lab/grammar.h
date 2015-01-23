@@ -1,5 +1,5 @@
-#ifndef __LAB_GRAMMAR_H____DUZY__
-#define __LAB_GRAMMAR_H____DUZY__ 1
+#ifndef __LYRE_GRAMMAR_H____DUZY__
+#define __LYRE_GRAMMAR_H____DUZY__ 1
 #include <boost/config/warning_disable.hpp>
 #include <boost/spirit/include/qi.hpp>
 #include <boost/spirit/include/phoenix_core.hpp>
@@ -15,7 +15,7 @@
 
 #include "ast.h"
 
-namespace lab
+namespace lyre
 {
     namespace debug
     {
@@ -352,10 +352,10 @@ namespace lab
             using boost::phoenix::construct;
             using boost::phoenix::val;
 
-            boost::spirit::qi::_1_type          _1; // qi::labels
-            boost::spirit::qi::_2_type          _2; // qi::labels
-            boost::spirit::qi::_3_type          _3; // qi::labels
-            boost::spirit::qi::_4_type          _4; // qi::labels
+            boost::spirit::qi::_1_type          _1; // qi::lyreels
+            boost::spirit::qi::_2_type          _2; // qi::lyreels
+            boost::spirit::qi::_3_type          _3; // qi::lyreels
+            boost::spirit::qi::_4_type          _4; // qi::lyreels
             boost::spirit::qi::_a_type          _a;
             boost::spirit::qi::_r1_type         _r1;
             boost::spirit::qi::char_type        char_;
@@ -511,7 +511,7 @@ namespace lab
     >
     struct grammar : boost::spirit::qi::grammar<Iterator, ast::stmts(), Locals, SpaceType>
     {
-        grammar() : grammar::base_type(top, "lab")
+        grammar() : grammar::base_type(top, "lyre")
         {
             using boost::spirit::qi::on_error;
             using boost::spirit::qi::fail;
@@ -519,10 +519,10 @@ namespace lab
             using boost::phoenix::construct;
             using boost::phoenix::val;
 
-            boost::spirit::qi::_1_type          _1; // qi::labels
-            boost::spirit::qi::_2_type          _2; // qi::labels
-            boost::spirit::qi::_3_type          _3; // qi::labels
-            boost::spirit::qi::_4_type          _4; // qi::labels
+            boost::spirit::qi::_1_type          _1; // qi::lyreels
+            boost::spirit::qi::_2_type          _2; // qi::lyreels
+            boost::spirit::qi::_3_type          _3; // qi::lyreels
+            boost::spirit::qi::_4_type          _4; // qi::lyreels
             boost::spirit::eoi_type             eoi;
 
             top = body > eoi ;
@@ -541,4 +541,4 @@ namespace lab
     };
 }
 
-#endif//__LAB_GRAMMAR_H____DUZY__
+#endif//__LYRE_GRAMMAR_H____DUZY__

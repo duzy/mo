@@ -1,11 +1,11 @@
-#ifndef __LAB_AST_H____DUZY__
-#define __LAB_AST_H____DUZY__ 1
+#ifndef __LYRE_AST_H____DUZY__
+#define __LYRE_AST_H____DUZY__ 1
 #include <boost/variant/recursive_variant.hpp>
 #include <boost/fusion/include/adapt_struct.hpp>
 #include <boost/optional.hpp>
 #include <list>
 
-namespace lab
+namespace lyre
 {
     namespace ast
     {
@@ -158,59 +158,59 @@ namespace lab
 }
 
 BOOST_FUSION_ADAPT_STRUCT(
-    lab::ast::declsym,
+    lyre::ast::declsym,
     (std::string, _name)
-    (boost::optional<lab::ast::expr>, _expr)
+    (boost::optional<lyre::ast::expr>, _expr)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
-    lab::ast::speak,
+    lyre::ast::speak,
     (std::list<std::string>, _langs)
     (std::string, _source)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
-    lab::ast::proc,
+    lyre::ast::proc,
     (std::string, _name)
     (std::list<std::string>, _params)
-    (lab::ast::block, _block)
+    (lyre::ast::block, _block)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
-    lab::ast::type,
+    lyre::ast::type,
     (std::string, _name)
     (boost::optional<std::list<std::string>>, _params)
-    (lab::ast::block, _block)
+    (lyre::ast::block, _block)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
-    lab::ast::with,
-    (lab::ast::expr, _expr)
-    (boost::optional<lab::ast::block>, _block)
+    lyre::ast::with,
+    (lyre::ast::expr, _expr)
+    (boost::optional<lyre::ast::block>, _block)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
-    lab::ast::see,
-    (lab::ast::expr, _expr)
-    (lab::ast::block, _block)
+    lyre::ast::see,
+    (lyre::ast::expr, _expr)
+    (lyre::ast::block, _block)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
-    lab::ast::block,
+    lyre::ast::block,
     (std::string, _name)
-    (lab::ast::stmts, _stmts)
+    (lyre::ast::stmts, _stmts)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
-    lab::ast::expr,
-    (lab::ast::operand, _operand)
-    (std::list<lab::ast::op>, _operators)
+    lyre::ast::expr,
+    (lyre::ast::operand, _operand)
+    (std::list<lyre::ast::op>, _operators)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
-    lab::ast::op,
-    (lab::ast::opcode, _operator)
-    (lab::ast::operand, _operand)
+    lyre::ast::op,
+    (lyre::ast::opcode, _operator)
+    (lyre::ast::operand, _operand)
 )
 
-#endif//__LAB_AST_H____DUZY__
+#endif//__LYRE_AST_H____DUZY__

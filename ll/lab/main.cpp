@@ -1,5 +1,5 @@
-#include "compiler.h"
 #include "parse.h"
+#include "compiler.h"
 
 template<class T>
 struct is
@@ -45,9 +45,9 @@ struct stmt_dumper
         std::clog<<indent()<<"(string) "<<v<<std::endl;
     }
 
-    void operator()(const lab::ast::expr & e)
+    void operator()(const lyre::ast::expr & e)
     {
-        is<lab::ast::none> isNone;
+        is<lyre::ast::none> isNone;
         if (e._operators.size() == 0 && boost::apply_visitor(isNone, e._operand)) {
             std::clog<<indent()<<"expr: none"<<std::endl;
             return;
@@ -64,37 +64,37 @@ struct stmt_dumper
         indent(-4);
     }
 
-    void operator()(const lab::ast::none &)
+    void operator()(const lyre::ast::none &)
     {
         std::clog<<indent()<<"none:"<<std::endl;
     }
 
-    void operator()(const lab::ast::decl & s)
+    void operator()(const lyre::ast::decl & s)
     {
         std::clog<<indent()<<"decl: "<<std::endl;
     }
 
-    void operator()(const lab::ast::proc & s)
+    void operator()(const lyre::ast::proc & s)
     {
         std::clog<<indent()<<"proc: "<<s._name<<std::endl;
     }
 
-    void operator()(const lab::ast::type & s)
+    void operator()(const lyre::ast::type & s)
     {
         std::clog<<indent()<<"type: "<<std::endl;
     }
 
-    void operator()(const lab::ast::see & s)
+    void operator()(const lyre::ast::see & s)
     {
         std::clog<<indent()<<"see: "<<std::endl;
     }
 
-    void operator()(const lab::ast::with & s)
+    void operator()(const lyre::ast::with & s)
     {
         std::clog<<indent()<<"with: "<<std::endl;
     }
 
-    void operator()(const lab::ast::speak & s)
+    void operator()(const lyre::ast::speak & s)
     {
         std::clog<<indent()<<"speak: "<<std::endl;
     }
@@ -108,20 +108,21 @@ struct stmt_dumper
 
 int main()
 {
-    auto stmts = lab::parse_file("00.lab");
-    stmt_dumper visit;
+    auto stmts = lyre::parse_file("00.ly");
     // std::clog<<"stmts: "<<stmts.size()<<std::endl;
+
+    stmt_dumper visit;
     for (auto stmt : stmts) {
         boost::apply_visitor(visit, stmt);
     }
 
     std::clog << std::string(12, '-') << std::endl;
 
-    lab::compiler::Init();
-    lab::compiler compiler;
+    lyre::compiler::Init();
+    lyre::compiler compiler;
 
     compiler.eval(stmts);
 
-    lab::compiler::Shutdown();
+    lyre::compiler::Shutdown();
     return 0;
 }

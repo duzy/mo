@@ -1,6 +1,6 @@
 #include "ast.h"
 
-namespace lab
+namespace lyre
 {
     namespace ast
     {
