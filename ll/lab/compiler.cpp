@@ -48,12 +48,12 @@ namespace lyre
 
     llvm::Value *expr_compiler::operator()(int v)
     {
-        return nullptr;
+        return comp->builder->getInt32(v);
     }
 
     llvm::Value *expr_compiler::operator()(unsigned int v)
     {
-        return nullptr;
+        return comp->builder->getInt32(v);
     }
 
     llvm::Value *expr_compiler::operator()(float v)
