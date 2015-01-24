@@ -14,6 +14,8 @@ namespace lyre
 
     struct expr_compiler
     {
+        typedef llvm::Value * result_type;
+
         compiler *comp;
 
         llvm::Value *compile(const ast::expr & v);
@@ -24,30 +26,62 @@ namespace lyre
         llvm::Value *operator()(unsigned int v);
         llvm::Value *operator()(float v);
         llvm::Value *operator()(double v);
+
+    private:
+        llvm::Value *op_attr(llvm::Value *operand1, llvm::Value *operand2);
+        llvm::Value *op_call(llvm::Value *operand1, llvm::Value *operand2);
+        llvm::Value *op_set(llvm::Value *operand1, llvm::Value *operand2);
+        llvm::Value *op_add(llvm::Value *operand1, llvm::Value *operand2);
     };
 
-    llvm::Value *expr_compiler::compile(const ast::expr & v)
+    llvm::Value *expr_compiler::compile(const ast::expr & expr)
     {
-        return nullptr;
+        auto operand1 = boost::apply_visitor(*this, expr.operand_);
+        if (expr.operators_.empty()) {
+            return operand1;
+        }
+
+        for (auto op : expr.operators_) {
+            auto operand2 = boost::apply_visitor(*this, op.operand_);
+
+            switch (op.operator_) {
+            case ast::opcode::attr:     operand1 = op_attr(operand1, operand2); break;
+            case ast::opcode::call:     operand1 = op_call(operand1, operand2); break;
+            case ast::opcode::set:      operand1 = op_set(operand1, operand2); break;
+            case ast::opcode::add:      operand1 = op_add(operand1, operand2); break;
+            default:
+                std::clog
+                    << __FUNCTION__
+                    << ": expr: op = " << int(op.operator_) << ", "
+                    << "operand1 = " << operand1 << ", "
+                    << "operand2 = " << operand2
+                    << std::endl ;
+            }
+        }
+
+        return operand1;
     }
 
-    llvm::Value *expr_compiler::operator()(const ast::expr & v)
+    llvm::Value *expr_compiler::operator()(const ast::expr & expr)
     {
-        return nullptr;
+        return compile(expr);
     }
 
     llvm::Value *expr_compiler::operator()(const ast::none & v)
     {
+        std::clog << __FUNCTION__ << ": none" << std::endl;
         return nullptr;
     }
 
     llvm::Value *expr_compiler::operator()(const std::string & v)
     {
+        //std::clog << __FUNCTION__ << ": string = " << v << std::endl;
         return comp->builder->CreateGlobalString(v);
     }
 
     llvm::Value *expr_compiler::operator()(int v)
     {
+        //std::clog << __FUNCTION__ << ": int = " << v << std::endl;
         return comp->builder->getInt32(v);
     }
 
@@ -58,12 +92,67 @@ namespace lyre
 
     llvm::Value *expr_compiler::operator()(float v)
     {
+        std::clog << __FUNCTION__ << ": float = " << v << std::endl;
         return nullptr;
     }
 
     llvm::Value *expr_compiler::operator()(double v)
     {
+        std::clog << __FUNCTION__ << ": double = " << v << std::endl;
         return nullptr;
+    }
+
+    llvm::Value *expr_compiler::op_attr(llvm::Value *operand1, llvm::Value *operand2)
+    {
+        return operand1;
+    }
+
+    llvm::Value *expr_compiler::op_call(llvm::Value *operand1, llvm::Value *operand2)
+    {
+        return operand1;
+    }
+
+    llvm::Value *expr_compiler::op_set(llvm::Value *operand1, llvm::Value *operand2)
+    {
+        std::clog
+            << __FUNCTION__ << ": "
+            << "operand1 = " << operand1 << ", "
+            << "operand2 = " << operand2
+            << std::endl;
+
+        /*
+        // Assignment requires the LHS to be an identifier.
+        VariableExprAST *LHSE = dynamic_cast<VariableExprAST *>(LHS);
+        if (!LHSE)
+            return ErrorV("destination of '=' must be a variable");
+        // Codegen the RHS.
+        Value *Val = RHS->Codegen();
+        if (Val == 0)
+            return 0;
+
+        // Look up the name.
+        Value *Variable = NamedValues[LHSE->getName()];
+        if (Variable == 0)
+            return ErrorV("Unknown variable name");
+
+        Builder.CreateStore(Val, Variable);
+        return Val;
+        */
+
+        auto var = operand1;
+
+        comp->builder->CreateStore(operand2, var);
+        return operand1;
+    }
+
+    llvm::Value *expr_compiler::op_add(llvm::Value *operand1, llvm::Value *operand2)
+    {
+        std::clog
+            << __FUNCTION__ << ": "
+            << "operand1 = " << operand1 << ", "
+            << "operand2 = " << operand2
+            << std::endl;
+        return operand1;
     }
 
     static bool llvm_init_done = false;
@@ -159,11 +248,13 @@ namespace lyre
         return nullptr != b0->CreateRet(builder->getInt32(0));
     }
 
-    bool compiler::operator()(const ast::expr & s)
+    bool compiler::operator()(const ast::expr & expr)
     {
         // TODO: accepts invocation only...
-        std::clog << "expr: " << std::endl;
-        return false;
+        expr_compiler excomp{ this };
+        auto value = excomp.compile(expr);
+        std::clog << "expr: " << value << std::endl;
+        return value != nullptr;
     }
 
     bool compiler::operator()(const ast::none &)
@@ -182,14 +273,14 @@ namespace lyre
         */
         for (auto sym : decl) {
             /**
-             *  var = alloca typeof(sym._expr)
-             *  init = sym._expr
+             *  var = alloca typeof(sym.expr_)
+             *  init = sym.expr_
              */
             auto type = Type::getDoubleTy(context);
-            auto alloca = builder0->CreateAlloca(type, nullptr, sym._name.c_str());
-            if (sym._expr) {
-                expr_compiler comp{ this };
-                auto value = comp.compile(boost::get<ast::expr>(sym._expr));
+            auto alloca = builder0->CreateAlloca(type, nullptr, sym.name_.c_str());
+            if (sym.expr_) {
+                expr_compiler excomp{ this };
+                auto value = excomp.compile(boost::get<ast::expr>(sym.expr_));
             }
         }
         return false;

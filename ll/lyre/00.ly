@@ -12,6 +12,6 @@
 
 #return 1;
 
-decl a = 1;
+decl a = 0 + 1 + 2 + 3;
 
 a = 2;

@@ -6,7 +6,7 @@ LIBS := $(shell $(LLVM_CONFIG) --ldflags) \
   $(shell $(LLVM_CONFIG) --libs mcjit interpreter nativecodegen) \
   -lpthread -ltinfo -ldl -lm -lz
 
-main: main.o compiler.o parse.o
+lyre: main.o compiler.o parse.o
 	$(LINK.cc) -o $@ $^ $(LOADLIBS) $(LIBS)
 
 main.o: main.cpp parse.h ast.h compiler.h
@@ -19,4 +19,4 @@ parse.o:
 %.o: %.cpp
 	$(COMPILE.cc) $< -o $@
 
-test: main ; @./main
+test: lyre ; @./lyre

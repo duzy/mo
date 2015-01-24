@@ -35,57 +35,59 @@ namespace lyre
 
         struct block
         {
-            std::string _name;
-            stmts _stmts;
+            std::string name_;
+            stmts stmts_;
         };
 
-        enum opcode
+        enum class opcode : int
         {
-            op_nil,
+            nil,
 
             // get a reference to attribute
-            op_attr,
+            attr,
 
             // filtering children
-            op_select,
+            select,
 
             // call a procedure (function)
-            op_call,
+            call,
 
             // unary
-            op_unary_plus,
-            op_unary_minus,
-            op_unary_not,
-            op_unary_dot,
-            op_unary_arrow,
+            unary_plus,
+            unary_minus,
+            unary_not,
+            unary_dot,
+            unary_arrow,
 
             // multiplicative
-            op_mul,
-            op_div,
+            mul,
+            div,
 
             // additive
-            op_add,
-            op_sub,
+            add,
+            sub,
 
             // relational
-            op_lt, // less then
-            op_le, // less or equal
-            op_gt, // greater then
-            op_ge, // greater or equal
+            lt, // less then
+            le, // less or equal
+            gt, // greater then
+            ge, // greater or equal
 
             // equality
-            op_eq,
-            op_ne,
+            eq,
+            ne,
 
             // logical and/or
-            op_a,
-            op_o,
+            a,
+            o,
 
             // assign
-            op_set,
+            set,
 
-            op_br,   // conditional branch
-            op_swi,  // switch
+            br,   // conditional branch
+            swi,  // switch
+
+            unr,  // unreachable
         };
 
         struct identifier
@@ -116,116 +118,116 @@ namespace lyre
 
         struct op
         {
-            opcode _operator;
-            operand _operand;
+            opcode operator_;
+            operand operand_;
         };
 
         struct expr
         {
-            operand _operand;
-            std::list<op> _operators;
+            operand operand_;
+            std::list<op> operators_;
 
-            expr() : _operand(), _operators() {}
-            explicit expr(const operand & o) : _operand(o), _operators() {}
-            explicit expr(const op & o) : _operand(), _operators({ o }) {}
+            expr() : operand_(), operators_() {}
+            explicit expr(const operand & o) : operand_(o), operators_() {}
+            explicit expr(const op & o) : operand_(), operators_({ o }) {}
         };
 
         struct declsym
         {
-            std::string _name;
-            boost::optional<expr> _expr;
+            std::string name_;
+            boost::optional<expr> expr_;
         };
 
         struct decl : std::list<declsym> {};
 
         struct proc
         {
-            std::string _name;
-            std::list<std::string> _params;
-            block _block;
+            std::string name_;
+            std::list<std::string> params_;
+            block block_;
         };
 
         struct type
         {
-            std::string _name;
-            boost::optional<std::list<std::string>> _params;
-            block _block;
+            std::string name_;
+            boost::optional<std::list<std::string>> params_;
+            block block_;
         };
 
         struct with
         {
-            expr _expr;
-            boost::optional<block> _block;
+            expr expr_;
+            boost::optional<block> block_;
         };
 
         struct see
         {
-            expr _expr;
-            block _block;
+            expr expr_;
+            block block_;
         };
 
         struct speak
         {
-            std::list<std::string> _langs;
-            std::string _source;
+            std::list<std::string> langs_;
+            std::string source_;
         };
     }
 }
 
 BOOST_FUSION_ADAPT_STRUCT(
     lyre::ast::declsym,
-    (std::string, _name)
-    (boost::optional<lyre::ast::expr>, _expr)
+    (std::string, name_)
+    (boost::optional<lyre::ast::expr>, expr_)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
     lyre::ast::speak,
-    (std::list<std::string>, _langs)
-    (std::string, _source)
+    (std::list<std::string>, langs_)
+    (std::string, source_)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
     lyre::ast::proc,
-    (std::string, _name)
-    (std::list<std::string>, _params)
-    (lyre::ast::block, _block)
+    (std::string, name_)
+    (std::list<std::string>, params_)
+    (lyre::ast::block, block_)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
     lyre::ast::type,
-    (std::string, _name)
-    (boost::optional<std::list<std::string>>, _params)
-    (lyre::ast::block, _block)
+    (std::string, name_)
+    (boost::optional<std::list<std::string>>, params_)
+    (lyre::ast::block, block_)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
     lyre::ast::with,
-    (lyre::ast::expr, _expr)
-    (boost::optional<lyre::ast::block>, _block)
+    (lyre::ast::expr, expr_)
+    (boost::optional<lyre::ast::block>, block_)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
     lyre::ast::see,
-    (lyre::ast::expr, _expr)
-    (lyre::ast::block, _block)
+    (lyre::ast::expr, expr_)
+    (lyre::ast::block, block_)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
     lyre::ast::block,
-    (std::string, _name)
-    (lyre::ast::stmts, _stmts)
+    (std::string, name_)
+    (lyre::ast::stmts, stmts_)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
     lyre::ast::expr,
-    (lyre::ast::operand, _operand)
-    (std::list<lyre::ast::op>, _operators)
+    (lyre::ast::operand, operand_)
+    (std::list<lyre::ast::op>, operators_)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
     lyre::ast::op,
-    (lyre::ast::opcode, _operator)
-    (lyre::ast::operand, _operand)
+    (lyre::ast::opcode, operator_)
+    (lyre::ast::operand, operand_)
 )
 
 #endif//__LYRE_AST_H____DUZY__

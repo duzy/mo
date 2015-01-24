@@ -99,45 +99,45 @@ namespace lyre
             as<ast::op> as_op;
 
             assign_op.add
-                ("=", ast::op_set)
+                ("=", ast::opcode::set)
                 ;
 
             logical_or_op.add
-                ("||", ast::op_o)
+                ("||", ast::opcode::o)
                 ;
             
             logical_and_op.add
-                ("&&", ast::op_a)
+                ("&&", ast::opcode::a)
                 ;
 
             equality_op.add
-                ("==", ast::op_eq)
-                ("!=", ast::op_ne)
+                ("==", ast::opcode::eq)
+                ("!=", ast::opcode::ne)
                 ;
 
             relational_op.add
-                ("<",  ast::op_lt)
-                ("<=", ast::op_le)
-                (">",  ast::op_gt)
-                (">=", ast::op_ge)
+                ("<",  ast::opcode::lt)
+                ("<=", ast::opcode::le)
+                (">",  ast::opcode::gt)
+                (">=", ast::opcode::ge)
                 ;
 
             additive_op.add
-                ("+", ast::op_add)
-                ("-", ast::op_sub)
+                ("+", ast::opcode::add)
+                ("-", ast::opcode::sub)
                 ;
             
             multiplicative_op.add
-                ("*", ast::op_mul)
-                ("/", ast::op_div)
+                ("*", ast::opcode::mul)
+                ("/", ast::opcode::div)
                 ;
 
             unary_op.add
-                ("+", ast::op_unary_plus)
-                ("-", ast::op_unary_minus)
-                ("!", ast::op_unary_not)
-                (".", ast::op_unary_dot)
-                ("->", ast::op_unary_arrow)
+                ("+", ast::opcode::unary_plus)
+                ("-", ast::opcode::unary_minus)
+                ("!", ast::opcode::unary_not)
+                (".", ast::opcode::unary_dot)
+                ("->", ast::opcode::unary_arrow)
                 ;
 
             keywords =
@@ -202,9 +202,9 @@ namespace lyre
             postfix
                 = primary
                 >> *(
-                    (omit['('] >> attr(ast::op_call) >> -postfix > omit[')'])   |
-                    (omit['.'] >> attr(ast::op_attr) > postfix)                 |
-                    (omit["->"] >> attr(ast::op_select) > postfix)
+                    (omit['('] >> attr(ast::opcode::call) >> -postfix > omit[')'])   |
+                    (omit['.'] >> attr(ast::opcode::attr) > postfix)                 |
+                    (omit["->"] >> attr(ast::opcode::select) > postfix)
                     )
                 ;
 
@@ -212,8 +212,8 @@ namespace lyre
                 =  '(' > expr > ')'
                 |  name
                 |  quote
-                |  double_
                 |  int_
+                |  double_
                 |  prop
                 |  nodector
                 ;
