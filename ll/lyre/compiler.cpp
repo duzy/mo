@@ -3,6 +3,7 @@
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/ValueSymbolTable.h>
 #include <llvm/Support/ManagedStatic.h>
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Support/raw_ostream.h>
@@ -21,6 +22,7 @@ namespace lyre
         llvm::Value *compile(const ast::expr & v);
         llvm::Value *operator()(const ast::expr & v);
         llvm::Value *operator()(const ast::none & v);
+        llvm::Value *operator()(const ast::identifier & v);
         llvm::Value *operator()(const std::string & v);
         llvm::Value *operator()(int v);
         llvm::Value *operator()(unsigned int v);
@@ -71,6 +73,11 @@ namespace lyre
     {
         std::clog << __FUNCTION__ << ": none" << std::endl;
         return nullptr;
+    }
+
+    llvm::Value *expr_compiler::operator()(const ast::identifier & id)
+    {
+        return comp->builder->GetInsertBlock()->getValueSymbolTable()->lookup(id.string.c_str());
     }
 
     llvm::Value *expr_compiler::operator()(const std::string & v)
@@ -191,8 +198,8 @@ namespace lyre
         GenericValue gv;
 
         if (!compile(stmts)) {
-            //std::clog << "malformed statements"  << std::endl;
-            //return gv;
+            std::clog << "malformed statements"  << std::endl;
+            return gv;
         }
 
         auto m = module.get();
@@ -251,10 +258,15 @@ namespace lyre
         block = BasicBlock::Create(context, "RootBlock", start);
         builder = make_unique<IRBuilder<>>(block);
         for (auto stmt : stmts)
-            if (!boost::apply_visitor(*this, stmt))
+            if (!boost::apply_visitor(*this, stmt)) {
+                b0->CreateRet(builder->getInt32(0));
                 return nullptr;
+            }
 
-        return b0->CreateRet(builder->getInt32(0));
+        //return start->back().CreateRet(builder->getInt32(0));
+        //return builder->CreateRet(builder->getInt32(0));
+        builder->CreateRet(builder->getInt32(0));
+        return start;
     }
 
     compiler::result_type compiler::operator()(const ast::expr & expr)
@@ -293,7 +305,7 @@ namespace lyre
                     type = value->getType();
 
                     std::clog
-                        << "decl: " << sym.name_ << ", "
+                        << "decl: " << sym.id_.string << ", "
                         << type->getTypeID() << ", "
                         << type->getScalarSizeInBits()
                         << std::endl;
@@ -303,11 +315,19 @@ namespace lyre
             /**
              *  Get a PointerTy of new alloca.
              */
-            auto alloca = builder0->CreateAlloca(type, nullptr, sym.name_.c_str());
+            auto alloca = builder0->CreateAlloca(type, nullptr, sym.id_.string.c_str());
             if (value) {
                 auto store = builder0->CreateStore(value, alloca);
                 lastStore = store;
             }
+
+            /*
+            std::clog
+                //<< builder0->GetInsertBlock()->getParent()->getValueSymbolTable().lookup(sym.name_.c_str());
+                << builder0->GetInsertBlock()->getValueSymbolTable()->lookup(sym.name_.c_str())
+                << alloca << ", "
+                << std::endl;
+            */
         }
         return lastStore;
     }

@@ -76,12 +76,12 @@ struct stmt_dumper
 
     void operator()(const lyre::ast::proc & s)
     {
-        std::clog<<indent()<<"proc: "<<s.name_<<std::endl;
+        std::clog<<indent()<<"proc: "<<s.name_.string<<std::endl;
     }
 
     void operator()(const lyre::ast::type & s)
     {
-        std::clog<<indent()<<"type: "<<std::endl;
+        std::clog<<indent()<<"type: "<<s.name_.string<<std::endl;
     }
 
     void operator()(const lyre::ast::see & s)

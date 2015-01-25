@@ -311,14 +311,14 @@ namespace lyre
 
         rule< ast::operand() > primary;
 
-        rule< std::string() > identifier ;
+        rule< ast::identifier() > identifier ;
         rule< char() > idchar ;
 
         rule<> nodector;
         rule< std::list<ast::expr>() > arglist;
         rule<> prop;
 
-        rule< std::string() > name;
+        rule< ast::identifier() > name;
         rule< std::string() > quote;
 
         boost::spirit::qi::rule<Iterator> dashes;
@@ -374,6 +374,7 @@ namespace lyre
             boost::spirit::skip_type            skip;
 
             as<std::list<std::string>> as_string_list;
+            as<std::string> as_string;
 
             stmts
                 %= +stmt
@@ -441,7 +442,8 @@ namespace lyre
 
             speak
                 =  lexeme[ "speak" >> !(alnum | '_')/*expr.idchar*/ ]
-                >  as_string_list[ expr.identifier % '>' ]
+                //>  as_string_list[ expr.identifier % '>' ]
+                >  expr.identifier % '>'
                 >  speak_source
                 ;
 
@@ -491,7 +493,7 @@ namespace lyre
         rule< ast::proc() > proc;
         rule< ast::type() > type;
         rule< ast::speak() > speak;
-        rule< std::list<std::string>() > params;
+        rule< std::list<ast::identifier>() > params;
         rule< ast::with() > with;
         rule< ast::see() > see;
 
