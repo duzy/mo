@@ -98,8 +98,8 @@ namespace lyre
 
     llvm::Value *expr_compiler::operator()(double v)
     {
-        std::clog << __FUNCTION__ << ": double = " << v << std::endl;
-        return nullptr;
+        //!< see <llvm/ADT/APFloat.h>
+        return ConstantFP::get(comp->context, APFloat(v));
     }
 
     llvm::Value *expr_compiler::op_attr(llvm::Value *operand1, llvm::Value *operand2)
@@ -152,7 +152,16 @@ namespace lyre
             << "operand1 = " << operand1 << ", "
             << "operand2 = " << operand2
             << std::endl;
-        return operand1;
+
+#if 0
+        if (isa<ConstantFP>(operand1) || isa<ConstantFP>(operand2)) {
+            return comp->builder->CreateFAdd(operand1, operand2, "addtmp");
+        } else {
+        }
+#endif
+
+        // return comp->builder->CreateAdd(operand1, operand2, "addtmp");
+        return comp->builder->CreateBinOp(Instruction::Add,  operand1, operand2, "addtmp");
     }
 
     static bool llvm_init_done = false;
@@ -172,8 +181,8 @@ namespace lyre
     compiler::compiler()
         : context()
         , module(nullptr)
-        , builder(nullptr)
         , builder0(nullptr)
+        , builder(nullptr)
     {
     }
 
@@ -219,7 +228,7 @@ namespace lyre
         return gv;
     }
 
-    bool compiler::compile(const ast::stmts & stmts)
+    compiler::result_type compiler::compile(const ast::stmts & stmts)
     {
         module = make_unique<Module>("a", context);
 
@@ -236,83 +245,100 @@ namespace lyre
         auto block = BasicBlock::Create(context, "EntryBlock", start);
         auto b0 = (builder0 = make_unique<IRBuilder<>>(block)).get();
         if (stmts.empty()) {
-            return nullptr != builder0->CreateRet(builder->getInt32(0));
+            return builder0->CreateRet(builder->getInt32(0));
         }
 
         block = BasicBlock::Create(context, "RootBlock", start);
         builder = make_unique<IRBuilder<>>(block);
         for (auto stmt : stmts)
             if (!boost::apply_visitor(*this, stmt))
-                return false;
+                return nullptr;
 
-        return nullptr != b0->CreateRet(builder->getInt32(0));
+        return b0->CreateRet(builder->getInt32(0));
     }
 
-    bool compiler::operator()(const ast::expr & expr)
+    compiler::result_type compiler::operator()(const ast::expr & expr)
     {
         // TODO: accepts invocation only...
         expr_compiler excomp{ this };
         auto value = excomp.compile(expr);
         std::clog << "expr: " << value << std::endl;
-        return value != nullptr;
+        return value;
     }
 
-    bool compiler::operator()(const ast::none &)
+    compiler::result_type compiler::operator()(const ast::none &)
     {
         std::clog << "none: " << std::endl;
-        return false;
+        return nullptr;
     }
 
-    bool compiler::operator()(const ast::decl & decl)
+    compiler::result_type compiler::operator()(const ast::decl & decl)
     {
         /*
-        IRBuilder<> TmpB(&TheFunction->getEntryBlock(),
-                         TheFunction->getEntryBlock().begin());
-        return TmpB.CreateAlloca(Type::getDoubleTy(getGlobalContext()), 0,
-                                 VarName.c_str());
+        IRBuilder<> TmpB(&TheFunction->getEntryBlock(), TheFunction->getEntryBlock().begin());
+        return TmpB.CreateAlloca(Type::getDoubleTy(getGlobalContext()), 0, VarName.c_str());
         */
+        compiler::result_type lastStore = nullptr;
         for (auto sym : decl) {
             /**
              *  var = alloca typeof(sym.expr_)
              *  init = sym.expr_
              */
-            auto type = Type::getDoubleTy(context);
-            auto alloca = builder0->CreateAlloca(type, nullptr, sym.name_.c_str());
+            auto type = Type::getVoidTy(context); // Type::getInt32Ty(context); // Type::getDoubleTy(context);
+
+            llvm::Value* value = nullptr;
             if (sym.expr_) {
                 expr_compiler excomp{ this };
-                auto value = excomp.compile(boost::get<ast::expr>(sym.expr_));
+                if ((value = excomp.compile(boost::get<ast::expr>(sym.expr_)))) {
+                    type = value->getType();
+
+                    std::clog
+                        << "decl: " << sym.name_ << ", "
+                        << type->getTypeID() << ", "
+                        << type->getScalarSizeInBits()
+                        << std::endl;
+                }
+            }
+
+            /**
+             *  Get a PointerTy of new alloca.
+             */
+            auto alloca = builder0->CreateAlloca(type, nullptr, sym.name_.c_str());
+            if (value) {
+                auto store = builder0->CreateStore(value, alloca);
+                lastStore = store;
             }
         }
-        return false;
+        return lastStore;
     }
 
-    bool compiler::operator()(const ast::proc & s)
+    compiler::result_type compiler::operator()(const ast::proc & s)
     {
         std::clog << "proc: " << std::endl;
-        return false;
+        return nullptr;
     }
 
-    bool compiler::operator()(const ast::type & s)
+    compiler::result_type compiler::operator()(const ast::type & s)
     {
         std::clog << "type: " << std::endl;
-        return false;
+        return nullptr;
     }
 
-    bool compiler::operator()(const ast::see & s)
+    compiler::result_type compiler::operator()(const ast::see & s)
     {
         std::clog << "see: " << std::endl;
-        return false;
+        return nullptr;
     }
 
-    bool compiler::operator()(const ast::with & s)
+    compiler::result_type compiler::operator()(const ast::with & s)
     {
         std::clog << "with: " << std::endl;
-        return false;
+        return nullptr;
     }
 
-    bool compiler::operator()(const ast::speak & s)
+    compiler::result_type compiler::operator()(const ast::speak & s)
     {
         std::clog << "speak: " << std::endl;
-        return false;
+        return nullptr;
     }
 }

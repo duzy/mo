@@ -10,27 +10,27 @@ namespace lyre
 {
     struct compiler
     {
-        typedef bool result_type;
+        typedef llvm::Value* result_type;
 
         static void Init();
         static void Shutdown();
 
         compiler();
 
-        bool compile(const ast::stmts & stmts);
-
         llvm::GenericValue eval(const ast::stmts & stmts);
 
-        template <class T> bool operator()(const T &) { return false; }
+        result_type compile(const ast::stmts & stmts);
 
-        bool operator()(const ast::expr & s);
-        bool operator()(const ast::none &);
-        bool operator()(const ast::decl & s);
-        bool operator()(const ast::proc & s);
-        bool operator()(const ast::type & s);
-        bool operator()(const ast::see & s);
-        bool operator()(const ast::with & s);
-        bool operator()(const ast::speak & s);
+        template <class T>
+        result_type operator()(const T &) { return nullptr; }
+        result_type operator()(const ast::expr & s);
+        result_type operator()(const ast::none &);
+        result_type operator()(const ast::decl & s);
+        result_type operator()(const ast::proc & s);
+        result_type operator()(const ast::type & s);
+        result_type operator()(const ast::see & s);
+        result_type operator()(const ast::with & s);
+        result_type operator()(const ast::speak & s);
 
     private:
         friend struct expr_compiler;
