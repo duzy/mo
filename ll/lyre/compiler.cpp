@@ -302,7 +302,7 @@ HANDLE_BINARY_INST(25, Xor  , BinaryOperator)
             return gv;
         }
 
-        auto start = m->getFunction("~start");
+        auto start = m->getFunction("lyre·~start");
         if (!start) {
             std::clog << "no module start point"  << std::endl;
             return gv;
@@ -337,7 +337,7 @@ HANDLE_BINARY_INST(25, Xor  , BinaryOperator)
         // The '0' terminates the list of argument types.
         auto start = cast<Function>(
             module->getOrInsertFunction(
-                "~start"
+                "lyre·~start"
                 , Type::getInt32Ty(context)
                 //, Type::getInt32Ty(context)
                 , static_cast<Type*>(nullptr)
