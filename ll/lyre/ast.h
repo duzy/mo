@@ -77,9 +77,10 @@ namespace lyre
             eq,
             ne,
 
-            // logical and/or
+            // logical and/or/xor
             a,
             o,
+            xo,
 
             // assign
             set,

@@ -33,10 +33,18 @@ namespace lyre
         llvm::Value *op_attr(llvm::Value *operand1, llvm::Value *operand2);
         llvm::Value *op_call(llvm::Value *operand1, llvm::Value *operand2);
         llvm::Value *op_set(llvm::Value *operand1, llvm::Value *operand2);
+        llvm::Value *op_mul(llvm::Value *operand1, llvm::Value *operand2);
+        llvm::Value *op_div(llvm::Value *operand1, llvm::Value *operand2);
         llvm::Value *op_add(llvm::Value *operand1, llvm::Value *operand2);
+        llvm::Value *op_sub(llvm::Value *operand1, llvm::Value *operand2);
+        llvm::Value *op_and(llvm::Value *operand1, llvm::Value *operand2);
+        llvm::Value *op_or (llvm::Value *operand1, llvm::Value *operand2);
+        llvm::Value *op_xor(llvm::Value *operand1, llvm::Value *operand2);
+
+        llvm::Value *binary(llvm::Instruction::BinaryOps, llvm::Value *operand1, llvm::Value *operand2);
     };
 
-    llvm::Value *expr_compiler::compile(const ast::expr & expr)
+    Value *expr_compiler::compile(const ast::expr & expr)
     {
         auto operand1 = boost::apply_visitor(*this, expr.operand_);
         if (expr.operators_.empty()) {
@@ -46,11 +54,38 @@ namespace lyre
         for (auto op : expr.operators_) {
             auto operand2 = boost::apply_visitor(*this, op.operand_);
 
+            /*
+HANDLE_BINARY_INST( 8, Add  , BinaryOperator)
+HANDLE_BINARY_INST( 9, FAdd , BinaryOperator)
+HANDLE_BINARY_INST(10, Sub  , BinaryOperator)
+HANDLE_BINARY_INST(11, FSub , BinaryOperator)
+HANDLE_BINARY_INST(12, Mul  , BinaryOperator)
+HANDLE_BINARY_INST(13, FMul , BinaryOperator)
+HANDLE_BINARY_INST(14, UDiv , BinaryOperator)
+HANDLE_BINARY_INST(15, SDiv , BinaryOperator)
+HANDLE_BINARY_INST(16, FDiv , BinaryOperator)
+HANDLE_BINARY_INST(17, URem , BinaryOperator)
+HANDLE_BINARY_INST(18, SRem , BinaryOperator)
+HANDLE_BINARY_INST(19, FRem , BinaryOperator)
+// Logical operators (integer operands)
+HANDLE_BINARY_INST(20, Shl  , BinaryOperator) // Shift left  (logical)
+HANDLE_BINARY_INST(21, LShr , BinaryOperator) // Shift right (logical)
+HANDLE_BINARY_INST(22, AShr , BinaryOperator) // Shift right (arithmetic)
+HANDLE_BINARY_INST(23, And  , BinaryOperator)
+HANDLE_BINARY_INST(24, Or   , BinaryOperator)
+HANDLE_BINARY_INST(25, Xor  , BinaryOperator)
+            */
             switch (op.operator_) {
             case ast::opcode::attr:     operand1 = op_attr(operand1, operand2); break;
             case ast::opcode::call:     operand1 = op_call(operand1, operand2); break;
             case ast::opcode::set:      operand1 = op_set(operand1, operand2); break;
+            case ast::opcode::mul:      operand1 = op_mul(operand1, operand2); break;
+            case ast::opcode::div:      operand1 = op_div(operand1, operand2); break;
             case ast::opcode::add:      operand1 = op_add(operand1, operand2); break;
+            case ast::opcode::sub:      operand1 = op_sub(operand1, operand2); break;
+            case ast::opcode::a:        operand1 = op_and(operand1, operand2); break;
+            case ast::opcode::o:        operand1 = op_or (operand1, operand2); break;
+            case ast::opcode::xo:       operand1 = op_xor(operand1, operand2); break;
             default:
                 std::clog
                     << __FUNCTION__
@@ -64,111 +99,170 @@ namespace lyre
         return operand1;
     }
 
-    llvm::Value *expr_compiler::operator()(const ast::expr & expr)
+    Value *expr_compiler::operator()(const ast::expr & expr)
     {
         return compile(expr);
     }
 
-    llvm::Value *expr_compiler::operator()(const ast::none & v)
+    Value *expr_compiler::operator()(const ast::none & v)
     {
         std::clog << __FUNCTION__ << ": none" << std::endl;
         return nullptr;
     }
 
-    llvm::Value *expr_compiler::operator()(const ast::identifier & id)
+    Value *expr_compiler::operator()(const ast::identifier & id)
     {
-        return comp->builder->GetInsertBlock()->getValueSymbolTable()->lookup(id.string.c_str());
+        auto sym = comp->builder->GetInsertBlock()->getValueSymbolTable()->lookup(id.string.c_str());
+        if (sym) return sym;
+        
+        auto gv = comp->module->getGlobalVariable(id.string.c_str());
+        if (gv) return gv;
+        
+        return nullptr;
     }
 
-    llvm::Value *expr_compiler::operator()(const std::string & v)
+    Value *expr_compiler::operator()(const std::string & v)
     {
         //std::clog << __FUNCTION__ << ": string = " << v << std::endl;
         return comp->builder->CreateGlobalString(v);
     }
 
-    llvm::Value *expr_compiler::operator()(int v)
+    Value *expr_compiler::operator()(int v)
     {
         //std::clog << __FUNCTION__ << ": int = " << v << std::endl;
         return comp->builder->getInt32(v);
     }
 
-    llvm::Value *expr_compiler::operator()(unsigned int v)
+    Value *expr_compiler::operator()(unsigned int v)
     {
         return comp->builder->getInt32(v);
     }
 
-    llvm::Value *expr_compiler::operator()(float v)
+    Value *expr_compiler::operator()(float v)
     {
         std::clog << __FUNCTION__ << ": float = " << v << std::endl;
         return nullptr;
     }
 
-    llvm::Value *expr_compiler::operator()(double v)
+    Value *expr_compiler::operator()(double v)
     {
         //!< see <llvm/ADT/APFloat.h>
         return ConstantFP::get(comp->context, APFloat(v));
     }
 
-    llvm::Value *expr_compiler::op_attr(llvm::Value *operand1, llvm::Value *operand2)
+    Value *expr_compiler::op_attr(Value *operand1, Value *operand2)
     {
         return operand1;
     }
 
-    llvm::Value *expr_compiler::op_call(llvm::Value *operand1, llvm::Value *operand2)
+    Value *expr_compiler::op_call(Value *operand1, Value *operand2)
     {
         return operand1;
     }
 
-    llvm::Value *expr_compiler::op_set(llvm::Value *operand1, llvm::Value *operand2)
+    Value *expr_compiler::op_set(Value *operand1, Value *operand2)
     {
+        /*
         std::clog
             << __FUNCTION__ << ": "
             << "operand1 = " << operand1 << ", "
             << "operand2 = " << operand2
             << std::endl;
-
-        /*
-        // Assignment requires the LHS to be an identifier.
-        VariableExprAST *LHSE = dynamic_cast<VariableExprAST *>(LHS);
-        if (!LHSE)
-            return ErrorV("destination of '=' must be a variable");
-        // Codegen the RHS.
-        Value *Val = RHS->Codegen();
-        if (Val == 0)
-            return 0;
-
-        // Look up the name.
-        Value *Variable = NamedValues[LHSE->getName()];
-        if (Variable == 0)
-            return ErrorV("Unknown variable name");
-
-        Builder.CreateStore(Val, Variable);
-        return Val;
         */
 
         auto var = operand1;
+        auto val = operand2;
 
-        comp->builder->CreateStore(operand2, var);
+        if (val->getType()->isPointerTy()) {
+            val = comp->builder->CreateLoad(val, "value");
+        }
+
+        if (var->getType()->isPointerTy()) {
+            comp->builder->CreateStore(val, var);
+        }
+
         return operand1;
     }
 
-    llvm::Value *expr_compiler::op_add(llvm::Value *operand1, llvm::Value *operand2)
+    Value *expr_compiler::op_mul(Value *operand1, Value *operand2)
     {
+        /*
         std::clog
             << __FUNCTION__ << ": "
             << "operand1 = " << operand1 << ", "
             << "operand2 = " << operand2
             << std::endl;
+        */
+        return binary(Instruction::Mul,  operand1, operand2);
+    }
 
+    Value *expr_compiler::op_div(Value *operand1, Value *operand2)
+    {
+        /*
+        std::clog
+            << __FUNCTION__ << ": "
+            << "operand1 = " << operand1 << ", "
+            << "operand2 = " << operand2
+            << std::endl;
+        */
+        return binary(Instruction::UDiv,  operand1, operand2);
+    }
+
+    Value *expr_compiler::op_add(Value *operand1, Value *operand2)
+    {
+        /*
+        std::clog
+            << __FUNCTION__ << ": "
+            << "operand1 = " << operand1 << ", "
+            << "operand2 = " << operand2
+            << std::endl;
+        */
+        return binary(Instruction::Add,  operand1, operand2); // comp->builder->CreateAdd(operand1, operand2, "tmp");
+    }
+
+    Value *expr_compiler::op_sub(Value *operand1, Value *operand2)
+    {
+        /*
+        std::clog
+            << __FUNCTION__ << ": "
+            << "operand1 = " << operand1 << ", "
+            << "operand2 = " << operand2
+            << std::endl;
+        */
+        return binary(Instruction::Sub,  operand1, operand2);
+    }
+
+    llvm::Value *expr_compiler::op_and(llvm::Value *operand1, llvm::Value *operand2)
+    {
+        return binary(Instruction::And,  operand1, operand2);
+    }
+
+    llvm::Value *expr_compiler::op_or (llvm::Value *operand1, llvm::Value *operand2)
+    {
+        return binary(Instruction::Or,  operand1, operand2);
+    }
+
+    llvm::Value *expr_compiler::op_xor(llvm::Value *operand1, llvm::Value *operand2)
+    {
+        return binary(Instruction::Xor,  operand1, operand2);
+    }
+
+    Value *expr_compiler::binary(Instruction::BinaryOps op, Value *operand1, Value *operand2)
+    {
 #if 0
         if (isa<ConstantFP>(operand1) || isa<ConstantFP>(operand2)) {
-            return comp->builder->CreateFAdd(operand1, operand2, "addtmp");
+            return comp->builder->CreateFAdd(operand1, operand2, "tmp");
         } else {
         }
 #endif
 
-        // return comp->builder->CreateAdd(operand1, operand2, "addtmp");
-        return comp->builder->CreateBinOp(Instruction::Add,  operand1, operand2, "addtmp");
+        if (operand1->getType()->isPointerTy()) {
+            operand1 = comp->builder->CreateLoad(operand1, "operand");
+        }
+        if (operand2->getType()->isPointerTy()) {
+            operand2 = comp->builder->CreateLoad(operand2, "operand");
+        }
+        return comp->builder->CreateBinOp(op,  operand1, operand2, "binres");
     }
 
     static bool llvm_init_done = false;
@@ -177,12 +271,12 @@ namespace lyre
     {
         if (llvm_init_done) return;
         llvm_init_done = true;
-        llvm::InitializeNativeTarget();
+        InitializeNativeTarget();
     }
 
     void compiler::Shutdown()
     {
-        llvm::llvm_shutdown();
+        llvm_shutdown();
     }
 
     compiler::compiler()
@@ -249,23 +343,27 @@ namespace lyre
                 , static_cast<Type*>(nullptr)
         ));
 
-        auto block = BasicBlock::Create(context, "EntryBlock", start);
-        auto b0 = (builder0 = make_unique<IRBuilder<>>(block)).get();
+        auto EntryBlock = BasicBlock::Create(context, "EntryBlock", start);
+        auto b0 = (builder0 = make_unique<IRBuilder<>>(EntryBlock)).get();
         if (stmts.empty()) {
             return builder0->CreateRet(builder->getInt32(0));
         }
 
-        block = BasicBlock::Create(context, "RootBlock", start);
-        builder = make_unique<IRBuilder<>>(block);
-        for (auto stmt : stmts)
-            if (!boost::apply_visitor(*this, stmt)) {
+        Value *last = nullptr;
+        auto RootBlock = BasicBlock::Create(context, "RootBlock", start);
+        builder = make_unique<IRBuilder<>>(RootBlock);
+        for (auto stmt : stmts) {
+            if (!(last = boost::apply_visitor(*this, stmt))) {
                 b0->CreateRet(builder->getInt32(0));
                 return nullptr;
             }
+        }
+
+        b0->CreateBr(RootBlock);
 
         //return start->back().CreateRet(builder->getInt32(0));
         //return builder->CreateRet(builder->getInt32(0));
-        builder->CreateRet(builder->getInt32(0));
+        builder->CreateRet(last ? last : builder->getInt32(0));
         return start;
     }
 
@@ -298,17 +396,19 @@ namespace lyre
              */
             auto type = Type::getVoidTy(context); // Type::getInt32Ty(context); // Type::getDoubleTy(context);
 
-            llvm::Value* value = nullptr;
+            Value* value = nullptr;
             if (sym.expr_) {
                 expr_compiler excomp{ this };
                 if ((value = excomp.compile(boost::get<ast::expr>(sym.expr_)))) {
                     type = value->getType();
 
+                    /*
                     std::clog
                         << "decl: " << sym.id_.string << ", "
                         << type->getTypeID() << ", "
                         << type->getScalarSizeInBits()
                         << std::endl;
+                    */
                 }
             }
 
@@ -317,7 +417,7 @@ namespace lyre
              */
             auto alloca = builder0->CreateAlloca(type, nullptr, sym.id_.string.c_str());
             if (value) {
-                auto store = builder0->CreateStore(value, alloca);
+                auto store = builder->CreateStore(value, alloca);
                 lastStore = store;
             }
 
@@ -334,8 +434,15 @@ namespace lyre
 
     compiler::result_type compiler::operator()(const ast::proc & s)
     {
-        std::clog << "proc: " << std::endl;
-        return nullptr;
+        // FunctionType::get(Type::getDoubleTy(getGlobalContext()), Doubles, false);
+        auto fty = FunctionType::get(Type::getVoidTy(context), false);
+
+        // ExternalLinkage, InternalLinkage, PrivateLinkage
+        auto fun = Function::Create(fty, Function::PrivateLinkage, s.name_.string, module.get());
+
+        std::clog << "proc: " << s.name_.string << std::endl;
+
+        return fun;
     }
 
     compiler::result_type compiler::operator()(const ast::type & s)
