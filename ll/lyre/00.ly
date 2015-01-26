@@ -43,3 +43,5 @@ proc foo(int a) int:bits(32)
 decl v int:signed
 decl u int:unsigned
 decl f float:bits(64)
+decl r array:int
+decl n array:int(:signed)
