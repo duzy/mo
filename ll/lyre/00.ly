@@ -18,8 +18,10 @@ proc foo(a:int) int
 ---
    decl b = 0;
    b = (a + 1) * 2;
+   a = b * b;
+   #return a;
 ---
 
 foo(0);
 
-decl v = foo(1);
+decl v = foo(foo(1));

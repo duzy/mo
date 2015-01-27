@@ -357,9 +357,18 @@ namespace lyre
 
         b0->CreateBr(RootBlock);
 
-        //return start->back().CreateRet(builder->getInt32(0));
-        //return builder->CreateRet(builder->getInt32(0));
-        builder->CreateRet(last ? last : builder->getInt32(0));
+        if (last == nullptr) {
+            builder->CreateRet(builder->getInt32(0));
+        } else if (last->getType()->isPointerTy()) {
+            last = builder->CreateLoad(last, "res");
+        }
+
+        if (last->getType()->isIntegerTy()) {
+            builder->CreateRet(builder->CreateLoad(last, "res"));
+        } else {
+            builder->CreateRetVoid();
+        }
+
         return start;
     }
 
