@@ -11,10 +11,15 @@
 # scalar: byte (1), int (4), float (4), string
 # array, vector, map, type
 
-proc foo(a:int(32)) int:bits(32)
+#type int32 is int:bits(32)
+#type uint is int:unsigned(true)
+
+proc foo(a:int) int
 ---
-   decl a = 0;
-   a = (a + 1) * 2;
+   decl b = 0;
+   b = (a + 1) * 2;
 ---
 
-foo(1);
+foo(0);
+
+decl v = foo(1);

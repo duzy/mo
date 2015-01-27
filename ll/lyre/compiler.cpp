@@ -53,28 +53,6 @@ namespace lyre
 
         for (auto op : expr.operators_) {
             auto operand2 = boost::apply_visitor(*this, op.operand_);
-
-            /*
-HANDLE_BINARY_INST( 8, Add  , BinaryOperator)
-HANDLE_BINARY_INST( 9, FAdd , BinaryOperator)
-HANDLE_BINARY_INST(10, Sub  , BinaryOperator)
-HANDLE_BINARY_INST(11, FSub , BinaryOperator)
-HANDLE_BINARY_INST(12, Mul  , BinaryOperator)
-HANDLE_BINARY_INST(13, FMul , BinaryOperator)
-HANDLE_BINARY_INST(14, UDiv , BinaryOperator)
-HANDLE_BINARY_INST(15, SDiv , BinaryOperator)
-HANDLE_BINARY_INST(16, FDiv , BinaryOperator)
-HANDLE_BINARY_INST(17, URem , BinaryOperator)
-HANDLE_BINARY_INST(18, SRem , BinaryOperator)
-HANDLE_BINARY_INST(19, FRem , BinaryOperator)
-// Logical operators (integer operands)
-HANDLE_BINARY_INST(20, Shl  , BinaryOperator) // Shift left  (logical)
-HANDLE_BINARY_INST(21, LShr , BinaryOperator) // Shift right (logical)
-HANDLE_BINARY_INST(22, AShr , BinaryOperator) // Shift right (arithmetic)
-HANDLE_BINARY_INST(23, And  , BinaryOperator)
-HANDLE_BINARY_INST(24, Or   , BinaryOperator)
-HANDLE_BINARY_INST(25, Xor  , BinaryOperator)
-            */
             switch (op.operator_) {
             case ast::opcode::attr:     operand1 = op_attr(operand1, operand2); break;
             case ast::opcode::call:     operand1 = op_call(operand1, operand2); break;
@@ -112,11 +90,14 @@ HANDLE_BINARY_INST(25, Xor  , BinaryOperator)
 
     Value *expr_compiler::operator()(const ast::identifier & id)
     {
-        auto sym = comp->builder->GetInsertBlock()->getValueSymbolTable()->lookup(id.string.c_str());
+        auto sym = comp->builder->GetInsertBlock()->getValueSymbolTable()->lookup(id.string);
         if (sym) return sym;
         
-        auto gv = comp->module->getGlobalVariable(id.string.c_str());
+        auto gv = comp->module->getGlobalVariable(id.string);
         if (gv) return gv;
+
+        auto fun = comp->module->getFunction(id.string);
+        if (fun) return fun;
         
         return nullptr;
     }
@@ -157,7 +138,18 @@ HANDLE_BINARY_INST(25, Xor  , BinaryOperator)
 
     Value *expr_compiler::op_call(Value *operand1, Value *operand2)
     {
-        return operand1;
+        /*
+        std::clog
+            << __FUNCTION__ << ": "
+            << "operand1 = " << operand1 << ", "
+            << "operand2 = " << operand2
+            << std::endl;
+        */
+
+        std::vector<Value*> args = { operand2 };
+        
+
+        return comp->builder->CreateCall(operand1, args, "res");
     }
 
     Value *expr_compiler::op_set(Value *operand1, Value *operand2)
@@ -281,6 +273,9 @@ HANDLE_BINARY_INST(25, Xor  , BinaryOperator)
 
     compiler::compiler()
         : context()
+        , typemap({
+                std::pair<std::string, Type*>("int", IntegerType::get(context, 32))
+          })
         , module(nullptr)
         , builder0(nullptr)
         , builder(nullptr)
@@ -302,7 +297,7 @@ HANDLE_BINARY_INST(25, Xor  , BinaryOperator)
             return gv;
         }
 
-        auto start = m->getFunction("lyre·~start");
+        auto start = m->getFunction("lyre·~start"); // lyre·start
         if (!start) {
             std::clog << "no module start point"  << std::endl;
             return gv;
@@ -346,7 +341,8 @@ HANDLE_BINARY_INST(25, Xor  , BinaryOperator)
         auto EntryBlock = BasicBlock::Create(context, "EntryBlock", start);
         auto b0 = (builder0 = make_unique<IRBuilder<>>(EntryBlock)).get();
         if (stmts.empty()) {
-            return builder0->CreateRet(builder->getInt32(0));
+            builder0->CreateRet(builder->getInt32(0));
+            return start;
         }
 
         Value *last = nullptr;
@@ -372,7 +368,7 @@ HANDLE_BINARY_INST(25, Xor  , BinaryOperator)
         // TODO: accepts invocation only...
         expr_compiler excomp{ this };
         auto value = excomp.compile(expr);
-        std::clog << "expr: " << value << std::endl;
+        // std::clog << "expr: " << value << std::endl;
         return value;
     }
 
@@ -432,17 +428,94 @@ HANDLE_BINARY_INST(25, Xor  , BinaryOperator)
         return lastStore;
     }
 
-    compiler::result_type compiler::operator()(const ast::proc & s)
+    compiler::result_type compiler::operator()(const ast::proc & proc)
     {
-        // FunctionType::get(Type::getDoubleTy(getGlobalContext()), Doubles, false);
-        auto fty = FunctionType::get(Type::getVoidTy(context), false);
+        auto rty = Type::getVoidTy(context);
+        if (proc.type_) {
+            auto id = boost::get<ast::identifier>(proc.type_);
+            auto t = typemap.find(id.string);
+            if (t == typemap.end()) {
+                std::cerr
+                    << "proc: " << proc.name_.string << ": unknown return type '" << id.string << "'"
+                    << std::endl ;
+                return nullptr;
+            }
+            rty = t->second;
+        }
+
+        std::vector<Type*> params;
+        for (auto param : proc.params_) {
+            //std::clog << "param: " << param.type_.string << std::endl;
+            auto t = typemap.find(param.type_.string);
+            if (t == typemap.end()) {
+                std::cerr
+                    << "proc: " << proc.name_.string << ": unknown parameter type '"
+                    << param.type_.string << "' referenced by '" << param.name_.string << "'"
+                    << std::endl ;
+                return nullptr;
+            }
+            params.push_back(t->second);
+        }
+
+        auto fty = FunctionType::get(rty, params, false);
 
         // ExternalLinkage, InternalLinkage, PrivateLinkage
-        auto fun = Function::Create(fty, Function::PrivateLinkage, s.name_.string, module.get());
+        auto fun = Function::Create(fty, Function::PrivateLinkage, proc.name_.string, module.get());
+        auto arg = fun->arg_begin();
+        for (auto param : proc.params_) {
+            assert (arg != fun->arg_end());
+            arg->setName(param.name_.string);
+            ++arg;
+        }
 
-        std::clog << "proc: " << s.name_.string << std::endl;
+        auto savedBuilder0 = std::move(builder0);
+        auto savedBuilder = std::move(builder);
 
+        if (nullptr == this->compile_body(fun, proc.block_.stmts_)) return nullptr;
+
+        builder0 = std::move(savedBuilder0);
+        builder = std::move(savedBuilder);
         return fun;
+    }
+
+    compiler::result_type compiler::compile_body(llvm::Function * fun, const ast::stmts & stmts)
+    {
+        auto rty = fun->getReturnType();
+
+        auto EntryBlock = BasicBlock::Create(context, "EntryBlock", fun);
+        auto b0 = (builder0 = make_unique<IRBuilder<>>(EntryBlock)).get();
+        if (stmts.empty()) {
+            /*
+            if (rty->isVoidTy()) return b0->CreateRetVoid();
+            return b0->CreateRet(builder->getInt32(0));
+            */
+            return b0->CreateRetVoid();
+        }
+
+        Value *last = nullptr;
+        auto StartBlock = BasicBlock::Create(context, "StartBlock", fun);
+        builder = make_unique<IRBuilder<>>(StartBlock);
+        for (auto stmt : stmts) {
+            if (!(last = boost::apply_visitor(*this, stmt))) {
+                //b0->CreateRet(builder->getInt32(0));
+                b0->CreateRetVoid();
+                return nullptr;
+            }
+        }
+
+        b0->CreateBr(StartBlock);
+
+        if (rty->isVoidTy()) return b0->CreateRetVoid();
+        if (last) {
+            auto fty = fun->getFunctionType();
+            auto lty = last->getType();
+            if (lty->isPointerTy() && fty->isValidReturnType(lty->getPointerElementType()))
+                return builder->CreateRet(builder->CreateLoad(last, "res"));
+            if (fty->isValidReturnType(lty))
+                return builder->CreateRet(last);
+        }
+
+        return b0->CreateRetVoid();
     }
 
     compiler::result_type compiler::operator()(const ast::type & s)

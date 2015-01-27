@@ -137,22 +137,30 @@ namespace lyre
         struct declsym
         {
             identifier id_;
+            //identifier type_;
             boost::optional<expr> expr_;
         };
 
         struct decl : std::list<declsym> {};
 
+        struct param
+        {
+            identifier name_;
+            identifier type_;
+        };
+
         struct proc
         {
             identifier name_;
-            std::list<identifier> params_;
+            std::list<param> params_;
+            boost::optional<identifier> type_;
             block block_;
         };
 
         struct type
         {
             identifier name_;
-            boost::optional<std::list<identifier>> params_;
+            boost::optional<std::list<param>> params_;
             block block_;
         };
 
@@ -179,6 +187,7 @@ namespace lyre
 BOOST_FUSION_ADAPT_STRUCT(
     lyre::ast::declsym,
     (lyre::ast::identifier, id_)
+    //(lyre::ast::identifier, type_)
     (boost::optional<lyre::ast::expr>, expr_)
 )
 
@@ -189,16 +198,23 @@ BOOST_FUSION_ADAPT_STRUCT(
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
+    lyre::ast::param,
+    (lyre::ast::identifier, name_)
+    (lyre::ast::identifier, type_)
+)
+
+BOOST_FUSION_ADAPT_STRUCT(
     lyre::ast::proc,
     (lyre::ast::identifier, name_)
-    (std::list<lyre::ast::identifier>, params_)
+    (std::list<lyre::ast::param>, params_)
+    (boost::optional<lyre::ast::identifier>, type_)
     (lyre::ast::block, block_)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
     lyre::ast::type,
     (lyre::ast::identifier, name_)
-    (boost::optional<std::list<lyre::ast::identifier>>, params_)
+    (boost::optional<std::list<lyre::ast::param>>, params_)
     (lyre::ast::block, block_)
 )
 

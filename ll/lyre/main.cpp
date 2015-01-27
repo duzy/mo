@@ -45,6 +45,11 @@ struct stmt_dumper
         std::clog<<indent()<<"(string) "<<v<<std::endl;
     }
 
+    void operator()(const lyre::ast::identifier & v)
+    {
+        std::clog<<indent()<<"(identifier) "<<v.string<<std::endl;
+    }
+
     void operator()(const lyre::ast::expr & e)
     {
         is<lyre::ast::none> isNone;

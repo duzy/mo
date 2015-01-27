@@ -202,8 +202,8 @@ namespace lyre
             postfix
                 = primary
                 >> *(
-                    (omit['('] >> attr(ast::opcode::call) >> -postfix > omit[')'])   |
-                    (omit['.'] >> attr(ast::opcode::attr) > postfix)                 |
+                    (omit['('] >> attr(ast::opcode::call) >> -expr > omit[')']) |
+                    (omit['.'] >> attr(ast::opcode::attr) > postfix)            |
                     (omit["->"] >> attr(ast::opcode::select) > postfix)
                     )
                 ;
@@ -352,10 +352,10 @@ namespace lyre
             using boost::phoenix::construct;
             using boost::phoenix::val;
 
-            boost::spirit::qi::_1_type          _1; // qi::lyreels
-            boost::spirit::qi::_2_type          _2; // qi::lyreels
-            boost::spirit::qi::_3_type          _3; // qi::lyreels
-            boost::spirit::qi::_4_type          _4; // qi::lyreels
+            boost::spirit::qi::_1_type          _1; // qi::labels
+            boost::spirit::qi::_2_type          _2; // qi::labels
+            boost::spirit::qi::_3_type          _3; // qi::labels
+            boost::spirit::qi::_4_type          _4; // qi::labels
             boost::spirit::qi::_a_type          _a;
             boost::spirit::qi::_r1_type         _r1;
             boost::spirit::qi::char_type        char_;
@@ -364,7 +364,7 @@ namespace lyre
             boost::spirit::qi::alnum_type       alnum;
             boost::spirit::qi::attr_type        attr;
             boost::spirit::qi::lexeme_type      lexeme;
-            boost::spirit::qi::omit_type      omit;
+            boost::spirit::qi::omit_type        omit;
             boost::spirit::ascii::space_type    space;
             boost::spirit::repeat_type          repeat;
             boost::spirit::eol_type             eol;
@@ -399,7 +399,7 @@ namespace lyre
 
             params
                 =  '('
-                >  -( expr.identifier % ',' )
+                >  -( (expr.identifier > omit[':'] > expr.identifier) % ',' )
                 >  ')'
                 ;
 
@@ -418,6 +418,7 @@ namespace lyre
                 =  lexeme[ "proc" >> !(alnum | '_')/*expr.idchar*/ ]
                 >  expr.identifier
                 >  params
+                >  -expr.identifier //>  -( omit[':'] > expr.identifier )
                 >  block(std::string("proc"))
                 ;
 
@@ -493,7 +494,7 @@ namespace lyre
         rule< ast::proc() > proc;
         rule< ast::type() > type;
         rule< ast::speak() > speak;
-        rule< std::list<ast::identifier>() > params;
+        rule< std::list<ast::param>() > params;
         rule< ast::with() > with;
         rule< ast::see() > see;
 
@@ -521,10 +522,10 @@ namespace lyre
             using boost::phoenix::construct;
             using boost::phoenix::val;
 
-            boost::spirit::qi::_1_type          _1; // qi::lyreels
-            boost::spirit::qi::_2_type          _2; // qi::lyreels
-            boost::spirit::qi::_3_type          _3; // qi::lyreels
-            boost::spirit::qi::_4_type          _4; // qi::lyreels
+            boost::spirit::qi::_1_type          _1; // qi::labels
+            boost::spirit::qi::_2_type          _2; // qi::labels
+            boost::spirit::qi::_3_type          _3; // qi::labels
+            boost::spirit::qi::_4_type          _4; // qi::labels
             boost::spirit::eoi_type             eoi;
 
             top = body > eoi ;

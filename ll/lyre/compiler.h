@@ -4,6 +4,7 @@
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/IRBuilder.h>
+#include <unordered_map>
 #include "ast.h"
 
 namespace lyre
@@ -33,8 +34,12 @@ namespace lyre
         result_type operator()(const ast::speak & s);
 
     private:
+        result_type compile_body(llvm::Function * fun, const ast::stmts &);
+
+    private:
         friend struct expr_compiler;
         llvm::LLVMContext context;
+        std::unordered_map<std::string, llvm::Type*> typemap;
         std::unique_ptr<llvm::Module> module;
         std::unique_ptr<llvm::IRBuilder<>> builder0; // the entry block builder
         std::unique_ptr<llvm::IRBuilder<>> builder; // the current block builder
