@@ -1,6 +1,10 @@
-#include <llvm/ExecutionEngine/Interpreter.h>
-#include <llvm/ExecutionEngine/MCJIT.h>
-#include <llvm/ExecutionEngine/SectionMemoryManager.h>
+#if USING_MCJIT
+#  include <llvm/ExecutionEngine/ExecutionEngine.h>
+#  include <llvm/ExecutionEngine/MCJIT.h>
+#  include <llvm/ExecutionEngine/SectionMemoryManager.h>
+#else
+#  include <llvm/ExecutionEngine/Interpreter.h>
+#endif
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Instructions.h>
@@ -299,10 +303,26 @@ namespace lyre
                 std::pair<std::string, Type*>("float", Type::getDoubleTy(context)),
                 std::pair<std::string, Type*>("int", IntegerType::get(context, 32))
           })
+        , error()
         , module(nullptr)
+        , engine(nullptr)
         , builder0(nullptr)
         , builder(nullptr)
     {
+        auto m = make_unique<Module>("a", context);
+        module = m.get();
+
+        // Now we create the JIT.
+        auto jit = EngineBuilder(std::move(m))
+            .setErrorStr(&error)
+#if USING_MCJIT
+            .setMCJITMemoryManager(make_unique<SectionMemoryManager>())
+#endif
+            .create();
+
+        module->setDataLayout(jit->getDataLayout());
+
+        engine.reset(jit);
     }
 
     GenericValue compiler::eval(const ast::stmts & stmts)
@@ -314,31 +334,21 @@ namespace lyre
             return gv;
         }
 
-        auto m = module.get();
-        if (!m) {
-            std::clog << "no module created"  << std::endl;
-            return gv;
-        }
+        // Print out all of the generated code.
+#if 1
+        module->dump();
+#else
+        outs() << "\n" << *module << "\n";
+        outs().flush();
+#endif
 
-        auto start = m->getFunction("lyre·~start"); // lyre·start
+        auto start = module->getFunction("lyre.start"); // lyre·start
         if (!start) {
             std::clog << "no module start point"  << std::endl;
             return gv;
         }
 
-        outs() << "\n" << *m << "\n";
-        outs().flush();
-
         this->builder.reset();
-
-        // Now we create the JIT.
-        std::string error;
-        std::unique_ptr<ExecutionEngine> engine(
-            EngineBuilder(std::move(module))
-            .setErrorStr(&error)
-            .setMCJITMemoryManager(make_unique<SectionMemoryManager>())
-            .create()
-        );
 
         if (!engine) {
             std::cerr << "Could not create ExecutionEngine: " << error << std::endl;
@@ -346,39 +356,36 @@ namespace lyre
         }
 
         std::clog << "-------------------\n"
-                  << "Run: ~start" << std::endl;
+                  << "Run: " << start->getName().str()
+                  << std::endl;
 
         // Call the `foo' function with no arguments:
         std::vector<GenericValue> noargs; // = { GenericValue(1) };
         gv = engine->runFunction(start, noargs);
 
         // Import result of execution:
-        outs() << "Result: " << gv.IntVal << "\n";
+        //outs() << "Result: " << gv.IntVal << "\n";
 
         return gv;
     }
 
     compiler::result_type compiler::compile(const ast::stmts & stmts)
     {
-        module = make_unique<Module>("a", context);
-
-        {
-            //std::vector<Type *> params = { Type::getDoubleTy(context) };
+        if (1) {
             std::vector<Type *> params = { Type::getInt32Ty(context) };
             FunctionType *FT = FunctionType::get(Type::getVoidTy(context), params, false);
-            Function *F = Function::Create(FT, Function::ExternalLinkage, "say", module.get());
+            Function *F = Function::Create(FT, Function::ExternalLinkage, "say", module);
             F->arg_begin()->setName("s");
         }
 
         // Create the ~start function entry and insert this entry into module M.
         // The '0' terminates the list of argument types.
         auto start = cast<Function>(
-            module->getOrInsertFunction(
-                "lyre·~start"
-                , Type::getInt32Ty(context)
-                //, Type::getInt32Ty(context)
+            module->getOrInsertFunction("lyre.start"
+                , Type::getInt32Ty(context) //Type::getVoidTy(context)
                 , static_cast<Type*>(nullptr)
-        ));
+            )
+        );
 
         auto EntryBlock = BasicBlock::Create(context, "EntryBlock", start);
         auto b0 = (builder0 = make_unique<IRBuilder<>>(EntryBlock)).get();
@@ -399,6 +406,7 @@ namespace lyre
 
         b0->CreateBr(RootBlock);
 
+#if 0
         if (last == nullptr) {
             builder->CreateRet(builder->getInt32(0));
         } else if (last->getType()->isPointerTy()) {
@@ -410,6 +418,9 @@ namespace lyre
         } else {
             builder->CreateRet(builder->getInt32(0));
         }
+#else
+        builder->CreateRet(builder->getInt32(1));
+#endif
 
         return start;
     }
@@ -511,7 +522,7 @@ namespace lyre
         auto fty = FunctionType::get(rty, params, false);
 
         // ExternalLinkage, InternalLinkage, PrivateLinkage
-        auto fun = Function::Create(fty, Function::PrivateLinkage, proc.name_.string, module.get());
+        auto fun = Function::Create(fty, Function::PrivateLinkage, proc.name_.string, module);
         auto arg = fun->arg_begin();
         for (auto param : proc.params_) {
             assert (arg != fun->arg_end());

@@ -116,12 +116,14 @@ int main()
     auto stmts = lyre::parse_file("00.ly");
     // std::clog<<"stmts: "<<stmts.size()<<std::endl;
 
+    /*
     stmt_dumper visit;
     for (auto stmt : stmts) {
         boost::apply_visitor(visit, stmt);
     }
 
     std::clog << std::string(12, '-') << std::endl;
+    */
 
     lyre::compiler::Init();
     lyre::compiler compiler;

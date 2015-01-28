@@ -1,6 +1,7 @@
 #ifndef __LYRE_COMPILER_H____DUZY__
 #define __LYRE_COMPILER_H____DUZY__ 1
 #include <llvm/ExecutionEngine/GenericValue.h>
+#include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/IRBuilder.h>
@@ -40,7 +41,9 @@ namespace lyre
         friend struct expr_compiler;
         llvm::LLVMContext context;
         std::unordered_map<std::string, llvm::Type*> typemap;
-        std::unique_ptr<llvm::Module> module;
+        std::string error;
+        llvm::Module * module;
+        std::unique_ptr<llvm::ExecutionEngine> engine;
         std::unique_ptr<llvm::IRBuilder<>> builder0; // the entry block builder
         std::unique_ptr<llvm::IRBuilder<>> builder; // the current block builder
     };

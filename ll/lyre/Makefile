@@ -3,8 +3,10 @@ LLVM_CONFIG := $(LLVM)/Debug+Asserts/bin/llvm-config
 CXXFLAGS := $(shell $(LLVM_CONFIG) --cxxflags)
 LOADLIBS := 
 LIBS := $(shell $(LLVM_CONFIG) --ldflags) \
-  $(shell $(LLVM_CONFIG) --libs core mcjit interpreter native nativecodegen) \
+  $(shell $(LLVM_CONFIG) --libs core mcjit native) \
   -lpthread -ltinfo -ldl -lm -lz
+
+# interpreter nativecodegen
 
 lyre: main.o compiler.o parse.o
 	$(LINK.cc) -o $@ $^ $(LOADLIBS) $(LIBS)
@@ -14,9 +16,9 @@ compiler.o: compiler.cpp ast.h compiler.h
 parse.o: parse.cpp parse.h grammar.h ast.h
 
 parse.o:
-	$(CXX) -std=c++11 -fPIC -c $< -o $@
+	$(CXX) -std=c++11 -fPIC -DUSING_MCJIT=true -c $< -o $@
 
 %.o: %.cpp
-	$(COMPILE.cc) $< -o $@
+	$(COMPILE.cc) -DUSING_MCJIT=true $< -o $@
 
 test: lyre ; @./lyre
