@@ -9,6 +9,16 @@
 #include <llvm/Support/raw_ostream.h>
 #include "compiler.h"
 
+extern "C" void sayd(int s)
+{
+    printf("%d\n", s);
+}
+
+extern "C" void say(int s)
+{
+    printf("%d\n", s);
+}
+
 namespace lyre
 {
     using namespace llvm;
@@ -146,10 +156,14 @@ namespace lyre
             << std::endl;
         */
 
-        std::vector<Value*> args = { operand2 };
-        
+        auto name = "res";
+        if (isa<Function>(operand1) && cast<Function>(operand1)->getReturnType()->isVoidTy()) {
+            name = ""; // "Cannot assign a name to void values!"
+        }
 
-        return comp->builder->CreateCall(operand1, args, "res");
+        std::vector<Value*> args = { operand2 };
+
+        return comp->builder->CreateCall(operand1, args, name);
     }
 
     Value *expr_compiler::op_set(Value *operand1, Value *operand2)
@@ -263,7 +277,10 @@ namespace lyre
     {
         if (llvm_init_done) return;
         llvm_init_done = true;
+
         InitializeNativeTarget();
+        InitializeNativeTargetAsmPrinter();
+        InitializeNativeTargetAsmParser();
     }
 
     void compiler::Shutdown()
@@ -274,6 +291,10 @@ namespace lyre
     compiler::compiler()
         : context()
         , typemap({
+                //std::pair<std::string, Type*>("float16", Type::getHalfTy(context)),
+                //std::pair<std::string, Type*>("float32", Type::getFloatTy(context)),
+                //std::pair<std::string, Type*>("float64", Type::getDoubleTy(context)),
+                std::pair<std::string, Type*>("float", Type::getDoubleTy(context)),
                 std::pair<std::string, Type*>("int", IntegerType::get(context, 32))
           })
         , module(nullptr)
@@ -309,7 +330,18 @@ namespace lyre
         this->builder.reset();
 
         // Now we create the JIT.
-        std::unique_ptr<ExecutionEngine> engine(EngineBuilder(std::move(module)).create());
+        std::string error;
+        std::unique_ptr<ExecutionEngine> engine(
+            EngineBuilder(std::move(module))
+            .setErrorStr(&error)
+            .setMCJITMemoryManager(make_unique<SectionMemoryManager>())
+            .create()
+        );
+
+        if (!engine) {
+            std::cerr << "Could not create ExecutionEngine: " << error << std::endl;
+            return gv;
+        }
 
         std::clog << "-------------------\n"
                   << "Run: ~start" << std::endl;
@@ -327,6 +359,14 @@ namespace lyre
     compiler::result_type compiler::compile(const ast::stmts & stmts)
     {
         module = make_unique<Module>("a", context);
+
+        {
+            //std::vector<Type *> params = { Type::getDoubleTy(context) };
+            std::vector<Type *> params = { Type::getInt32Ty(context) };
+            FunctionType *FT = FunctionType::get(Type::getVoidTy(context), params, false);
+            Function *F = Function::Create(FT, Function::ExternalLinkage, "say", module.get());
+            F->arg_begin()->setName("s");
+        }
 
         // Create the ~start function entry and insert this entry into module M.
         // The '0' terminates the list of argument types.

@@ -3,7 +3,7 @@ LLVM_CONFIG := $(LLVM)/Debug+Asserts/bin/llvm-config
 CXXFLAGS := $(shell $(LLVM_CONFIG) --cxxflags)
 LOADLIBS := 
 LIBS := $(shell $(LLVM_CONFIG) --ldflags) \
-  $(shell $(LLVM_CONFIG) --libs mcjit interpreter nativecodegen) \
+  $(shell $(LLVM_CONFIG) --libs core mcjit interpreter native nativecodegen) \
   -lpthread -ltinfo -ldl -lm -lz
 
 lyre: main.o compiler.o parse.o

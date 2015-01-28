@@ -14,6 +14,8 @@
 #type int32 is int:bits(32)
 #type uint is int:unsigned(true)
 
+say(1);
+
 proc foo(a:int) int
 ---
    decl b = 0;

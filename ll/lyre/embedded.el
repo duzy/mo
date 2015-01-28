@@ -12,51 +12,51 @@
        '((lyre-embedded-template
           :submode lyre-template-mode
           :face mmm-default-submode-face
-          :front "\\<template\s+.*?\n---+\n"
+          :front "\\<speak\s+template\s+.*?\n---+\n"
           :front-offset 0
-          :back "^---+\s*end\\>"
+          :back "^---+\\>"
           :back-offset 0)
          (lyre-embedded-xml
           :submode sgml-mode ;nxml-mode
           :face mmm-code-submode-face ;mmm-default-submode-face
-          :front "\\<lang\s+XML\\>.*?\n---+\n"
+          :front "\\<speak\s+\\(?XML\\|xml\\)\\>.*?\n---+\n"
           :front-offset 0
-          :back "^---+\s*end\\>"
+          :back "^---+\\>"
           :back-offset 0)
          (lyre-embedded-shell
           :submode shell-script-mode
           :face mmm-code-submode-face ;mmm-default-submode-face
-          :front "\\<lang\s+shell\\>.*?\n---+\n"
+          :front "\\<speak\s+shell\\>.*?\n---+\n"
           :front-offset 0
-          :back "^---+\s*end\\>"
+          :back "^---+\\>"
           :back-offset 0)
          (lyre-embedded-bash
           :submode shell-script-mode
           :face mmm-code-submode-face ;mmm-default-submode-face
-          :front "\\<lang\s+bash\\>.*?\n---+\n"
+          :front "\\<speak\s+bash\\>.*?\n---+\n"
           :front-offset 0
-          :back "^---+\s*end\\>"
+          :back "^---+\\>"
           :back-offset 0)
          (lyre-embedded-perl5
           :submode perl-mode
           :face mmm-code-submode-face
-          :front "\\<lang\s+Perl5\\>.*?\n---+\n"
+          :front "\\<speak\s+Perl5\\>.*?\n---+\n"
           :front-offset 0
-          :back "^---+\s*end\\>"
+          :back "^---+\\>"
           :back-offset 0)
          (lyre-embedded-perl6
           :submode perl-mode
           :face mmm-code-submode-face
-          :front "\\<lang\s+Perl6\\>.*?\n---+\n"
+          :front "\\<speak\s+Perl6\\>.*?\n---+\n"
           :front-offset 0
-          :back "^---+\s*end\\>"
+          :back "^---+\\>"
           :back-offset 0)
          (lyre-embedded-python
           :submode python-mode
           :face mmm-code-submode-face
-          :front "\\<lang\s+python\\>.*?\n---+\n"
+          :front "\\<speak\s+python\\>.*?\n---+\n"
           :front-offset 0
-          :back "^---+\s*end\\>"
+          :back "^---+\\>"
           :back-offset 0)))
       (mmm-add-mode-ext-class 'lyre-mode nil 'lyre-embedded-template)
       (mmm-add-mode-ext-class 'lyre-mode nil 'lyre-embedded-xml)
