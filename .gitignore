@@ -1,3 +1,5 @@
 /gen
 /editor/mmm-mode
 *~
+*.mbc
+*.log

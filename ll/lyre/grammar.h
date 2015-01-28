@@ -144,10 +144,11 @@ namespace lyre
                 "decl",  // declare variables, constants, fields
                 "speak", // 
                 "type",  // 
-                "proc",  // 
+                "proc",  //
+                "is",    // 
                 "see",   // 
                 "with",  // 
-                "any"    // loop on a list or range
+                "per"    // loop on a list or range
                 ;
 
             ////////////////////
