@@ -1,4 +1,6 @@
 #include <llvm/ExecutionEngine/Interpreter.h>
+#include <llvm/ExecutionEngine/MCJIT.h>
+#include <llvm/ExecutionEngine/SectionMemoryManager.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Instructions.h>
@@ -381,7 +383,7 @@ namespace lyre
         auto EntryBlock = BasicBlock::Create(context, "EntryBlock", start);
         auto b0 = (builder0 = make_unique<IRBuilder<>>(EntryBlock)).get();
         if (stmts.empty()) {
-            builder0->CreateRet(builder->getInt32(0));
+            b0->CreateRet(b0->getInt32(0));
             return start;
         }
 
@@ -390,7 +392,7 @@ namespace lyre
         builder = make_unique<IRBuilder<>>(RootBlock);
         for (auto stmt : stmts) {
             if (!(last = boost::apply_visitor(*this, stmt))) {
-                b0->CreateRet(builder->getInt32(0));
+                b0->CreateRet(b0->getInt32(0));
                 return nullptr;
             }
         }
@@ -406,7 +408,7 @@ namespace lyre
         if (last->getType()->isIntegerTy()) {
             builder->CreateRet(builder->CreateLoad(last, "res"));
         } else {
-            builder->CreateRetVoid();
+            builder->CreateRet(builder->getInt32(0));
         }
 
         return start;
