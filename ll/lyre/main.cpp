@@ -111,7 +111,7 @@ struct stmt_dumper
     }
 };
 
-static void lyre_run(const char *ly)
+static void lyre_run(const char * ly)
 {
     auto stmts = lyre::parse_file(ly);
 

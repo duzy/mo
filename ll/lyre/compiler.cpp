@@ -340,6 +340,7 @@ namespace lyre
         std::pair<std::string, void*>("say", reinterpret_cast<void*>(&say))
     };
 
+    // FIXME: http://llvm.org/PR5184 (thread safe issue)
     static void* LyreLazyFunctionCreator(const std::string & name)
     {
         auto i = LyreLazyFunctionMap.find(name);
@@ -423,9 +424,12 @@ namespace lyre
             return gv;
         }
 
-        std::clog << "-------------------\n"
-                  << "Run: " << start->getName().str()
-                  << std::endl ;
+        std::clog
+            << "-------------------\n"
+            << "Run: " << start->getName().str() << "\n"
+            << "----\n"
+            << std::endl
+            ;
 
         //engine->generateCodeForModule(module);
 
