@@ -103,6 +103,7 @@
     "see"
     "with"
     "per" ; "in" is a special case
+    "return"
     ))
 
 (defvar lyre-builtin-list

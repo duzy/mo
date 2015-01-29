@@ -53,17 +53,17 @@ struct stmt_dumper
     void operator()(const lyre::ast::expr & e)
     {
         is<lyre::ast::none> isNone;
-        if (e.operators_.size() == 0 && boost::apply_visitor(isNone, e.operand_)) {
+        if (e.operators.size() == 0 && boost::apply_visitor(isNone, e.operand)) {
             std::clog<<indent()<<"expr: none"<<std::endl;
             return;
         }
-        std::clog<<indent()<<"expr: ("<<e.operators_.size()<<" ops)"<<std::endl;
+        std::clog<<indent()<<"expr: ("<<e.operators.size()<<" ops)"<<std::endl;
         indent(4);
-        boost::apply_visitor(*this, e.operand_);
-        for (auto op : e.operators_) {
-            std::clog<<indent()<<"op: "<<int(op.operator_)<<std::endl;
+        boost::apply_visitor(*this, e.operand);
+        for (auto op : e.operators) {
+            std::clog<<indent()<<"op: "<<int(op.opcode)<<std::endl;
             indent(4);
-            boost::apply_visitor(*this, op.operand_);
+            boost::apply_visitor(*this, op.operand);
             indent(-4);
         }
         indent(-4);
@@ -81,12 +81,12 @@ struct stmt_dumper
 
     void operator()(const lyre::ast::proc & s)
     {
-        std::clog<<indent()<<"proc: "<<s.name_.string<<std::endl;
+        std::clog<<indent()<<"proc: "<<s.name.string<<std::endl;
     }
 
     void operator()(const lyre::ast::type & s)
     {
-        std::clog<<indent()<<"type: "<<s.name_.string<<std::endl;
+        std::clog<<indent()<<"type: "<<s.name.string<<std::endl;
     }
 
     void operator()(const lyre::ast::see & s)
@@ -114,16 +114,15 @@ struct stmt_dumper
 int main()
 {
     auto stmts = lyre::parse_file("00.ly");
-    // std::clog<<"stmts: "<<stmts.size()<<std::endl;
 
-    /*
+#if false
+    // std::clog<<"stmts: "<<stmts.size()<<std::endl;
     stmt_dumper visit;
     for (auto stmt : stmts) {
         boost::apply_visitor(visit, stmt);
     }
-
     std::clog << std::string(12, '-') << std::endl;
-    */
+#endif
 
     lyre::compiler::Init();
     lyre::compiler compiler;

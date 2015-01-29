@@ -16,6 +16,8 @@ namespace lyre
         struct see;
         struct with;
         struct speak;
+        struct per;
+        struct ret;
         struct expr;
         struct op;
         
@@ -27,6 +29,8 @@ namespace lyre
             , boost::recursive_wrapper<see>
             , boost::recursive_wrapper<with>
             , boost::recursive_wrapper<speak>
+            , boost::recursive_wrapper<per>
+            , boost::recursive_wrapper<ret>
             , boost::recursive_wrapper<expr>
             >
         stmt;
@@ -35,8 +39,8 @@ namespace lyre
 
         struct block
         {
-            std::string name_;
-            stmts stmts_;
+            std::string name;
+            ast::stmts stmts;
         };
 
         enum class opcode : int
@@ -120,120 +124,134 @@ namespace lyre
 
         struct op
         {
-            opcode operator_;
-            operand operand_;
+            ast::opcode opcode;
+            ast::operand operand;
         };
 
         struct expr
         {
-            operand operand_;
-            std::list<op> operators_;
+            ast::operand operand;
+            std::list<op> operators;
 
-            expr() : operand_(), operators_() {}
-            explicit expr(const operand & o) : operand_(o), operators_() {}
-            explicit expr(const op & o) : operand_(), operators_({ o }) {}
+            expr() : operand(), operators() {}
+            explicit expr(const ast::operand & o) : operand(o), operators() {}
+            explicit expr(const op & o) : operand(), operators({ o }) {}
         };
 
         struct declsym
         {
-            identifier id_;
-            //identifier type_;
-            boost::optional<expr> expr_;
+            identifier id;
+            //identifier type;
+            boost::optional<ast::expr> expr;
         };
 
         struct decl : std::list<declsym> {};
 
         struct param
         {
-            identifier name_;
-            identifier type_;
+            identifier name;
+            identifier type;
         };
 
         struct proc
         {
-            identifier name_;
-            std::list<param> params_;
-            boost::optional<identifier> type_;
-            block block_;
+            identifier name;
+            std::list<param> params;
+            boost::optional<identifier> type;
+            ast::block block;
         };
 
         struct type
         {
-            identifier name_;
-            boost::optional<std::list<param>> params_;
-            block block_;
+            identifier name;
+            boost::optional<std::list<param>> params;
+            ast::block block;
         };
 
         struct with
         {
-            expr expr_;
-            boost::optional<block> block_;
+            ast::expr expr;
+            boost::optional<ast::block> block;
         };
 
         struct see
         {
-            expr expr_;
-            block block_;
+            ast::expr expr;
+            ast::block block;
         };
 
         struct speak
         {
-            std::list<identifier> langs_;
-            std::string source_;
+            std::list<identifier> langs;
+            std::string source;
+        };
+        
+        struct per
+        {
+        };
+
+        struct ret
+        {
+            boost::optional<ast::expr> expr;
         };
     }
 }
 
 BOOST_FUSION_ADAPT_STRUCT(
     lyre::ast::declsym,
-    (lyre::ast::identifier, id_)
-    //(lyre::ast::identifier, type_)
-    (boost::optional<lyre::ast::expr>, expr_)
+    (lyre::ast::identifier, id)
+    //(lyre::ast::identifier, type)
+    (boost::optional<lyre::ast::expr>, expr)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
     lyre::ast::speak,
-    (std::list<lyre::ast::identifier>, langs_)
-    (std::string, source_)
+    (std::list<lyre::ast::identifier>, langs)
+    (std::string, source)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
     lyre::ast::param,
-    (lyre::ast::identifier, name_)
-    (lyre::ast::identifier, type_)
+    (lyre::ast::identifier, name)
+    (lyre::ast::identifier, type)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
     lyre::ast::proc,
-    (lyre::ast::identifier, name_)
-    (std::list<lyre::ast::param>, params_)
-    (boost::optional<lyre::ast::identifier>, type_)
-    (lyre::ast::block, block_)
+    (lyre::ast::identifier, name)
+    (std::list<lyre::ast::param>, params)
+    (boost::optional<lyre::ast::identifier>, type)
+    (lyre::ast::block, block)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
     lyre::ast::type,
-    (lyre::ast::identifier, name_)
-    (boost::optional<std::list<lyre::ast::param>>, params_)
-    (lyre::ast::block, block_)
+    (lyre::ast::identifier, name)
+    (boost::optional<std::list<lyre::ast::param>>, params)
+    (lyre::ast::block, block)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
     lyre::ast::with,
-    (lyre::ast::expr, expr_)
-    (boost::optional<lyre::ast::block>, block_)
+    (lyre::ast::expr, expr)
+    (boost::optional<lyre::ast::block>, block)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
     lyre::ast::see,
-    (lyre::ast::expr, expr_)
-    (lyre::ast::block, block_)
+    (lyre::ast::expr, expr)
+    (lyre::ast::block, block)
+)
+
+BOOST_FUSION_ADAPT_STRUCT(
+    lyre::ast::ret,
+    (boost::optional<lyre::ast::expr>, expr)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
     lyre::ast::block,
-    (std::string, name_)
-    (lyre::ast::stmts, stmts_)
+    (std::string, name)
+    (lyre::ast::stmts, stmts)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
@@ -243,14 +261,14 @@ BOOST_FUSION_ADAPT_STRUCT(
 
 BOOST_FUSION_ADAPT_STRUCT(
     lyre::ast::expr,
-    (lyre::ast::operand, operand_)
-    (std::list<lyre::ast::op>, operators_)
+    (lyre::ast::operand, operand)
+    (std::list<lyre::ast::op>, operators)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
     lyre::ast::op,
-    (lyre::ast::opcode, operator_)
-    (lyre::ast::operand, operand_)
+    (lyre::ast::opcode, opcode)
+    (lyre::ast::operand, operand)
 )
 
 #endif//__LYRE_AST_H____DUZY__

@@ -1,5 +1,4 @@
-#if USING_MCJIT
-#  include <llvm/ExecutionEngine/ExecutionEngine.h>
+#if LYRE_USING_MCJIT
 #  include <llvm/ExecutionEngine/MCJIT.h>
 #  include <llvm/ExecutionEngine/SectionMemoryManager.h>
 #else
@@ -62,14 +61,14 @@ namespace lyre
 
     Value *expr_compiler::compile(const ast::expr & expr)
     {
-        auto operand1 = boost::apply_visitor(*this, expr.operand_);
-        if (expr.operators_.empty()) {
+        auto operand1 = boost::apply_visitor(*this, expr.operand);
+        if (expr.operators.empty()) {
             return operand1;
         }
 
-        for (auto op : expr.operators_) {
-            auto operand2 = boost::apply_visitor(*this, op.operand_);
-            switch (op.operator_) {
+        for (auto op : expr.operators) {
+            auto operand2 = boost::apply_visitor(*this, op.operand);
+            switch (op.opcode) {
             case ast::opcode::attr:     operand1 = op_attr(operand1, operand2); break;
             case ast::opcode::call:     operand1 = op_call(operand1, operand2); break;
             case ast::opcode::set:      operand1 = op_set(operand1, operand2); break;
@@ -83,7 +82,7 @@ namespace lyre
             default:
                 std::clog
                     << __FUNCTION__
-                    << ": expr: op = " << int(op.operator_) << ", "
+                    << ": expr: op = " << int(op.opcode) << ", "
                     << "operand1 = " << operand1 << ", "
                     << "operand2 = " << operand2
                     << std::endl ;
@@ -310,15 +309,21 @@ namespace lyre
         , builder(nullptr)
     {
         auto m = make_unique<Module>("a", context);
+
+        // Keep the reference to the module
         module = m.get();
 
         // Now we create the JIT.
         auto jit = EngineBuilder(std::move(m))
             .setErrorStr(&error)
-#if USING_MCJIT
+#if LYRE_USING_MCJIT
             .setMCJITMemoryManager(make_unique<SectionMemoryManager>())
 #endif
             .create();
+
+#if LYRE_USING_MCJIT
+        jit->setProcessAllSections(true);
+#endif
 
         module->setDataLayout(jit->getDataLayout());
 
@@ -348,8 +353,6 @@ namespace lyre
             return gv;
         }
 
-        this->builder.reset();
-
         if (!engine) {
             std::cerr << "Could not create ExecutionEngine: " << error << std::endl;
             return gv;
@@ -357,14 +360,21 @@ namespace lyre
 
         std::clog << "-------------------\n"
                   << "Run: " << start->getName().str()
-                  << std::endl;
+                  << std::endl ;
+
+        //engine->generateCodeForModule(module);
+
+        // Ensure the module is fully processed and is usable. It has no effect for the interpeter.
+        engine->finalizeObject();
 
         // Call the `foo' function with no arguments:
         std::vector<GenericValue> noargs; // = { GenericValue(1) };
         gv = engine->runFunction(start, noargs);
 
-        // Import result of execution:
-        //outs() << "Result: " << gv.IntVal << "\n";
+        outs() << "-------------------\n"
+               << "Result: " << gv.IntVal << "\n"
+               << "-------------------\n" ;
+        outs().flush();
 
         return gv;
     }
@@ -406,6 +416,9 @@ namespace lyre
 
         b0->CreateBr(RootBlock);
 
+        // If the block is well formed, we don't need to add 'ret'.
+        if (builder->GetInsertBlock()->getTerminator()) return start;
+
 #if 0
         if (last == nullptr) {
             builder->CreateRet(builder->getInt32(0));
@@ -419,19 +432,23 @@ namespace lyre
             builder->CreateRet(builder->getInt32(0));
         }
 #else
-        builder->CreateRet(builder->getInt32(1));
+        builder->CreateRet(builder->getInt32(0));
 #endif
 
         return start;
     }
 
+    compiler::result_type compiler::compile_expr(const ast::expr & expr)
+    {
+        expr_compiler excomp{ this };
+        auto value = excomp.compile(expr);
+        return value;
+    }
+
     compiler::result_type compiler::operator()(const ast::expr & expr)
     {
         // TODO: accepts invocation only...
-        expr_compiler excomp{ this };
-        auto value = excomp.compile(expr);
-        // std::clog << "expr: " << value << std::endl;
-        return value;
+        return compile_expr(expr);
     }
 
     compiler::result_type compiler::operator()(const ast::none &)
@@ -449,20 +466,19 @@ namespace lyre
         compiler::result_type lastStore = nullptr;
         for (auto sym : decl) {
             /**
-             *  var = alloca typeof(sym.expr_)
-             *  init = sym.expr_
+             *  var = alloca typeof(sym.expr)
+             *  init = sym.expr
              */
             auto type = Type::getVoidTy(context); // Type::getInt32Ty(context); // Type::getDoubleTy(context);
 
             Value* value = nullptr;
-            if (sym.expr_) {
-                expr_compiler excomp{ this };
-                if ((value = excomp.compile(boost::get<ast::expr>(sym.expr_)))) {
+            if (sym.expr) {
+                if ((value = compile_expr(sym.expr))) {
                     type = value->getType();
 
                     /*
                     std::clog
-                        << "decl: " << sym.id_.string << ", "
+                        << "decl: " << sym.id.string << ", "
                         << type->getTypeID() << ", "
                         << type->getScalarSizeInBits()
                         << std::endl;
@@ -473,7 +489,7 @@ namespace lyre
             /**
              *  Get a PointerTy of new alloca.
              */
-            auto alloca = builder0->CreateAlloca(type, nullptr, sym.id_.string.c_str());
+            auto alloca = builder0->CreateAlloca(type, nullptr, sym.id.string.c_str());
             if (value) {
                 auto store = builder->CreateStore(value, alloca);
                 lastStore = store;
@@ -481,8 +497,8 @@ namespace lyre
 
             /*
             std::clog
-                //<< builder0->GetInsertBlock()->getParent()->getValueSymbolTable().lookup(sym.name_.c_str());
-                << builder0->GetInsertBlock()->getValueSymbolTable()->lookup(sym.name_.c_str())
+                //<< builder0->GetInsertBlock()->getParent()->getValueSymbolTable().lookup(sym.name.c_str());
+                << builder0->GetInsertBlock()->getValueSymbolTable()->lookup(sym.name.c_str())
                 << alloca << ", "
                 << std::endl;
             */
@@ -493,12 +509,12 @@ namespace lyre
     compiler::result_type compiler::operator()(const ast::proc & proc)
     {
         auto rty = Type::getVoidTy(context);
-        if (proc.type_) {
-            auto id = boost::get<ast::identifier>(proc.type_);
+        if (proc.type) {
+            auto id = boost::get<ast::identifier>(proc.type);
             auto t = typemap.find(id.string);
             if (t == typemap.end()) {
                 std::cerr
-                    << "proc: " << proc.name_.string << ": unknown return type '" << id.string << "'"
+                    << "proc: " << proc.name.string << ": unknown return type '" << id.string << "'"
                     << std::endl ;
                 return nullptr;
             }
@@ -506,13 +522,13 @@ namespace lyre
         }
 
         std::vector<Type*> params;
-        for (auto param : proc.params_) {
-            //std::clog << "param: " << param.type_.string << std::endl;
-            auto t = typemap.find(param.type_.string);
+        for (auto param : proc.params) {
+            //std::clog << "param: " << param.type.string << std::endl;
+            auto t = typemap.find(param.type.string);
             if (t == typemap.end()) {
                 std::cerr
-                    << "proc: " << proc.name_.string << ": unknown parameter type '"
-                    << param.type_.string << "' referenced by '" << param.name_.string << "'"
+                    << "proc: " << proc.name.string << ": unknown parameter type '"
+                    << param.type.string << "' referenced by '" << param.name.string << "'"
                     << std::endl ;
                 return nullptr;
             }
@@ -522,18 +538,18 @@ namespace lyre
         auto fty = FunctionType::get(rty, params, false);
 
         // ExternalLinkage, InternalLinkage, PrivateLinkage
-        auto fun = Function::Create(fty, Function::PrivateLinkage, proc.name_.string, module);
+        auto fun = Function::Create(fty, Function::PrivateLinkage, proc.name.string, module);
         auto arg = fun->arg_begin();
-        for (auto param : proc.params_) {
+        for (auto param : proc.params) {
             assert (arg != fun->arg_end());
-            arg->setName(param.name_.string);
+            arg->setName(param.name.string);
             ++arg;
         }
 
         auto savedBuilder0 = std::move(builder0);
         auto savedBuilder = std::move(builder);
 
-        if (nullptr == this->compile_body(fun, proc.block_.stmts_)) return nullptr;
+        if (nullptr == this->compile_body(fun, proc.block.stmts)) return nullptr;
 
         builder0 = std::move(savedBuilder0);
         builder = std::move(savedBuilder);
@@ -567,6 +583,8 @@ namespace lyre
 
         b0->CreateBr(StartBlock);
 
+        if (builder->GetInsertBlock()->getTerminator()) return last;
+
         if (rty->isVoidTy()) return b0->CreateRetVoid();
         if (last) {
             auto fty = fun->getFunctionType();
@@ -576,7 +594,6 @@ namespace lyre
             if (fty->isValidReturnType(lty))
                 return builder->CreateRet(last);
         }
-
         return b0->CreateRetVoid();
     }
 
@@ -602,5 +619,23 @@ namespace lyre
     {
         std::clog << "speak: " << std::endl;
         return nullptr;
+    }
+
+    compiler::result_type compiler::operator()(const ast::per & s)
+    {
+        return nullptr;
+    }
+
+    compiler::result_type compiler::operator()(const ast::ret & s)
+    {
+        auto value = compile_expr(s.expr);
+        /*
+        std::clog
+            << "return: " << value << ", "
+            << std::endl
+            ;
+        */
+        if (!value) return nullptr;
+        return builder->CreateRet(value);
     }
 }

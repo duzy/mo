@@ -23,8 +23,6 @@ namespace lyre
 
         result_type compile(const ast::stmts & stmts);
 
-        template <class T>
-        result_type operator()(const T &) { return nullptr; }
         result_type operator()(const ast::expr & s);
         result_type operator()(const ast::none &);
         result_type operator()(const ast::decl & s);
@@ -33,8 +31,12 @@ namespace lyre
         result_type operator()(const ast::see & s);
         result_type operator()(const ast::with & s);
         result_type operator()(const ast::speak & s);
+        result_type operator()(const ast::per & s);
+        result_type operator()(const ast::ret & s);
 
     private:
+        result_type compile_expr(const ast::expr &);
+        result_type compile_expr(const boost::optional<ast::expr> & e) { return compile_expr(boost::get<ast::expr>(e)); }
         result_type compile_body(llvm::Function * fun, const ast::stmts &);
 
     private:

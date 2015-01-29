@@ -148,7 +148,8 @@ namespace lyre
                 "is",    // 
                 "see",   // 
                 "with",  // 
-                "per"    // loop on a list or range
+                "per",   // loop on a list or range
+                "return"
                 ;
 
             ////////////////////
@@ -385,6 +386,7 @@ namespace lyre
                 %= decl
                 |  proc
                 |  type
+                |  ret
                 |  see
                 |  with
                 |  speak
@@ -442,6 +444,12 @@ namespace lyre
                 >  block(std::string("see"))
                 ;
 
+            ret
+                =  lexeme[ "return" >> !(alnum | '_')/*expr.idchar*/ ]
+                >  -expr
+                >  ';'
+                ;
+
             speak
                 =  lexeme[ "speak" >> !(alnum | '_')/*expr.idchar*/ ]
                 //>  as_string_list[ expr.identifier % '>' ]
@@ -474,6 +482,8 @@ namespace lyre
                 (speak_source)
                 (with)
                 (see)
+                (per)
+                (ret)
                 (block)
             );
 
@@ -498,6 +508,8 @@ namespace lyre
         rule< std::list<ast::param>() > params;
         rule< ast::with() > with;
         rule< ast::see() > see;
+        rule< ast::per() > per;
+        rule< ast::ret() > ret;
 
         rule< ast::block(std::string) > block;
 

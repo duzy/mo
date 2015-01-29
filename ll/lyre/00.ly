@@ -14,20 +14,16 @@
 #type int32 is int:bits(32)
 #type uint is int:unsigned(true)
 
-#say(1);
-
 proc foo(a:int) int
 ----
     decl b = 0;
     b = (a + 1) * 2;
     a = b * b;
-    #return a;
+    return a;
 ----
 
-#foo(0);
+say(foo(1));
 
-#decl v = foo(foo(1));
+decl a = 1 + 2 + 3 + foo(4);
 
-#0;
-
-decl a = 1 + 2 + 3;
+return foo(foo(a * 5) * 10);
