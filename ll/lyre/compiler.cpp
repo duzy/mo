@@ -63,8 +63,8 @@ namespace lyre
             case ast::opcode::attr:     operand1 = op_attr(operand1, operand2); break;
             case ast::opcode::call:     operand1 = op_call(operand1, operand2); break;
             case ast::opcode::list: {
-                if (&op == &expr.operators.begin()) {
-                    auto list = ArrayType::get(ElementType, NumElements);
+                if (&op == &expr.operators.front()) {
+                    auto list = ArrayType::get(operand1->getType(), expr.operators.size());
                     operand1 = op_list(list, operand1);
                 }
                 operand1 = op_list(operand1, operand2);

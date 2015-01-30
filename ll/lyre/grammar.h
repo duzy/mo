@@ -459,7 +459,6 @@ namespace lyre
 
             speak
                 =  lexeme[ "speak" >> !(alnum | '_')/*expr.idchar*/ ]
-                //>  as_string_list[ expr.identifier % '>' ]
                 >  expr.identifier % '>'
                 >  speak_source
                 ;
