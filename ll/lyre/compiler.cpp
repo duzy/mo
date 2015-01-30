@@ -62,7 +62,13 @@ namespace lyre
             switch (op.opcode) {
             case ast::opcode::attr:     operand1 = op_attr(operand1, operand2); break;
             case ast::opcode::call:     operand1 = op_call(operand1, operand2); break;
-            case ast::opcode::list:     operand1 = op_list(operand1, operand2); break;
+            case ast::opcode::list: {
+                if (&op == &expr.operators.begin()) {
+                    auto list = ArrayType::get(ElementType, NumElements);
+                    operand1 = op_list(list, operand1);
+                }
+                operand1 = op_list(operand1, operand2);
+            } break;
             case ast::opcode::set:      operand1 = op_set(operand1, operand2); break;
             case ast::opcode::mul:      operand1 = op_mul(operand1, operand2); break;
             case ast::opcode::div:      operand1 = op_div(operand1, operand2); break;
