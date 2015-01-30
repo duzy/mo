@@ -9,6 +9,9 @@ decl a_string = "foobar";
 # language facility to conveniently operate on a node tree.
 decl a_node = { name:'foobar' };
 
+# scalar: byte (1), int (4), float (4), string
+# array, vector, map, type
+
 # variable declaration without initialization
 decl another_boolean bool;
 decl another_integer int;
@@ -220,3 +223,11 @@ per {name:'child-1'}, {name:'child-2'}, {name:'child-3'} doit
 decl list_a = doit per {name:'child-1'}, {name:'child-2'}, {name:'child-3'}
 decl list_b = 0 < _ per -3, -2, -1, 0, 1, 2, 3
 decl list_c = 0 < n per n in -3, -2, -1, 0, 1, 2, 3
+
+#->name;
+#->name.foo();
+#->name.name.foo();
+
+#.name;
+#.name.foo();
+#.name->name.foo();

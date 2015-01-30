@@ -89,6 +89,9 @@ namespace lyre
             // assign
             set,
 
+            // list (comma)
+            list,
+
             br,   // conditional branch
             swi,  // switch
 

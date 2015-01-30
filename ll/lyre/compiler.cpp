@@ -37,6 +37,7 @@ namespace lyre
     private:
         llvm::Value *op_attr(llvm::Value *operand1, llvm::Value *operand2);
         llvm::Value *op_call(llvm::Value *operand1, llvm::Value *operand2);
+        llvm::Value *op_list(llvm::Value *operand1, llvm::Value *operand2);
         llvm::Value *op_set(llvm::Value *operand1, llvm::Value *operand2);
         llvm::Value *op_mul(llvm::Value *operand1, llvm::Value *operand2);
         llvm::Value *op_div(llvm::Value *operand1, llvm::Value *operand2);
@@ -61,6 +62,7 @@ namespace lyre
             switch (op.opcode) {
             case ast::opcode::attr:     operand1 = op_attr(operand1, operand2); break;
             case ast::opcode::call:     operand1 = op_call(operand1, operand2); break;
+            case ast::opcode::list:     operand1 = op_list(operand1, operand2); break;
             case ast::opcode::set:      operand1 = op_set(operand1, operand2); break;
             case ast::opcode::mul:      operand1 = op_mul(operand1, operand2); break;
             case ast::opcode::div:      operand1 = op_div(operand1, operand2); break;
@@ -189,6 +191,16 @@ namespace lyre
             name = ""; // "Cannot assign a name to void values!"
         }
         return comp->builder->CreateCall(fun, args, name);
+    }
+
+    Value *expr_compiler::op_list(Value *operand1, Value *operand2)
+    {
+        std::clog
+            << __FUNCTION__ << ": "
+            << "operand1 = " << operand1 << ", "
+            << "operand2 = " << operand2
+            << std::endl;
+        return nullptr;
     }
 
     Value *expr_compiler::op_set(Value *operand1, Value *operand2)
@@ -337,7 +349,9 @@ namespace lyre
                 //std::pair<std::string, Type*>("float64", Type::getDoubleTy(context)),
                 std::pair<std::string, Type*>("float", Type::getDoubleTy(context)),
                 std::pair<std::string, Type*>("int", IntegerType::get(context, 32)),
-                std::pair<std::string, Type*>("variant", PointerType::get(Type::getInt8PtrTy(context), 0))
+                std::pair<std::string, Type*>("bool", Type::getInt1Ty(context)),
+                std::pair<std::string, Type*>("variant", PointerType::get(Type::getInt8PtrTy(context), 0)),
+                std::pair<std::string, Type*>("node", StructType::get(context))
           })
         , error()
         , module(nullptr)

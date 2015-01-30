@@ -98,6 +98,10 @@ namespace lyre
             as<ast::expr> as_expr;
             as<ast::op> as_op;
 
+            list_op.add
+                (",", ast::opcode::list)
+                ;
+
             assign_op.add
                 ("=", ast::opcode::set)
                 ;
@@ -154,11 +158,12 @@ namespace lyre
 
             ////////////////////
             expr
-                /*
-                %= !keywords
-                >> prefix
-                */
-                %= assign
+                %= list
+                ;
+
+            list
+                =  assign
+                >> *(list_op > assign)
                 ;
 
             assign
@@ -279,6 +284,7 @@ namespace lyre
                 (quote)
                 (arglist)
                 (assign)
+                (list)
             );
 
             on_error<fail>
@@ -300,8 +306,8 @@ namespace lyre
         rule< ast::expr() > postfix;
 
         rule< ast::expr() > dotted;
-        rule< ast::expr() > list;
 
+        rule< ast::expr() > list;
         rule< ast::expr() > assign;
         rule< ast::expr() > logical_or;
         rule< ast::expr() > logical_and;
@@ -326,6 +332,7 @@ namespace lyre
         boost::spirit::qi::rule<Iterator> dashes;
 
         boost::spirit::qi::symbols<char, ast::opcode>
+            list_op,
             assign_op,
             equality_op,
             relational_op,
