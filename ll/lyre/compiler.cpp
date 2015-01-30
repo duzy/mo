@@ -336,12 +336,12 @@ namespace lyre
                 //std::pair<std::string, Type*>("float32", Type::getFloatTy(context)),
                 //std::pair<std::string, Type*>("float64", Type::getDoubleTy(context)),
                 std::pair<std::string, Type*>("float", Type::getDoubleTy(context)),
-                std::pair<std::string, Type*>("int", IntegerType::get(context, 32))
+                std::pair<std::string, Type*>("int", IntegerType::get(context, 32)),
+                std::pair<std::string, Type*>("variant", PointerType::get(Type::getInt8PtrTy(context), 0))
           })
         , error()
         , module(nullptr)
         , engine(nullptr)
-        , builder0(nullptr)
         , builder(nullptr)
     {
         auto m = make_unique<Module>("a", context);
@@ -435,23 +435,24 @@ namespace lyre
         );
 
         auto EntryBlock = BasicBlock::Create(context, "EntryBlock", start);
-        auto b0 = (builder0 = make_unique<IRBuilder<>>(EntryBlock)).get();
+        builder = make_unique<IRBuilder<>>(EntryBlock);
+
         if (stmts.empty()) {
-            b0->CreateRet(b0->getInt32(0));
+            builder->CreateRet(builder->getInt32(0));
             return start;
         }
 
+        auto TopBlock = BasicBlock::Create(context, "TopBlock", start);
+        builder->CreateBr(TopBlock);
+        builder->SetInsertPoint(TopBlock);
+
         Value *last = nullptr;
-        auto RootBlock = BasicBlock::Create(context, "RootBlock", start);
-        builder = make_unique<IRBuilder<>>(RootBlock);
         for (auto stmt : stmts) {
             if (!(last = boost::apply_visitor(*this, stmt))) {
-                b0->CreateRet(b0->getInt32(0));
+                builder->CreateRet(builder->getInt32(0));
                 return nullptr;
             }
         }
-
-        b0->CreateBr(RootBlock);
 
         // If the block is well formed, we don't need to add 'ret'.
         if (builder->GetInsertBlock()->getTerminator()) return start;
@@ -496,10 +497,10 @@ namespace lyre
 
     compiler::result_type compiler::operator()(const ast::decl & decl)
     {
-        /*
-        IRBuilder<> TmpB(&TheFunction->getEntryBlock(), TheFunction->getEntryBlock().begin());
-        return TmpB.CreateAlloca(Type::getDoubleTy(getGlobalContext()), 0, VarName.c_str());
-        */
+        auto & EntryBlock = builder->GetInsertBlock()->getParent()->getEntryBlock();
+        IRBuilder<> allocaBuilder(&EntryBlock, EntryBlock.begin());
+
+        auto variant = typemap.find("variant")->second;
         compiler::result_type lastAlloca = nullptr;
         for (auto sym : decl) {
             /**
@@ -507,7 +508,7 @@ namespace lyre
              *  store var, sym.expr
              */
 
-            auto type = reinterpret_cast<Type*>(Type::getInt8PtrTy(context));
+            auto type = variant;
 
             Value* value = nullptr;
             if (sym.expr) {
@@ -527,7 +528,7 @@ namespace lyre
             /**
              *  Get a PointerTy of new alloca.
              */
-            auto alloca = builder0->CreateAlloca(type, nullptr, sym.id.string.c_str());
+            auto alloca = allocaBuilder.CreateAlloca(type, nullptr, sym.id.string.c_str());
             if (value) {
                 auto store = builder->CreateStore(value, alloca);
             }
@@ -536,8 +537,8 @@ namespace lyre
 
             /*
             std::clog
-                //<< builder0->GetInsertBlock()->getParent()->getValueSymbolTable().lookup(sym.name.c_str());
-                << builder0->GetInsertBlock()->getValueSymbolTable()->lookup(sym.name.c_str())
+                //<< builder->GetInsertBlock()->getParent()->getValueSymbolTable().lookup(sym.name.c_str());
+                << builder->GetInsertBlock()->getValueSymbolTable()->lookup(sym.name.c_str())
                 << alloca << ", "
                 << std::endl;
             */
@@ -585,13 +586,15 @@ namespace lyre
             ++arg;
         }
 
-        auto savedBuilder0 = std::move(builder0);
-        auto savedBuilder = std::move(builder);
+        auto savedInsertBlock = builder->GetInsertBlock();
 
-        if (nullptr == this->compile_body(fun, proc.block.stmts)) return nullptr;
+        if (nullptr == this->compile_body(fun, proc.block.stmts)) {
+            // No function body, remove function.
+            fun->eraseFromParent();
+            return nullptr;
+        }
 
-        builder0 = std::move(savedBuilder0);
-        builder = std::move(savedBuilder);
+        builder->SetInsertPoint(savedInsertBlock);
         return fun;
     }
 
@@ -600,31 +603,27 @@ namespace lyre
         auto rty = fun->getReturnType();
 
         auto EntryBlock = BasicBlock::Create(context, "EntryBlock", fun);
-        auto b0 = (builder0 = make_unique<IRBuilder<>>(EntryBlock)).get();
+        builder->SetInsertPoint(EntryBlock);
+
         if (stmts.empty()) {
-            /*
-            if (rty->isVoidTy()) return b0->CreateRetVoid();
-            return b0->CreateRet(builder->getInt32(0));
-            */
-            return b0->CreateRetVoid();
+            return builder->CreateRetVoid();
         }
 
-        Value *last = nullptr;
         auto StartBlock = BasicBlock::Create(context, "StartBlock", fun);
-        builder = make_unique<IRBuilder<>>(StartBlock);
+        builder->CreateBr(StartBlock);
+        builder->SetInsertPoint(StartBlock);
+
+        Value *last = nullptr;
         for (auto stmt : stmts) {
             if (!(last = boost::apply_visitor(*this, stmt))) {
-                //b0->CreateRet(builder->getInt32(0));
-                b0->CreateRetVoid();
+                builder->CreateRetVoid();
                 return nullptr;
             }
         }
 
-        b0->CreateBr(StartBlock);
-
         if (builder->GetInsertBlock()->getTerminator()) return last;
 
-        if (rty->isVoidTy()) return b0->CreateRetVoid();
+        if (rty->isVoidTy()) return builder->CreateRetVoid();
         if (last) {
             auto fty = fun->getFunctionType();
             auto lty = last->getType();
@@ -633,7 +632,7 @@ namespace lyre
             if (fty->isValidReturnType(lty))
                 return builder->CreateRet(last);
         }
-        return b0->CreateRetVoid();
+        return builder->CreateRetVoid();
     }
 
     compiler::result_type compiler::operator()(const ast::type & s)

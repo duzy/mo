@@ -46,7 +46,6 @@ namespace lyre
         std::string error;
         llvm::Module * module;
         std::unique_ptr<llvm::ExecutionEngine> engine;
-        std::unique_ptr<llvm::IRBuilder<>> builder0; // the entry block builder
         std::unique_ptr<llvm::IRBuilder<>> builder; // the current block builder
     };
 }
