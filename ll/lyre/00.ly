@@ -22,8 +22,10 @@ proc foo(a:int) int
     return a;
 ----
 
-say(foo(1));
+say("foo"); #say(foo(1));
 
 decl a = 1 + 2 + 3 + foo(4);
+
+decl v; # variant
 
 return foo(foo(a * 5) * 10);

@@ -14,16 +14,6 @@
 #include <llvm/Support/raw_ostream.h>
 #include "compiler.h"
 
-extern "C" void sayd(int s)
-{
-    printf("%d\n", s);
-}
-
-extern "C" void say(int s)
-{
-    printf("%d\n", s);
-}
-
 namespace lyre
 {
     using namespace llvm;
@@ -161,14 +151,44 @@ namespace lyre
             << std::endl;
         */
 
-        auto name = "res";
-        if (isa<Function>(operand1) && cast<Function>(operand1)->getReturnType()->isVoidTy()) {
-            name = ""; // "Cannot assign a name to void values!"
+        if (!isa<Function>(operand1)) {
+            std::cerr
+                << "lyre: '" << operand1->getName().str() << "' is not a function"
+                << std::endl ;
+            return nullptr;
         }
+
+        auto fun = cast<Function>(operand1);
+        auto fty = fun->getFunctionType();
 
         std::vector<Value*> args = { operand2 };
 
-        return comp->builder->CreateCall(operand1, args, name);
+        if (args.size() != fty->getNumParams()) {
+            std::cerr
+                << "lyre: '" << operand1->getName().str() << "' wrong number of arguments"
+                << std::endl ;
+            return nullptr;
+        }
+
+        for (auto n=0; n < fty->getNumParams(); ++n) {
+            auto pty = fty->getParamType(n);
+            auto aty = args[n]->getType();
+            if (pty == aty) continue;
+            if (aty->canLosslesslyBitCastTo(pty)) {
+                if (aty->isPointerTy()) {
+                    args[n] = comp->builder->CreatePointerCast(args[n], pty);
+                } else if (aty->isIntegerTy()) {
+                    args[n] = comp->builder->CreateIntCast(args[n], pty, true /* TODO: isSigned */);
+                }
+                continue;
+            }
+        }
+
+        auto name = "res";
+        if (fun->getReturnType()->isVoidTy()) {
+            name = ""; // "Cannot assign a name to void values!"
+        }
+        return comp->builder->CreateCall(fun, args, name);
     }
 
     Value *expr_compiler::op_set(Value *operand1, Value *operand2)
@@ -293,6 +313,22 @@ namespace lyre
         llvm_shutdown();
     }
 
+    static void say(const char * s)
+    {
+        printf("%s\n", s);
+    }
+
+    static std::unordered_map<std::string, void*> LyreLazyFunctionMap = {
+        std::pair<std::string, void*>("say", reinterpret_cast<void*>(&say))
+    };
+
+    static void* LyreLazyFunctionCreator(const std::string & name)
+    {
+        auto i = LyreLazyFunctionMap.find(name);
+        if (i != LyreLazyFunctionMap.end()) return i->second;
+        return nullptr;
+    }
+
     compiler::compiler()
         : context()
         , typemap({
@@ -325,7 +361,16 @@ namespace lyre
         jit->setProcessAllSections(true);
 #endif
 
+        jit->InstallLazyFunctionCreator(LyreLazyFunctionCreator);
+
         module->setDataLayout(jit->getDataLayout());
+
+        if (1) {
+            std::vector<Type *> params = { Type::getInt8PtrTy(context) }; // { ArrayType::get(Type::getInt8Ty(context)) }
+            FunctionType *FT = FunctionType::get(Type::getVoidTy(context), params, false);
+            Function *F = Function::Create(FT, Function::ExternalLinkage, "say", module);
+            F->arg_begin()->setName("s");
+        }
 
         engine.reset(jit);
     }
@@ -335,7 +380,7 @@ namespace lyre
         GenericValue gv;
 
         if (!compile(stmts)) {
-            std::clog << "malformed statements"  << std::endl;
+            std::clog << "lyre: failed to compile statements"  << std::endl;
             return gv;
         }
 
@@ -367,27 +412,19 @@ namespace lyre
         // Ensure the module is fully processed and is usable. It has no effect for the interpeter.
         engine->finalizeObject();
 
+        engine->runStaticConstructorsDestructors(/* isDtors = */false);
+
         // Call the `foo' function with no arguments:
         std::vector<GenericValue> noargs; // = { GenericValue(1) };
         gv = engine->runFunction(start, noargs);
 
-        outs() << "-------------------\n"
-               << "Result: " << gv.IntVal << "\n"
-               << "-------------------\n" ;
-        outs().flush();
+        engine->runStaticConstructorsDestructors(/* isDtors = */true);
 
         return gv;
     }
 
     compiler::result_type compiler::compile(const ast::stmts & stmts)
     {
-        if (1) {
-            std::vector<Type *> params = { Type::getInt32Ty(context) };
-            FunctionType *FT = FunctionType::get(Type::getVoidTy(context), params, false);
-            Function *F = Function::Create(FT, Function::ExternalLinkage, "say", module);
-            F->arg_begin()->setName("s");
-        }
-
         // Create the ~start function entry and insert this entry into module M.
         // The '0' terminates the list of argument types.
         auto start = cast<Function>(
@@ -463,13 +500,14 @@ namespace lyre
         IRBuilder<> TmpB(&TheFunction->getEntryBlock(), TheFunction->getEntryBlock().begin());
         return TmpB.CreateAlloca(Type::getDoubleTy(getGlobalContext()), 0, VarName.c_str());
         */
-        compiler::result_type lastStore = nullptr;
+        compiler::result_type lastAlloca = nullptr;
         for (auto sym : decl) {
             /**
              *  var = alloca typeof(sym.expr)
-             *  init = sym.expr
+             *  store var, sym.expr
              */
-            auto type = Type::getVoidTy(context); // Type::getInt32Ty(context); // Type::getDoubleTy(context);
+
+            auto type = reinterpret_cast<Type*>(Type::getInt8PtrTy(context));
 
             Value* value = nullptr;
             if (sym.expr) {
@@ -492,8 +530,9 @@ namespace lyre
             auto alloca = builder0->CreateAlloca(type, nullptr, sym.id.string.c_str());
             if (value) {
                 auto store = builder->CreateStore(value, alloca);
-                lastStore = store;
             }
+
+            lastAlloca = alloca;
 
             /*
             std::clog
@@ -503,7 +542,7 @@ namespace lyre
                 << std::endl;
             */
         }
-        return lastStore;
+        return lastAlloca;
     }
 
     compiler::result_type compiler::operator()(const ast::proc & proc)

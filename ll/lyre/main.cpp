@@ -111,9 +111,9 @@ struct stmt_dumper
     }
 };
 
-int main()
+static void lyre_run(const char *ly)
 {
-    auto stmts = lyre::parse_file("00.ly");
+    auto stmts = lyre::parse_file(ly);
 
 #if false
     // std::clog<<"stmts: "<<stmts.size()<<std::endl;
@@ -124,11 +124,20 @@ int main()
     std::clog << std::string(12, '-') << std::endl;
 #endif
 
-    lyre::compiler::Init();
     lyre::compiler compiler;
+    auto gv = compiler.eval(stmts);
 
-    compiler.eval(stmts);
+    std::clog
+        << "-------------------\n"
+        << "eval: " << gv.IntVal.getLimitedValue() << "\n"
+        << std::endl
+        ;
+}
 
+int main()
+{
+    lyre::compiler::Init();
+    lyre_run("00.ly");
     lyre::compiler::Shutdown();
     return 0;
 }
