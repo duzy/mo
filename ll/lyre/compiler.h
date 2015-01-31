@@ -39,9 +39,13 @@ namespace lyre
         result_type compile_expr(const boost::optional<ast::expr> & e) { return compile_expr(boost::get<ast::expr>(e)); }
         result_type compile_body(llvm::Function * fun, const ast::stmts &);
 
+        result_type create_alloca(llvm::Type *Ty, llvm::Value *ArraySize = nullptr, const std::string &Name = "");
+
     private:
         friend struct expr_compiler;
         llvm::LLVMContext context;
+        llvm::Type* variant;
+        llvm::Type* nodetype;
         std::unordered_map<std::string, llvm::Type*> typemap;
         std::string error;
         llvm::Module * module;

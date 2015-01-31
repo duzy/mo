@@ -37,7 +37,7 @@ namespace lyre
     private:
         llvm::Value *op_attr(llvm::Value *operand1, llvm::Value *operand2);
         llvm::Value *op_call(llvm::Value *operand1, llvm::Value *operand2);
-        llvm::Value *op_list(llvm::Value *operand1, llvm::Value *operand2);
+        llvm::Value *op_list(llvm::Value *operand1, llvm::Value *operand2, llvm::Value *index);
         llvm::Value *op_set(llvm::Value *operand1, llvm::Value *operand2);
         llvm::Value *op_mul(llvm::Value *operand1, llvm::Value *operand2);
         llvm::Value *op_div(llvm::Value *operand1, llvm::Value *operand2);
@@ -57,6 +57,7 @@ namespace lyre
             return operand1;
         }
 
+        auto index = 0;
         for (auto op : expr.operators) {
             auto operand2 = boost::apply_visitor(*this, op.operand);
             switch (op.opcode) {
@@ -64,10 +65,11 @@ namespace lyre
             case ast::opcode::call:     operand1 = op_call(operand1, operand2); break;
             case ast::opcode::list: {
                 if (&op == &expr.operators.front()) {
-                    auto list = ArrayType::get(operand1->getType(), expr.operators.size());
-                    operand1 = op_list(list, operand1);
+                    auto lty = ArrayType::get(comp->variant, expr.operators.size()+1);
+                    auto list = comp->builder->CreateAlloca(lty, nullptr, "list");
+                    operand1 = op_list(list, operand1, comp->builder->getInt32(index));
                 }
-                operand1 = op_list(operand1, operand2);
+                operand1 = op_list(operand1, operand2, comp->builder->getInt32(index+1));
             } break;
             case ast::opcode::set:      operand1 = op_set(operand1, operand2); break;
             case ast::opcode::mul:      operand1 = op_mul(operand1, operand2); break;
@@ -85,6 +87,7 @@ namespace lyre
                     << "operand2 = " << operand2
                     << std::endl ;
             }
+            index += 1;
         }
 
         return operand1;
@@ -199,14 +202,23 @@ namespace lyre
         return comp->builder->CreateCall(fun, args, name);
     }
 
-    Value *expr_compiler::op_list(Value *operand1, Value *operand2)
+    Value *expr_compiler::op_list(Value *operand1, Value *operand2, llvm::Value *index)
     {
         std::clog
             << __FUNCTION__ << ": "
             << "operand1 = " << operand1 << ", "
             << "operand2 = " << operand2
             << std::endl;
-        return nullptr;
+
+        auto elem = comp->builder->CreateGEP(operand1, index);
+        auto ptr1 = comp->builder->CreateStructGEP(elem, 0);
+        auto ptr2 = comp->builder->CreateStructGEP(elem, 1);
+        auto val = operand2;
+        if (operand2->getType()->isPtrOrPtrVectorTy())
+            comp->builder->CreatePointerCast(operand2,
+                cast<PointerType>(ptr2->getType())->getElementType());
+        comp->builder->CreateStore(val, ptr2);
+        return operand1;
     }
 
     Value *expr_compiler::op_set(Value *operand1, Value *operand2)
@@ -350,6 +362,8 @@ namespace lyre
 
     compiler::compiler()
         : context()
+        , variant(StructType::get(Type::getInt8Ty(context), Type::getInt8PtrTy(context), nullptr))
+        , nodetype(StructType::get(context))
         , typemap({
                 //std::pair<std::string, Type*>("float16", Type::getHalfTy(context)),
                 //std::pair<std::string, Type*>("float32", Type::getFloatTy(context)),
@@ -357,8 +371,8 @@ namespace lyre
                 std::pair<std::string, Type*>("float", Type::getDoubleTy(context)),
                 std::pair<std::string, Type*>("int", IntegerType::get(context, 32)),
                 std::pair<std::string, Type*>("bool", Type::getInt1Ty(context)),
-                std::pair<std::string, Type*>("variant", PointerType::get(Type::getInt8PtrTy(context), 0)),
-                std::pair<std::string, Type*>("node", StructType::get(context))
+                std::pair<std::string, Type*>("variant", variant),
+                std::pair<std::string, Type*>("node", nodetype)
           })
         , error()
         , module(nullptr)
@@ -500,6 +514,13 @@ namespace lyre
         return start;
     }
 
+    compiler::result_type compiler::create_alloca(llvm::Type *Ty, llvm::Value *ArraySize, const std::string &Name)
+    {
+        auto & EntryBlock = builder->GetInsertBlock()->getParent()->getEntryBlock();
+        IRBuilder<> allocaBuilder(&EntryBlock, EntryBlock.begin());
+        return allocaBuilder.CreateAlloca(Ty, ArraySize, Name.c_str());
+    }
+
     compiler::result_type compiler::compile_expr(const ast::expr & expr)
     {
         expr_compiler excomp{ this };
@@ -524,7 +545,6 @@ namespace lyre
         auto & EntryBlock = builder->GetInsertBlock()->getParent()->getEntryBlock();
         IRBuilder<> allocaBuilder(&EntryBlock, EntryBlock.begin());
 
-        auto variant = typemap.find("variant")->second;
         compiler::result_type lastAlloca = nullptr;
         for (auto sym : decl) {
             /**
