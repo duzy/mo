@@ -37,7 +37,6 @@ namespace lyre
     private:
         llvm::Value *op_attr(llvm::Value *operand1, llvm::Value *operand2);
         llvm::Value *op_call(llvm::Value *operand1, llvm::Value *operand2);
-        llvm::Value *op_list(llvm::Value *operand1, llvm::Value *operand2, llvm::Value *index);
         llvm::Value *op_set(llvm::Value *operand1, llvm::Value *operand2);
         llvm::Value *op_mul(llvm::Value *operand1, llvm::Value *operand2);
         llvm::Value *op_div(llvm::Value *operand1, llvm::Value *operand2);
@@ -57,20 +56,21 @@ namespace lyre
             return operand1;
         }
 
-        auto index = 0;
-        for (auto op : expr.operators) {
+        if (expr.operators.front().opcode == ast::opcode::comma) {
+            std::vector<Metadata*> a{ ValueAsMetadata::get(operand1) };
+            for (auto & op : expr.operators) {
+                assert(op.opcode == ast::opcode::comma && "mixed comma with other operators");
+                auto value = boost::apply_visitor(*this, op.operand);
+                a.push_back( ValueAsMetadata::get(value) );
+            }
+            return MetadataAsValue::get(comp->context, MDNode::get(comp->context, a));
+        }
+
+        for (auto & op : expr.operators) {
             auto operand2 = boost::apply_visitor(*this, op.operand);
             switch (op.opcode) {
             case ast::opcode::attr:     operand1 = op_attr(operand1, operand2); break;
             case ast::opcode::call:     operand1 = op_call(operand1, operand2); break;
-            case ast::opcode::list: {
-                if (&op == &expr.operators.front()) {
-                    auto lty = ArrayType::get(comp->variant, expr.operators.size()+1);
-                    auto list = comp->builder->CreateAlloca(lty, nullptr, "list");
-                    operand1 = op_list(list, operand1, comp->builder->getInt32(index));
-                }
-                operand1 = op_list(operand1, operand2, comp->builder->getInt32(index+1));
-            } break;
             case ast::opcode::set:      operand1 = op_set(operand1, operand2); break;
             case ast::opcode::mul:      operand1 = op_mul(operand1, operand2); break;
             case ast::opcode::div:      operand1 = op_div(operand1, operand2); break;
@@ -87,7 +87,6 @@ namespace lyre
                     << "operand2 = " << operand2
                     << std::endl ;
             }
-            index += 1;
         }
 
         return operand1;
@@ -172,7 +171,18 @@ namespace lyre
         auto fun = cast<Function>(operand1);
         auto fty = fun->getFunctionType();
 
-        std::vector<Value*> args = { operand2 };
+        std::vector<Value*> args;
+
+        if (operand2->getType()->isMetadataTy()) {
+            auto mav = cast<MetadataAsValue>(operand2);
+            auto mdnode = cast<MDNode>(mav->getMetadata());
+            for (auto & mdop : mdnode->operands()) {
+                auto md = cast<ValueAsMetadata>(mdop.get());
+                args.push_back(md->getValue());
+            }
+        } else {
+            args.push_back(operand2);
+        }
 
         if (args.size() != fty->getNumParams()) {
             std::cerr
@@ -202,6 +212,7 @@ namespace lyre
         return comp->builder->CreateCall(fun, args, name);
     }
 
+#if 0
     Value *expr_compiler::op_list(Value *operand1, Value *operand2, llvm::Value *index)
     {
         std::clog
@@ -220,6 +231,7 @@ namespace lyre
         comp->builder->CreateStore(val, ptr2);
         return operand1;
     }
+#endif
 
     Value *expr_compiler::op_set(Value *operand1, Value *operand2)
     {
@@ -362,7 +374,7 @@ namespace lyre
 
     compiler::compiler()
         : context()
-        , variant(StructType::get(Type::getInt8Ty(context), Type::getInt8PtrTy(context), nullptr))
+        , variant(StructType::get(Type::getMetadataTy(context), nullptr))
         , nodetype(StructType::get(context))
         , typemap({
                 //std::pair<std::string, Type*>("float16", Type::getHalfTy(context)),

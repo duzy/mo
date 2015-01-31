@@ -99,7 +99,7 @@ namespace lyre
             as<ast::op> as_op;
 
             list_op.add
-                (",", ast::opcode::list)
+                (",", ast::opcode::comma)
                 ;
 
             assign_op.add
