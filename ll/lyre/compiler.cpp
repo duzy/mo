@@ -184,7 +184,7 @@ namespace lyre
             args.push_back(operand2);
         }
 
-        if (args.size() != fty->getNumParams()) {
+        if (!fty->isVarArg() && args.size() != fty->getNumParams()) {
             std::cerr
                 << "lyre: '" << operand1->getName().str() << "' wrong number of arguments"
                 << std::endl ;
@@ -355,9 +355,13 @@ namespace lyre
         llvm_shutdown();
     }
 
-    static void say(const char * s)
+    static void say(const char * s, ...)
     {
-        printf("%s\n", s);
+        va_list ap;
+        va_start(ap, s);
+        vprintf(s, ap);
+        va_end(ap);
+        printf("\n");
     }
 
     static std::unordered_map<std::string, void*> LyreLazyFunctionMap = {
@@ -374,8 +378,13 @@ namespace lyre
 
     compiler::compiler()
         : context()
-        , variant(StructType::get(Type::getMetadataTy(context), nullptr))
-        , nodetype(StructType::get(context))
+        , variant(
+            StructType::get(
+                Type::getMetadataTy(context),
+                nullptr
+            )
+        )
+        , nodetype(StructType::create(context))
         , typemap({
                 //std::pair<std::string, Type*>("float16", Type::getHalfTy(context)),
                 //std::pair<std::string, Type*>("float32", Type::getFloatTy(context)),
@@ -391,6 +400,14 @@ namespace lyre
         , engine(nullptr)
         , builder(nullptr)
     {
+        reinterpret_cast<StructType*>(nodetype)->setBody(
+            Type::getInt8PtrTy(context),        // node (tag) name
+            Type::getInt32Ty(context),          // number of children
+            PointerType::getUnqual(nodetype),   // children
+            PointerType::getUnqual(nodetype),   // parent
+            nullptr
+        );
+
         auto m = make_unique<Module>("a", context);
 
         // Keep the reference to the module
@@ -413,8 +430,8 @@ namespace lyre
         module->setDataLayout(jit->getDataLayout());
 
         if (1) {
-            std::vector<Type *> params = { Type::getInt8PtrTy(context) }; // { ArrayType::get(Type::getInt8Ty(context)) }
-            FunctionType *FT = FunctionType::get(Type::getVoidTy(context), params, false);
+            std::vector<Type *> params = { Type::getInt8PtrTy(context) };
+            FunctionType *FT = FunctionType::get(Type::getVoidTy(context), params, true);
             Function *F = Function::Create(FT, Function::ExternalLinkage, "say", module);
             F->arg_begin()->setName("s");
         }
@@ -497,7 +514,7 @@ namespace lyre
         builder->SetInsertPoint(TopBlock);
 
         Value *last = nullptr;
-        for (auto stmt : stmts) {
+        for (auto & stmt : stmts) {
             if (!(last = boost::apply_visitor(*this, stmt))) {
                 builder->CreateRet(builder->getInt32(0));
                 return nullptr;
@@ -558,18 +575,24 @@ namespace lyre
         IRBuilder<> allocaBuilder(&EntryBlock, EntryBlock.begin());
 
         compiler::result_type lastAlloca = nullptr;
-        for (auto sym : decl) {
+        for (auto & sym : decl) {
             /**
-             *  var = alloca typeof(sym.expr)
-             *  store var, sym.expr
+             *  The default type is 'variant'.
              */
-
             auto type = variant;
+
+            if (sym.type) {
+                auto i = typemap.find(boost::get<ast::identifier>(sym.type).string);
+                if (i != typemap.end()) type = i->second;
+            }
 
             Value* value = nullptr;
             if (sym.expr) {
                 if ((value = compile_expr(sym.expr))) {
-                    type = value->getType();
+                    /**
+                     *  Use the value type if no explicit type specified.
+                     */
+                    if (!sym.type) type = value->getType();
 
                     /*
                     std::clog
@@ -618,7 +641,7 @@ namespace lyre
         }
 
         std::vector<Type*> params;
-        for (auto param : proc.params) {
+        for (auto & param : proc.params) {
             //std::clog << "param: " << param.type.string << std::endl;
             auto t = typemap.find(param.type.string);
             if (t == typemap.end()) {
@@ -636,7 +659,7 @@ namespace lyre
         // ExternalLinkage, InternalLinkage, PrivateLinkage
         auto fun = Function::Create(fty, Function::PrivateLinkage, proc.name.string, module);
         auto arg = fun->arg_begin();
-        for (auto param : proc.params) {
+        for (auto & param : proc.params) {
             assert (arg != fun->arg_end());
             arg->setName(param.name.string);
             ++arg;
@@ -670,7 +693,7 @@ namespace lyre
         builder->SetInsertPoint(StartBlock);
 
         Value *last = nullptr;
-        for (auto stmt : stmts) {
+        for (auto & stmt : stmts) {
             if (!(last = boost::apply_visitor(*this, stmt))) {
                 builder->CreateRetVoid();
                 return nullptr;

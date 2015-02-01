@@ -144,7 +144,7 @@ namespace lyre
         struct declsym
         {
             identifier id;
-            //identifier type;
+            boost::optional<identifier> type;
             boost::optional<ast::expr> expr;
         };
 
@@ -203,7 +203,7 @@ namespace lyre
 BOOST_FUSION_ADAPT_STRUCT(
     lyre::ast::declsym,
     (lyre::ast::identifier, id)
-    //(lyre::ast::identifier, type)
+    (boost::optional<lyre::ast::identifier>, type)
     (boost::optional<lyre::ast::expr>, expr)
 )
 

@@ -11,6 +11,9 @@ $(info LLVMLIBS: $(LLVMLIBS))
 
 LLVM := $(or $(wildcard /open/llvm),$(wildcard ~/tools/ll/llvm))
 LLVM_CONFIG := $(LLVM)/Debug+Asserts/bin/llvm-config
+LLVM_DIS := $(LLVM)/Debug+Asserts/bin/llvm-dis
+LLI := $(LLVM)/Debug+Asserts/bin/lli
+
 CXXFLAGS := \
   -DLYRE_USING_MCJIT=$(LYRE_USING_MCJIT) \
   $(shell $(LLVM_CONFIG) --cxxflags)
@@ -33,3 +36,4 @@ parse.o:
 	$(COMPILE.cc) $< -o $@
 
 test: lyre ; @./lyre
+lab: lab.ll ; @$(LLI) lab.ll

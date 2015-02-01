@@ -243,8 +243,8 @@ namespace lyre
 
             quote
                 = (
-                    ( '\'' >> *(char_ - '\'') >> '\'' ) |
-                    ( '"' >> *(char_ - '"') >> '"' )
+                    ( '\'' >> raw[ *(char_ - '\'') ] >> '\'' ) |
+                    ( '"' >> raw[ *(char_ - '"') ] >> '"' )
                   )
                 ;
 
@@ -418,6 +418,7 @@ namespace lyre
                 >  (
                        (
                            expr.identifier
+                           >> -expr.identifier
                            >> -( '=' > expr )
                        ) % ','
                    )
