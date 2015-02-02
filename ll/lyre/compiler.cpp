@@ -14,6 +14,8 @@
 #include <llvm/Support/raw_ostream.h>
 #include "compiler.h"
 
+// TODO: http://llvm.org/docs/GarbageCollection.html
+
 namespace lyre
 {
     using namespace llvm;
