@@ -26,16 +26,10 @@ public:
 
 int main(int argc, char**argv)
 {
-    Foo foo(1);
+    IFoo *ptr = new Foo(100);
 
-    IFoo *ptr1 = new Foo(100);
-    IFoo *ptr2 = new Foobar(20, 10);
+    int v = ptr->foo();
 
-    int v1 = foo.foo();
-    int v2 = ptr1->foo();
-    int v3 = ptr2->foo();
-
-    delete ptr1;
-    delete ptr2;
+    delete ptr;
     return 0;
 }
