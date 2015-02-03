@@ -89,7 +89,7 @@ namespace lyre
             // assign
             set,
 
-            // list, tuple (comma)
+            // list, tuple, etc.
             comma,
 
             br,   // conditional branch

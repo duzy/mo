@@ -1,2 +1,7 @@
+decl v = 1;
 decl a node;
-decl v;
+
+proc fun(a:variant) variant
+----
+    return a;
+----

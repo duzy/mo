@@ -37,16 +37,16 @@ namespace lyre
         llvm::Value *operator()(double v);
 
     private:
-        llvm::Value *op_attr(llvm::Value *operand1, llvm::Value *operand2);
-        llvm::Value *op_call(llvm::Value *operand1, llvm::Value *operand2);
-        llvm::Value *op_set(llvm::Value *operand1, llvm::Value *operand2);
-        llvm::Value *op_mul(llvm::Value *operand1, llvm::Value *operand2);
-        llvm::Value *op_div(llvm::Value *operand1, llvm::Value *operand2);
-        llvm::Value *op_add(llvm::Value *operand1, llvm::Value *operand2);
-        llvm::Value *op_sub(llvm::Value *operand1, llvm::Value *operand2);
-        llvm::Value *op_and(llvm::Value *operand1, llvm::Value *operand2);
-        llvm::Value *op_or (llvm::Value *operand1, llvm::Value *operand2);
-        llvm::Value *op_xor(llvm::Value *operand1, llvm::Value *operand2);
+        llvm::Value *op_attr(const ast::op & op, llvm::Value *operand1, llvm::Value *operand2);
+        llvm::Value *op_call(const ast::op & op, llvm::Value *operand1, llvm::Value *operand2);
+        llvm::Value *op_set(const ast::op & op, llvm::Value *operand1, llvm::Value *operand2);
+        llvm::Value *op_mul(const ast::op & op, llvm::Value *operand1, llvm::Value *operand2);
+        llvm::Value *op_div(const ast::op & op, llvm::Value *operand1, llvm::Value *operand2);
+        llvm::Value *op_add(const ast::op & op, llvm::Value *operand1, llvm::Value *operand2);
+        llvm::Value *op_sub(const ast::op & op, llvm::Value *operand1, llvm::Value *operand2);
+        llvm::Value *op_and(const ast::op & op, llvm::Value *operand1, llvm::Value *operand2);
+        llvm::Value *op_or (const ast::op & op, llvm::Value *operand1, llvm::Value *operand2);
+        llvm::Value *op_xor(const ast::op & op, llvm::Value *operand1, llvm::Value *operand2);
 
         llvm::Value *binary(llvm::Instruction::BinaryOps, llvm::Value *operand1, llvm::Value *operand2);
     };
@@ -71,22 +71,22 @@ namespace lyre
         for (auto & op : expr.operators) {
             auto operand2 = boost::apply_visitor(*this, op.operand);
             switch (op.opcode) {
-            case ast::opcode::attr:     operand1 = op_attr(operand1, operand2); break;
-            case ast::opcode::call:     operand1 = op_call(operand1, operand2); break;
-            case ast::opcode::set:      operand1 = op_set(operand1, operand2); break;
-            case ast::opcode::mul:      operand1 = op_mul(operand1, operand2); break;
-            case ast::opcode::div:      operand1 = op_div(operand1, operand2); break;
-            case ast::opcode::add:      operand1 = op_add(operand1, operand2); break;
-            case ast::opcode::sub:      operand1 = op_sub(operand1, operand2); break;
-            case ast::opcode::a:        operand1 = op_and(operand1, operand2); break;
-            case ast::opcode::o:        operand1 = op_or (operand1, operand2); break;
-            case ast::opcode::xo:       operand1 = op_xor(operand1, operand2); break;
+            case ast::opcode::attr:     operand1 = op_attr(op, operand1, operand2); break;
+            case ast::opcode::call:     operand1 = op_call(op, operand1, operand2); break;
+            case ast::opcode::set:      operand1 = op_set(op, operand1, operand2); break;
+            case ast::opcode::mul:      operand1 = op_mul(op, operand1, operand2); break;
+            case ast::opcode::div:      operand1 = op_div(op, operand1, operand2); break;
+            case ast::opcode::add:      operand1 = op_add(op, operand1, operand2); break;
+            case ast::opcode::sub:      operand1 = op_sub(op, operand1, operand2); break;
+            case ast::opcode::a:        operand1 = op_and(op, operand1, operand2); break;
+            case ast::opcode::o:        operand1 = op_or (op, operand1, operand2); break;
+            case ast::opcode::xo:       operand1 = op_xor(op, operand1, operand2); break;
             default:
                 std::clog
                     << __FUNCTION__
                     << ": expr: op = " << int(op.opcode) << ", "
-                    << "operand1 = " << operand1 << ", "
-                    << "operand2 = " << operand2
+                    //<< "operand1 = " << operand1 << ", "
+                    //<< "operand2 = " << operand2
                     << std::endl ;
             }
         }
@@ -148,12 +148,12 @@ namespace lyre
         return ConstantFP::get(comp->context, APFloat(v));
     }
 
-    Value *expr_compiler::op_attr(Value *operand1, Value *operand2)
+    Value *expr_compiler::op_attr(const ast::op & op, Value *operand1, Value *operand2)
     {
         return operand1;
     }
 
-    Value *expr_compiler::op_call(Value *operand1, Value *operand2)
+    Value *expr_compiler::op_call(const ast::op & op, Value *operand1, Value *operand2)
     {
         /*
         std::clog
@@ -215,7 +215,7 @@ namespace lyre
     }
 
 #if 0
-    Value *expr_compiler::op_list(Value *operand1, Value *operand2, llvm::Value *index)
+    Value *expr_compiler::op_list(const ast::op & op, Value *operand1, Value *operand2, llvm::Value *index)
     {
         std::clog
             << __FUNCTION__ << ": "
@@ -235,7 +235,7 @@ namespace lyre
     }
 #endif
 
-    Value *expr_compiler::op_set(Value *operand1, Value *operand2)
+    Value *expr_compiler::op_set(const ast::op & op, Value *operand1, Value *operand2)
     {
         /*
         std::clog
@@ -259,7 +259,7 @@ namespace lyre
         return operand1;
     }
 
-    Value *expr_compiler::op_mul(Value *operand1, Value *operand2)
+    Value *expr_compiler::op_mul(const ast::op & op, Value *operand1, Value *operand2)
     {
         /*
         std::clog
@@ -271,7 +271,7 @@ namespace lyre
         return binary(Instruction::Mul,  operand1, operand2);
     }
 
-    Value *expr_compiler::op_div(Value *operand1, Value *operand2)
+    Value *expr_compiler::op_div(const ast::op & op, Value *operand1, Value *operand2)
     {
         /*
         std::clog
@@ -283,7 +283,7 @@ namespace lyre
         return binary(Instruction::UDiv,  operand1, operand2);
     }
 
-    Value *expr_compiler::op_add(Value *operand1, Value *operand2)
+    Value *expr_compiler::op_add(const ast::op & op, Value *operand1, Value *operand2)
     {
         /*
         std::clog
@@ -295,7 +295,7 @@ namespace lyre
         return binary(Instruction::Add,  operand1, operand2); // comp->builder->CreateAdd(operand1, operand2, "tmp");
     }
 
-    Value *expr_compiler::op_sub(Value *operand1, Value *operand2)
+    Value *expr_compiler::op_sub(const ast::op & op, Value *operand1, Value *operand2)
     {
         /*
         std::clog
@@ -307,17 +307,17 @@ namespace lyre
         return binary(Instruction::Sub,  operand1, operand2);
     }
 
-    llvm::Value *expr_compiler::op_and(llvm::Value *operand1, llvm::Value *operand2)
+    llvm::Value *expr_compiler::op_and(const ast::op & op, llvm::Value *operand1, llvm::Value *operand2)
     {
         return binary(Instruction::And,  operand1, operand2);
     }
 
-    llvm::Value *expr_compiler::op_or (llvm::Value *operand1, llvm::Value *operand2)
+    llvm::Value *expr_compiler::op_or(const ast::op & op, llvm::Value *operand1, llvm::Value *operand2)
     {
         return binary(Instruction::Or,  operand1, operand2);
     }
 
-    llvm::Value *expr_compiler::op_xor(llvm::Value *operand1, llvm::Value *operand2)
+    llvm::Value *expr_compiler::op_xor(const ast::op & op, llvm::Value *operand1, llvm::Value *operand2)
     {
         return binary(Instruction::Xor,  operand1, operand2);
     }
@@ -382,7 +382,7 @@ namespace lyre
         : context()
         , variant(
             StructType::get(
-                Type::getMetadataTy(context),
+                PointerType::getUnqual(Type::getInt8Ty(context)),
                 nullptr
             )
         )
@@ -503,17 +503,17 @@ namespace lyre
             )
         );
 
-        auto EntryBlock = BasicBlock::Create(context, "EntryBlock", start);
-        builder = make_unique<IRBuilder<>>(EntryBlock);
+        auto entry = BasicBlock::Create(context, "entry", start);
+        builder = make_unique<IRBuilder<>>(entry);
 
         if (stmts.empty()) {
             builder->CreateRet(builder->getInt32(0));
             return start;
         }
 
-        auto TopBlock = BasicBlock::Create(context, "TopBlock", start);
-        builder->CreateBr(TopBlock);
-        builder->SetInsertPoint(TopBlock);
+        auto block = BasicBlock::Create(context, "top", start);
+        builder->CreateBr(block);
+        builder->SetInsertPoint(block);
 
         Value *last = nullptr;
         for (auto & stmt : stmts) {
@@ -547,8 +547,8 @@ namespace lyre
 
     compiler::result_type compiler::create_alloca(llvm::Type *Ty, llvm::Value *ArraySize, const std::string &Name)
     {
-        auto & EntryBlock = builder->GetInsertBlock()->getParent()->getEntryBlock();
-        IRBuilder<> allocaBuilder(&EntryBlock, EntryBlock.begin());
+        auto & entry = builder->GetInsertBlock()->getParent()->getEntryBlock();
+        IRBuilder<> allocaBuilder(&entry, entry.begin());
         return allocaBuilder.CreateAlloca(Ty, ArraySize, Name.c_str());
     }
 
@@ -573,8 +573,8 @@ namespace lyre
 
     compiler::result_type compiler::operator()(const ast::decl & decl)
     {
-        auto & EntryBlock = builder->GetInsertBlock()->getParent()->getEntryBlock();
-        IRBuilder<> allocaBuilder(&EntryBlock, EntryBlock.begin());
+        auto & entry = builder->GetInsertBlock()->getParent()->getEntryBlock();
+        IRBuilder<> allocaBuilder(&entry, entry.begin());
 
         compiler::result_type lastAlloca = nullptr;
         for (auto & sym : decl) {
@@ -683,16 +683,16 @@ namespace lyre
     {
         auto rty = fun->getReturnType();
 
-        auto EntryBlock = BasicBlock::Create(context, "EntryBlock", fun);
-        builder->SetInsertPoint(EntryBlock);
+        auto entry = BasicBlock::Create(context, "entry", fun);
+        builder->SetInsertPoint(entry);
 
         if (stmts.empty()) {
             return builder->CreateRetVoid();
         }
 
-        auto StartBlock = BasicBlock::Create(context, "StartBlock", fun);
-        builder->CreateBr(StartBlock);
-        builder->SetInsertPoint(StartBlock);
+        auto block = BasicBlock::Create(context, "block", fun);
+        builder->CreateBr(block);
+        builder->SetInsertPoint(block);
 
         Value *last = nullptr;
         for (auto & stmt : stmts) {
