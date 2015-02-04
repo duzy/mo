@@ -381,21 +381,25 @@ namespace lyre
     compiler::compiler()
         : context()
         , variant(
-            StructType::get(
+            StructType::create(
+                "type.lyre.variant",
+                PointerType::getUnqual(Type::getInt8Ty(context)),
                 PointerType::getUnqual(Type::getInt8Ty(context)),
                 nullptr
             )
         )
-        , nodetype(StructType::create(context))
+        , nodetype(
+            StructType::create(context, "type.lyre.node")
+        )
         , typemap({
                 //std::pair<std::string, Type*>("float16", Type::getHalfTy(context)),
                 //std::pair<std::string, Type*>("float32", Type::getFloatTy(context)),
                 //std::pair<std::string, Type*>("float64", Type::getDoubleTy(context)),
-                std::pair<std::string, Type*>("float", Type::getDoubleTy(context)),
-                std::pair<std::string, Type*>("int", IntegerType::get(context, 32)),
-                std::pair<std::string, Type*>("bool", Type::getInt1Ty(context)),
+                std::pair<std::string, Type*>("float",  Type::getDoubleTy(context)),
+                std::pair<std::string, Type*>("int",    IntegerType::get(context, 32)),
+                std::pair<std::string, Type*>("bool",   Type::getInt1Ty(context)),
                 std::pair<std::string, Type*>("variant", variant),
-                std::pair<std::string, Type*>("node", nodetype)
+                std::pair<std::string, Type*>("node",   nodetype)
           })
         , error()
         , module(nullptr)
@@ -484,8 +488,14 @@ namespace lyre
         engine->runStaticConstructorsDestructors(/* isDtors = */false);
 
         // Call the `foo' function with no arguments:
-        std::vector<GenericValue> noargs; // = { GenericValue(1) };
+#if 0
+        std::vector<GenericValue> noargs;
         gv = engine->runFunction(start, noargs);
+#else
+        std::vector<std::string> argv = { "a" };
+        const char * const * envp = nullptr;
+        auto status = engine->runFunctionAsMain(start, argv, envp);
+#endif
 
         engine->runStaticConstructorsDestructors(/* isDtors = */true);
 
@@ -498,7 +508,9 @@ namespace lyre
         // The '0' terminates the list of argument types.
         auto start = cast<Function>(
             module->getOrInsertFunction("lyre.start"
-                , Type::getInt32Ty(context) //Type::getVoidTy(context)
+                , Type::getInt32Ty(context)
+                , Type::getInt32Ty(context)
+                , PointerType::getUnqual(Type::getInt8PtrTy(context))
                 , static_cast<Type*>(nullptr)
             )
         );
