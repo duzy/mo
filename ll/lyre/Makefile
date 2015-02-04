@@ -22,14 +22,14 @@ LIBS := \
   -lpthread -ltinfo -ldl -lm -lz
 LOADLIBS := 
 
-lyre: main.o compiler.o parse.o
+lyre: source/main.o source/compiler.o source/parse.o
 	$(LINK.cc) -o $@ $^ $(LOADLIBS) $(LIBS)
 
-main.o: main.cpp parse.h ast.h compiler.h
-compiler.o: compiler.cpp ast.h compiler.h
-parse.o: parse.cpp parse.h grammar.h ast.h
+source/main.o: source/main.cpp source/parse.h source/ast.h source/compiler.h
+source/compiler.o: source/compiler.cpp source/ast.h source/compiler.h
+source/parse.o: source/parse.cpp source/parse.h source/grammar.h source/ast.h
 
-parse.o:
+source/parse.o:
 	$(CXX) -DLYRE_USING_MCJIT=$(LYRE_USING_MCJIT) -std=c++11 -fPIC -c $< -o $@
 
 %.o: %.cpp
