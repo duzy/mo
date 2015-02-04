@@ -137,7 +137,7 @@ static void lyre_run(const char * ly)
 int main()
 {
     lyre::compiler::Init();
-    lyre_run("00.ly");
+    lyre_run("test/00.ly");
     lyre::compiler::Shutdown();
     return 0;
 }
