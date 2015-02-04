@@ -515,6 +515,11 @@ namespace lyre
             )
         );
 
+        //start->getFunctionType()->getParamType(0)->setName("argc");
+        //start->getFunctionType()->getParamType(1)->setName("argv");
+        start->arg_begin()->setName("argc");
+        (++start->arg_begin())->setName("argv");
+
         auto entry = BasicBlock::Create(context, "entry", start);
         builder = make_unique<IRBuilder<>>(entry);
 
