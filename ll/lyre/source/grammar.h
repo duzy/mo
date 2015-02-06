@@ -144,6 +144,12 @@ namespace lyre
                 ("->", ast::opcode::unary_arrow)
                 ;
 
+            builtin_constant.add
+                ("null", ast::cv::null)
+                ("true", ast::cv::true_)
+                ("false", ast::cv::false_)
+                ;
+
             keywords =
                 "decl",  // declare variables, constants, fields
                 "speak", // 
@@ -153,7 +159,8 @@ namespace lyre
                 "see",   // 
                 "with",  // 
                 "per",   // loop on a list or range
-                "return"
+                "return",
+                "true", "false", "null" // not really keywords, but special cases
                 ;
 
             ////////////////////
@@ -217,6 +224,7 @@ namespace lyre
 
             primary
                 =  '(' > expr > ')'
+                |  builtin_constant
                 |  name
                 |  quote
                 |  int_
@@ -342,6 +350,9 @@ namespace lyre
             multiplicative_op,
             unary_op ;
 
+        boost::spirit::qi::symbols<char, ast::cv>
+            builtin_constant ;
+
         boost::spirit::qi::symbols<char>
             keywords ;
     };
@@ -382,6 +393,8 @@ namespace lyre
             boost::spirit::inf_type             inf;
             boost::spirit::skip_type            skip;
 
+            as<ast::param> as_param;
+            as<ast::identifier> as_identifier;
             as<std::list<std::string>> as_string_list;
             as<std::string> as_string;
 
@@ -409,7 +422,7 @@ namespace lyre
 
             params
                 =  '('
-                >  -( (expr.identifier > omit[':'] > expr.identifier) % ',' )
+                >  -( ( expr.identifier > omit[':'] > expr.identifier ) % ',' )
                 >  ')'
                 ;
 

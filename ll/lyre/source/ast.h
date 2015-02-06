@@ -43,6 +43,11 @@ namespace lyre
             ast::stmts stmts;
         };
 
+        enum class cv : int
+        {
+            null, true_, false_
+        };
+
         enum class opcode : int
         {
             nil,
@@ -115,6 +120,7 @@ namespace lyre
             , uint32_t
             , uint64_t
         */
+            , cv
             , int
             , unsigned int
             , float
@@ -153,7 +159,7 @@ namespace lyre
         struct param
         {
             identifier name;
-            identifier type;
+            boost::optional<identifier> type;
         };
 
         struct proc
@@ -216,7 +222,7 @@ BOOST_FUSION_ADAPT_STRUCT(
 BOOST_FUSION_ADAPT_STRUCT(
     lyre::ast::param,
     (lyre::ast::identifier, name)
-    (lyre::ast::identifier, type)
+    (boost::optional<lyre::ast::identifier>, type)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(

@@ -37,3 +37,5 @@ source/parse.o:
 
 test: lyre ; @./lyre
 lab: lab.ll ; @$(LLI) lab.ll
+
+.PHONY: test lab

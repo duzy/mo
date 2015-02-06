@@ -31,6 +31,7 @@ namespace lyre
         llvm::Value *operator()(const ast::none & v);
         llvm::Value *operator()(const ast::identifier & v);
         llvm::Value *operator()(const std::string & v);
+        llvm::Value *operator()(ast::cv v);
         llvm::Value *operator()(int v);
         llvm::Value *operator()(unsigned int v);
         llvm::Value *operator()(float v);
@@ -123,6 +124,20 @@ namespace lyre
     {
         //std::clog << __FUNCTION__ << ": string = " << v << std::endl;
         return comp->builder->CreateGlobalString(v);
+    }
+
+    Value *expr_compiler::operator()(ast::cv cv)
+    {
+        //std::clog << __FUNCTION__ << ": int = " << v << std::endl;
+        switch (cv) {
+        case ast::cv::null:
+            break;
+        case ast::cv::true_:
+            return comp->builder->getInt1(1);
+        case ast::cv::false_:
+            return comp->builder->getInt1(0);
+        }
+        return nullptr;
     }
 
     Value *expr_compiler::operator()(int v)
@@ -399,7 +414,6 @@ namespace lyre
                 std::pair<std::string, Type*>("int",    IntegerType::get(context, 32)),
                 std::pair<std::string, Type*>("bool",   Type::getInt1Ty(context)),
                 std::pair<std::string, Type*>("variant", variant),
-                std::pair<std::string, Type*>("node",   nodetype)
           })
         , error()
         , module(nullptr)
@@ -661,12 +675,17 @@ namespace lyre
 
         std::vector<Type*> params;
         for (auto & param : proc.params) {
-            //std::clog << "param: " << param.type.string << std::endl;
-            auto t = typemap.find(param.type.string);
+            if (!param.type) {
+                params.push_back(variant);
+                continue;
+            }
+
+            auto & id = boost::get<ast::identifier>(param.type);
+            auto t = typemap.find(id.string);
             if (t == typemap.end()) {
                 std::cerr
                     << "proc: " << proc.name.string << ": unknown parameter type '"
-                    << param.type.string << "' referenced by '" << param.name.string << "'"
+                    << id.string << "' referenced by '" << param.name.string << "'"
                     << std::endl ;
                 return nullptr;
             }
