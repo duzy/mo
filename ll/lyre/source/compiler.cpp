@@ -522,7 +522,7 @@ namespace lyre
     compiler::result_type compiler::calling_conv(llvm::Type * ty, llvm::Value * value)
     {
         if (value->getType() == ty) return value;
-        if (value->getType()->isPointerTy() && value->getType()->getPointerElementType() == ty) {
+        if (value->getType()->isPointerTy() && value->getType()->getSequentialElementType() == ty) {
             return builder->CreateLoad(value);
         }
         return value;
