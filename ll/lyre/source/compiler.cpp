@@ -521,9 +521,17 @@ namespace lyre
 
     compiler::result_type compiler::calling_conv(llvm::Type * ty, llvm::Value * value)
     {
+        value->getType()->dump();
+        if (ty) ty->dump();
+        std::clog<<std::endl;
         if (value->getType() == ty) return value;
-        if (value->getType()->isPointerTy() && value->getType()->getSequentialElementType() == ty) {
-            return builder->CreateLoad(value);
+        if (value->getType()->isPointerTy()) {
+            auto elementTy = value->getType()->getSequentialElementType();
+            if (elementTy == ty) return builder->CreateLoad(value);
+            if (elementTy->getSequentialElementType() == ty) {
+                std::vector<llvm::Value*> idx = { builder->getInt32(0), builder->getInt32(0) };
+                return builder->CreateGEP(value, idx);
+            }
         }
         return value;
     }
