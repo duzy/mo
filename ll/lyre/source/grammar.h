@@ -23,6 +23,10 @@ namespace lyre
             std::clog<<s<<std::endl;
         }
 
+        void a_id(const ast::identifier & id) {
+            std::clog<<id.string<<std::endl;
+        }
+
         void a_name(const std::string & s) {
             std::clog<<"name: "<<s<<std::endl;
         }
@@ -242,7 +246,7 @@ namespace lyre
                 ;
             identifier
                 = !keywords
-                >> lexeme[ ( alpha | '_' ) >> *(alnum | '_') /*idchar*/ ]
+                >> raw[lexeme[ ( alpha | '_' ) >> *(alnum | '_') /*idchar*/ ]]
                 ;
 
             name
@@ -430,7 +434,7 @@ namespace lyre
                 =  lexeme[ "decl" >> !(alnum | '_')/*expr.idchar*/ ]
                 >  (
                        (
-                           expr.identifier
+                           expr.identifier // [ boost::bind(&debug::a_id, _1) ]
                            >> -expr.identifier
                            >> -( '=' > expr )
                        ) % ','

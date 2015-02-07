@@ -42,8 +42,22 @@ public:
     virtual int foo() { return value * factor; }
 };
 
+static void cal(int n, ...)
+{
+}
+
+static void str(const char * s, ...)
+{
+}
+
 int main(int argc, char**argv)
 {
+    int num = 0;
+    cal(num, num);
+
+    const char *s = "foo";
+    str(s, s, num);
+
     IFoo *ptr = new Foo(100);
 
     int v = ptr->foo();

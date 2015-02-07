@@ -108,6 +108,8 @@ namespace lyre
 
     Value *expr_compiler::operator()(const ast::identifier & id)
     {
+        std::clog << __FILE__ << ":" << __LINE__ << ": " << id.string << std::endl;
+
         auto sym = comp->builder->GetInsertBlock()->getValueSymbolTable()->lookup(id.string);
         if (sym) return sym;
         
@@ -193,12 +195,13 @@ namespace lyre
         if (operand2->getType()->isMetadataTy()) {
             auto mav = cast<MetadataAsValue>(operand2);
             auto mdnode = cast<MDNode>(mav->getMetadata());
+            auto n = 0;
             for (auto & mdop : mdnode->operands()) {
                 auto md = cast<ValueAsMetadata>(mdop.get());
-                args.push_back(md->getValue());
+                args.push_back(comp->calling_conv(fty->getParamType(n++), md->getValue()));
             }
         } else {
-            args.push_back(operand2);
+            args.push_back(comp->calling_conv(fty->getParamType(0), operand2));
         }
 
         if (!fty->isVarArg() && args.size() != fty->getNumParams()) {
@@ -516,6 +519,15 @@ namespace lyre
         return gv;
     }
 
+    compiler::result_type compiler::calling_conv(llvm::Type * ty, llvm::Value * value)
+    {
+        if (value->getType() == ty) return value;
+        if (value->getType()->isPointerTy() && value->getType()->getPointerElementType() == ty) {
+            return builder->CreateLoad(value);
+        }
+        return value;
+    }
+
     compiler::result_type compiler::compile(const ast::stmts & stmts)
     {
         // Create the ~start function entry and insert this entry into module M.
@@ -613,6 +625,8 @@ namespace lyre
              *  The default type is 'variant'.
              */
             auto type = variant;
+
+            std::clog << __FILE__ << ":" << __LINE__ << ": " << sym.id.string << std::endl;
 
             if (sym.type) {
                 auto i = typemap.find(boost::get<ast::identifier>(sym.type).string);
