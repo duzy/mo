@@ -125,7 +125,7 @@ namespace lyre
     Value *expr_compiler::operator()(const std::string & v)
     {
         //std::clog << __FUNCTION__ << ": string = " << v << std::endl;
-        return comp->builder->CreateGlobalString(v);
+        return comp->builder->CreateGlobalString(v, "str");
     }
 
     Value *expr_compiler::operator()(ast::cv cv)

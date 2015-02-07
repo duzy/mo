@@ -57,6 +57,7 @@ int main(int argc, char**argv)
 
     const char *s = "foo";
     str(s, s, num);
+    str("%s", s, num);
 
     IFoo *ptr = new Foo(100);
 
