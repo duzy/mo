@@ -108,7 +108,7 @@ namespace lyre
 
     Value *expr_compiler::operator()(const ast::identifier & id)
     {
-        std::clog << __FILE__ << ":" << __LINE__ << ": " << id.string << std::endl;
+        //std::clog << __FILE__ << ":" << __LINE__ << ": " << id.string << std::endl;
 
         auto sym = comp->builder->GetInsertBlock()->getValueSymbolTable()->lookup(id.string);
         if (sym) return sym;
@@ -125,7 +125,7 @@ namespace lyre
     Value *expr_compiler::operator()(const std::string & v)
     {
         //std::clog << __FUNCTION__ << ": string = " << v << std::endl;
-        return comp->builder->CreateGlobalString(v, "str");
+        return comp->builder->CreateGlobalString(v, ".str");
     }
 
     Value *expr_compiler::operator()(ast::cv cv)
@@ -264,14 +264,28 @@ namespace lyre
         */
 
         auto var = operand1;
-        auto val = operand2;
+        auto varTy = var->getType();
 
-        if (val->getType()->isPointerTy()) {
-            val = comp->builder->CreateLoad(val, "value");
-        }
+        if (varTy->isPointerTy()) {
+            auto varElementTy = varTy->getSequentialElementType();
 
-        if (var->getType()->isPointerTy()) {
-            comp->builder->CreateStore(val, var);
+            std::clog << __FILE__ << ": " << __LINE__ << ":" << std::endl;
+            std::clog << "\t"; varTy->dump();
+            std::clog << "\t"; varElementTy->dump();
+
+            auto val = comp->calling_conv(varElementTy, operand2);
+
+            if (varElementTy == comp->variant) {
+                // %type.lyre.variant = type { [8 x i8], i8* }
+                auto zero = comp->builder->getInt32(0);
+                std::vector<llvm::Value*> idx = { zero, zero };
+                auto ptr = comp->builder->CreateGEP(var, idx);
+                auto destTy = PointerType::getUnqual(val->getType());
+                ptr = comp->builder->CreatePointerCast(ptr, destTy);
+                var = ptr;
+            }
+
+            comp->builder->CreateStore(val, var); // store 'val' to the 'var'
         }
 
         return operand1;
@@ -401,7 +415,8 @@ namespace lyre
         , variant(
             StructType::create(
                 "type.lyre.variant",
-                PointerType::getUnqual(Type::getInt8Ty(context)),
+                //PointerType::getUnqual(Type::getInt8Ty(context)),
+                ArrayType::get(Type::getInt8Ty(context), 8),
                 PointerType::getUnqual(Type::getInt8Ty(context)),
                 nullptr
             )
@@ -519,20 +534,46 @@ namespace lyre
         return gv;
     }
 
-    compiler::result_type compiler::calling_conv(llvm::Type * ty, llvm::Value * value)
+    compiler::result_type compiler::calling_conv(llvm::Type * destTy, llvm::Value * value)
     {
-        value->getType()->dump();
-        if (ty) ty->dump();
-        std::clog<<std::endl;
-        if (value->getType() == ty) return value;
-        if (value->getType()->isPointerTy()) {
-            auto elementTy = value->getType()->getSequentialElementType();
-            if (elementTy == ty) return builder->CreateLoad(value);
-            if (elementTy->getSequentialElementType() == ty) {
-                std::vector<llvm::Value*> idx = { builder->getInt32(0), builder->getInt32(0) };
-                return builder->CreateGEP(value, idx);
+        auto valueTy = value->getType();
+        //std::clog<<"target-type: "; if (destTy) destTy->dump(); else std::clog<<"null"<<std::endl; 
+        //std::clog<<"value-type: "; valueTy->dump();
+        if (valueTy == destTy) return value;
+        if (valueTy->isPointerTy()) {
+            auto elementTy = valueTy->getSequentialElementType();
+            //std::clog<<"element: "; elementTy->dump();
+            if (elementTy == destTy || destTy == nullptr) {
+                /**
+                 *  %0 = load i32* %a_integer
+                 */
+                return builder->CreateLoad(value);
             }
+            if (elementTy->isArrayTy()) {
+                auto arrayElementTy = elementTy->getSequentialElementType();
+                //std::clog<<"element-element: "; arrayElementTy->dump();
+                if (arrayElementTy == destTy) {
+                    /**
+                     *  %0 = i8* getelementptr inbounds ([11 x i8]* @str1, i32 0, i32 0)
+                     */
+                    auto zero = builder->getInt32(0);
+                    std::vector<llvm::Value*> idx = { zero, zero };
+                    return builder->CreateGEP(value, idx);
+                }
+#if 0
+                if (destTy->isPointerTy()) {
+                    if (destTy->getSequentialElementType() == arrayElementTy) {
+                        /**
+                         *  %0 = i8* getelementptr inbounds (???)
+                         */
+                        return builder->CreateGEP(value, builder->getInt32(0));
+                    }
+                }
+#endif
+            }
+            //std::clog<<"unknown-element: "; elementTy->dump();
         }
+        //std::clog<<"----"<<std::endl;
         return value;
     }
 
@@ -634,7 +675,7 @@ namespace lyre
              */
             auto type = variant;
 
-            std::clog << __FILE__ << ":" << __LINE__ << ": " << sym.id.string << std::endl;
+            //std::clog << __FILE__ << ":" << __LINE__ << ": " << sym.id.string << std::endl;
 
             if (sym.type) {
                 auto i = typemap.find(boost::get<ast::identifier>(sym.type).string);

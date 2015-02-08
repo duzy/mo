@@ -231,7 +231,7 @@ namespace lyre
                 |  builtin_constant
                 |  name
                 |  quote
-                |  int_
+                |  int_ >> !char_('.')
                 |  double_
                 |  prop
                 |  nodector
