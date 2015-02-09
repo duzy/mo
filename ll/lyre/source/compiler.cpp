@@ -428,7 +428,6 @@ namespace lyre
         , variant(
             StructType::create(
                 "type.lyre.variant",
-                //PointerType::getUnqual(Type::getInt8Ty(context)),
                 ArrayType::get(Type::getInt8Ty(context), 8),
                 PointerType::getUnqual(Type::getInt8Ty(context)),
                 nullptr
