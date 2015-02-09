@@ -6,7 +6,7 @@ n = 1;
 v = 1;
 v = n;
 
-#m = v;
+m = v;
 
 proc fun(a:int) int
 ----

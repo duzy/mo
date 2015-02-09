@@ -270,12 +270,11 @@ namespace lyre
             auto varElementTy = varTy->getSequentialElementType();
             auto val = comp->calling_cast(varElementTy, operand2);
 
-            /*
             std::clog << __FILE__ << ": " << __LINE__ << ":" << std::endl;
             std::clog << "\t"; varTy->dump();
             std::clog << "\t"; varElementTy->dump();
             std::clog << "\t"; operand2->getType()->dump();
-            */
+            std::clog << "\t"; val->getType()->dump();
 
             if (varElementTy == comp->variant) {
                 /**
@@ -557,6 +556,7 @@ namespace lyre
             return nullptr;
         }
 
+        std::clog << __FILE__ << ": " << __LINE__ << ": TODO: variant cast" << std::endl;
         
         return value;
     }
