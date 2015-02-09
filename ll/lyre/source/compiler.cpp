@@ -268,24 +268,38 @@ namespace lyre
 
         if (varTy->isPointerTy()) {
             auto varElementTy = varTy->getSequentialElementType();
+            auto val = comp->calling_conv(varElementTy, operand2);
 
+            /*
             std::clog << __FILE__ << ": " << __LINE__ << ":" << std::endl;
             std::clog << "\t"; varTy->dump();
             std::clog << "\t"; varElementTy->dump();
-
-            auto val = comp->calling_conv(varElementTy, operand2);
+            std::clog << "\t"; operand2->getType()->dump();
+            */
 
             if (varElementTy == comp->variant) {
-                // %type.lyre.variant = type { [8 x i8], i8* }
+                /**
+                 *  Get pointer to the variant storage.
+                 *
+                 *  %type.lyre.variant = type { [8 x i8], i8* }
+                 */
                 auto zero = comp->builder->getInt32(0);
-                std::vector<llvm::Value*> idx = { zero, zero };
+                std::vector<llvm::Value*> idx = { zero, zero, zero };
                 auto ptr = comp->builder->CreateGEP(var, idx);
+
+                /**
+                 *  Convert the storage pointer for the value type.
+                 */
                 auto destTy = PointerType::getUnqual(val->getType());
-                ptr = comp->builder->CreatePointerCast(ptr, destTy);
-                var = ptr;
+                var = comp->builder->CreatePointerCast(ptr, destTy);
             }
 
             comp->builder->CreateStore(val, var); // store 'val' to the 'var'
+        } else {
+            std::cerr
+                << "lyre: can't set value to a non-pointer value"
+                << std::endl ;
+            return nullptr;
         }
 
         return operand1;
@@ -541,16 +555,29 @@ namespace lyre
         //std::clog<<"value-type: "; valueTy->dump();
         if (valueTy == destTy) return value;
         if (valueTy->isPointerTy()) {
-            auto elementTy = valueTy->getSequentialElementType();
-            //std::clog<<"element: "; elementTy->dump();
-            if (elementTy == destTy || destTy == nullptr) {
+            auto valueElementTy = valueTy->getSequentialElementType();
+            //std::clog<<"element: "; valueElementTy->dump();
+            /**
+             *  If the destination type is 'variant', we're doing a special conversion.
+             */
+            if (destTy == variant) {
+                return builder->CreateLoad(value);
+            }
+
+            /**
+             *  If the value is a pointer to the destTy or no destination type is given.
+             */
+            if (valueElementTy == destTy || destTy == nullptr) {
                 /**
                  *  %0 = load i32* %a_integer
                  */
                 return builder->CreateLoad(value);
             }
-            if (elementTy->isArrayTy()) {
-                auto arrayElementTy = elementTy->getSequentialElementType();
+            /**
+             *  If the value is a pointer to an array.
+             */
+            if (valueElementTy->isArrayTy()) {
+                auto arrayElementTy = valueElementTy->getSequentialElementType();
                 //std::clog<<"element-element: "; arrayElementTy->dump();
                 if (arrayElementTy == destTy) {
                     /**
@@ -571,7 +598,7 @@ namespace lyre
                 }
 #endif
             }
-            //std::clog<<"unknown-element: "; elementTy->dump();
+            //std::clog<<"unknown-element: "; valueElementTy->dump();
         }
         //std::clog<<"----"<<std::endl;
         return value;
