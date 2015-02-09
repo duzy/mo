@@ -41,7 +41,8 @@ namespace lyre
 
         result_type create_alloca(llvm::Type *Ty, llvm::Value *ArraySize = nullptr, const std::string &Name = "");
 
-        result_type calling_conv(llvm::Type*, llvm::Value*);
+        result_type calling_cast(llvm::Type*, llvm::Value*);
+        result_type variant_cast(llvm::Type*, llvm::Value*);
 
     private:
         friend struct expr_compiler;

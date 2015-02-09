@@ -198,10 +198,10 @@ namespace lyre
             auto n = 0;
             for (auto & mdop : mdnode->operands()) {
                 auto md = cast<ValueAsMetadata>(mdop.get());
-                args.push_back(comp->calling_conv(fty->getParamType(n++), md->getValue()));
+                args.push_back(comp->calling_cast(fty->getParamType(n++), md->getValue()));
             }
         } else {
-            args.push_back(comp->calling_conv(fty->getParamType(0), operand2));
+            args.push_back(comp->calling_cast(fty->getParamType(0), operand2));
         }
 
         if (!fty->isVarArg() && args.size() != fty->getNumParams()) {
@@ -268,7 +268,7 @@ namespace lyre
 
         if (varTy->isPointerTy()) {
             auto varElementTy = varTy->getSequentialElementType();
-            auto val = comp->calling_conv(varElementTy, operand2);
+            auto val = comp->calling_cast(varElementTy, operand2);
 
             /*
             std::clog << __FILE__ << ": " << __LINE__ << ":" << std::endl;
@@ -548,19 +548,37 @@ namespace lyre
         return gv;
     }
 
-    compiler::result_type compiler::calling_conv(llvm::Type * destTy, llvm::Value * value)
+    compiler::result_type compiler::variant_cast(llvm::Type * destTy, llvm::Value * value)
+    {
+        if (value->getType()->isPointerTy()) {
+            return variant_cast(destTy, builder->CreateLoad(value));
+        }
+        if (value->getType() != variant) {
+            return nullptr;
+        }
+
+        
+        return value;
+    }
+
+    compiler::result_type compiler::calling_cast(llvm::Type * destTy, llvm::Value * value)
     {
         auto valueTy = value->getType();
         //std::clog<<"target-type: "; if (destTy) destTy->dump(); else std::clog<<"null"<<std::endl; 
         //std::clog<<"value-type: "; valueTy->dump();
         if (valueTy == destTy) return value;
+        if (valueTy == variant) return variant_cast(destTy, value);
         if (valueTy->isPointerTy()) {
             auto valueElementTy = valueTy->getSequentialElementType();
-            //std::clog<<"element: "; valueElementTy->dump();
+            if (valueElementTy == variant) {
+                return variant_cast(destTy, value);
+            }
+
             /**
              *  If the destination type is 'variant', we're doing a special conversion.
              */
             if (destTy == variant) {
+                // TODO: type checking
                 return builder->CreateLoad(value);
             }
 
@@ -573,6 +591,7 @@ namespace lyre
                  */
                 return builder->CreateLoad(value);
             }
+
             /**
              *  If the value is a pointer to an array.
              */
