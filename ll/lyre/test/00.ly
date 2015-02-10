@@ -18,6 +18,9 @@ say("m = %d", m);
 m = n + v + n;
 say("m = %d", m);
 
+m = n + v + v;
+say("m = %d", m);
+
 proc fun(a:int) int
 ----
     return a;

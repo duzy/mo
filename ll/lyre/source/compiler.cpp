@@ -380,7 +380,7 @@ namespace lyre
         if (ty1 == ty2) {
             if (ty1->getSequentialElementType() == comp->variant) {
                 std::cerr
-                    << "lyre: perform binary operations on variants"
+                    << "lyre: can't perform binary operation on two variants"
                     << std::endl ;
                 return nullptr;
             }
