@@ -115,7 +115,7 @@ static void lyre_run(const char * ly)
 {
     auto stmts = lyre::parse_file(ly);
 
-#if 1
+#if 0
     // std::clog<<"stmts: "<<stmts.size()<<std::endl;
     stmt_dumper visit;
     for (auto stmt : stmts) {
