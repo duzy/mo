@@ -950,14 +950,16 @@ namespace lyre
 
     compiler::result_type compiler::operator()(const ast::ret & s)
     {
-        auto value = compile_expr(s.expr);
-        /*
         std::clog
-            << "return: " << value << ", "
+            << __FILE__ << ":" << __LINE__ << ": ret"
             << std::endl
             ;
-        */
+        
+        auto value = compile_expr(s.expr);
         if (!value) return nullptr;
+
+        value->getType()->dump();
+
         return builder->CreateRet(value);
     }
 }
