@@ -270,11 +270,13 @@ namespace lyre
             auto varElementTy = varTy->getSequentialElementType();
             auto val = comp->calling_cast(varElementTy, operand2);
 
+            /*
             std::clog << __FILE__ << ": " << __LINE__ << ":" << std::endl;
             std::clog << "\t"; varTy->dump();
             std::clog << "\t"; varElementTy->dump();
             std::clog << "\t"; operand2->getType()->dump();
             std::clog << "\t"; val->getType()->dump();
+            */
 
             if (varElementTy == comp->variant) {
                 /**
@@ -369,20 +371,55 @@ namespace lyre
 
     Value *expr_compiler::binary(Instruction::BinaryOps op, Value *operand1, Value *operand2)
     {
-#if 0
-        if (isa<ConstantFP>(operand1) || isa<ConstantFP>(operand2)) {
-            return comp->builder->CreateFAdd(operand1, operand2, "tmp");
-        } else {
-        }
-#endif
+        std::clog << __FILE__ << ":" << __LINE__ << ": " << __FUNCTION__ << std::endl;
+        std::clog << "\t"; operand1->getType()->dump();
+        std::clog << "\t"; operand2->getType()->dump();
 
-        if (operand1->getType()->isPointerTy()) {
-            operand1 = comp->builder->CreateLoad(operand1, "operand");
+        auto ty1 = operand1->getType();
+        auto ty2 = operand2->getType();
+        if (ty1 == ty2) {
+            if (ty1->getSequentialElementType() == comp->variant) {
+                std::cerr
+                    << "lyre: perform binary operations on variants"
+                    << std::endl ;
+                return nullptr;
+            }
+        } else {
+#if 1
+            if (ty1->isPointerTy()) {
+                if (ty1->getSequentialElementType() == comp->variant) {
+                    auto ty = ty2->isPointerTy() ? ty2->getSequentialElementType() : ty2;
+                    operand1 = comp->calling_cast(ty, operand1);
+                } else {
+                    operand1 = comp->builder->CreateLoad(operand1);
+                }
+            }
+            if (ty2->isPointerTy()) {
+                if (ty2->getSequentialElementType() == comp->variant) {
+                    auto ty = ty1->isPointerTy() ? ty1->getSequentialElementType() : ty1;
+                    operand2 = comp->calling_cast(ty, operand2);
+                } else {
+                    operand2 = comp->builder->CreateLoad(operand2);
+                }
+            }
+#else
+            if (ty1->isPointerTy()) operand1 = comp->builder->CreateLoad(operand1);
+            if (ty2->isPointerTy()) operand2 = comp->builder->CreateLoad(operand2);
+
+            ty1 = operand1->getType();
+            ty2 = operand2->getType();
+            if (ty1 == comp->variant) operand1 = comp->calling_cast(ty2, operand1);
+            if (ty2 == comp->variant) operand2 = comp->calling_cast(ty1, operand2);
+#endif
+            // TODO: more conversion here...
         }
-        if (operand2->getType()->isPointerTy()) {
-            operand2 = comp->builder->CreateLoad(operand2, "operand");
-        }
-        return comp->builder->CreateBinOp(op,  operand1, operand2, "binres");
+
+        std::clog << "\t"; operand1->getType()->dump();
+        std::clog << "\t"; operand2->getType()->dump();
+
+        assert (operand1->getType() == operand2->getType() && "binary operator must have operands of the same type");
+
+        return comp->builder->CreateBinOp(op, operand1, operand2, "binres");
     }
 
     static bool llvm_init_done = false;
@@ -548,16 +585,40 @@ namespace lyre
 
     compiler::result_type compiler::variant_cast(llvm::Type * destTy, llvm::Value * value)
     {
-        if (value->getType()->isPointerTy()) {
-            return variant_cast(destTy, builder->CreateLoad(value));
-        }
-        if (value->getType() != variant) {
-            return nullptr;
+        assert ((value->getType() == variant || value->getType()->getSequentialElementType() == variant) &&
+                "variant casting on non-variant");
+
+        /**
+         *  Get pointer to the variant storage.
+         *
+         *  %type.lyre.variant = type { [8 x i8], i8* }
+         */
+        auto zero = builder->getInt32(0);
+        std::vector<llvm::Value*> idx = { zero, zero };
+
+        /**
+         *  If value is of type "%type.lyre.variant*".
+         */
+        if (value->getType()->isPointerTy())
+            idx.push_back(zero);
+
+        auto ptr = builder->CreateGEP(value, idx);
+
+        std::clog<<__FILE__<<":"<<__LINE__<<std::endl;
+        value->getType()->dump();
+        ptr->getType()->dump();
+
+        if (destTy->isPointerTy()) {
+            auto destPtrTy = PointerType::getUnqual(destTy);
+            return builder->CreatePointerCast(ptr, destTy);
         }
 
-        std::clog << __FILE__ << ": " << __LINE__ << ": TODO: variant cast" << std::endl;
-        
-        return value;
+        /**
+         *  Convert the storage pointer for the value type.
+         */
+        auto destPtrTy = PointerType::getUnqual(destTy);
+        ptr = builder->CreatePointerCast(ptr, destPtrTy);
+        return builder->CreateLoad(ptr);
     }
 
     compiler::result_type compiler::calling_cast(llvm::Type * destTy, llvm::Value * value)
@@ -569,9 +630,7 @@ namespace lyre
         if (valueTy == variant) return variant_cast(destTy, value);
         if (valueTy->isPointerTy()) {
             auto valueElementTy = valueTy->getSequentialElementType();
-            if (valueElementTy == variant) {
-                return variant_cast(destTy, value);
-            }
+            if (valueElementTy == variant) return variant_cast(destTy, value);
 
             /**
              *  If the destination type is 'variant', we're doing a special conversion.
