@@ -956,6 +956,9 @@ namespace lyre
             ;
         
         auto value = compile_expr(s.expr);
+
+        std::clog << "\t";  value->getType()->dump();
+
         if (!value) return nullptr;
 
         value->getType()->dump();
