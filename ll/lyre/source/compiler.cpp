@@ -382,14 +382,15 @@ namespace lyre
 
     Value *expr_compiler::binary(Instruction::BinaryOps op, Value *operand1, Value *operand2)
     {
+        /*
         std::clog << __FILE__ << ":" << __LINE__ << ": " << __FUNCTION__ << std::endl;
         std::clog << "\t"; operand1->getType()->dump();
         std::clog << "\t"; operand2->getType()->dump();
+        */
 
         auto ty1 = operand1->getType();
         auto ty2 = operand2->getType();
         if (ty1 == ty2) {
-            std::clog << __FILE__ << ":" << __LINE__ << ": " << __FUNCTION__ << std::endl;
             if ((ty1 == comp->variant) ||
                 (ty1->isPointerTy() && ty1->getSequentialElementType() == comp->variant)) {
                 std::cerr
@@ -400,10 +401,8 @@ namespace lyre
                 operand1 = comp->builder->CreateLoad(operand1);
                 operand2 = comp->builder->CreateLoad(operand2);
             }
-            std::clog << __FILE__ << ":" << __LINE__ << ": " << __FUNCTION__ << std::endl;
         } else {
 #if 1
-            std::clog << __FILE__ << ":" << __LINE__ << ": " << __FUNCTION__ << std::endl;
             if (ty1->isPointerTy()) {
                 if (ty1->getSequentialElementType() == comp->variant) {
                     auto ty = ty2->isPointerTy() ? ty2->getSequentialElementType() : ty2;
@@ -412,7 +411,6 @@ namespace lyre
                     operand1 = comp->builder->CreateLoad(operand1);
                 }
             }
-            std::clog << __FILE__ << ":" << __LINE__ << ": " << __FUNCTION__ << std::endl;
             if (ty2->isPointerTy()) {
                 if (ty2->getSequentialElementType() == comp->variant) {
                     auto ty = ty1->isPointerTy() ? ty1->getSequentialElementType() : ty1;
@@ -421,7 +419,6 @@ namespace lyre
                     operand2 = comp->builder->CreateLoad(operand2);
                 }
             }
-            std::clog << __FILE__ << ":" << __LINE__ << ": " << __FUNCTION__ << std::endl;
 #else
             if (ty1->isPointerTy()) operand1 = comp->builder->CreateLoad(operand1);
             if (ty2->isPointerTy()) operand2 = comp->builder->CreateLoad(operand2);
@@ -434,14 +431,14 @@ namespace lyre
             // TODO: more conversion here...
         }
 
-        std::clog << "\t"; operand1->getType()->dump();
-        std::clog << "\t"; operand2->getType()->dump();
+        //std::clog << "\t"; operand1->getType()->dump();
+        //std::clog << "\t"; operand2->getType()->dump();
 
         assert (operand1->getType() == operand2->getType() && "binary operator must have operands of the same type");
 
         auto binres = comp->builder->CreateBinOp(op, operand1, operand2, "binres");
 
-        std::clog << "\t"; binres->getType()->dump();
+        //std::clog << "\t"; binres->getType()->dump();
 
         return binres;
     }
@@ -1002,16 +999,18 @@ namespace lyre
 
     compiler::result_type compiler::operator()(const ast::ret & s)
     {
+        /*
         std::clog
             << __FILE__ << ":" << __LINE__ << ": ast::ret"
             << std::endl
             ;
+        */
         
         auto value = compile_expr(s.expr);
 
         if (!value) return nullptr;
 
-        std::clog << "\t";  value->getType()->dump();
+        //std::clog << "\t";  value->getType()->dump();
 
         return builder->CreateRet(value);
     }
