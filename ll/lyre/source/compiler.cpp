@@ -264,8 +264,19 @@ namespace lyre
         */
 
         auto var = operand1;
-        auto varTy = var->getType();
+        if (isa<Argument>(var)) {
+            auto arg = cast<Argument>(var);
+            auto varName = arg->getName().str() + ".addr";
+            if ((var = arg->getParent()->getValueSymbolTable().lookup(varName)) == nullptr) {
+                std::cerr
+                    << "lyre: argument#" << arg->getArgNo() << " " << arg->getName().str()
+                    << " don't have an address"
+                    << std::endl ;
+                return nullptr;
+            }
+        }
 
+        auto varTy = var->getType();
         if (varTy->isPointerTy()) {
             auto varElementTy = varTy->getSequentialElementType();
             auto val = comp->calling_cast(varElementTy, operand2);
@@ -419,7 +430,11 @@ namespace lyre
 
         assert (operand1->getType() == operand2->getType() && "binary operator must have operands of the same type");
 
-        return comp->builder->CreateBinOp(op, operand1, operand2, "binres");
+        auto binres = comp->builder->CreateBinOp(op, operand1, operand2, "binres");
+
+        std::clog << "\t"; binres->getType()->dump();
+
+        return binres;
     }
 
     static bool llvm_init_done = false;
@@ -623,6 +638,18 @@ namespace lyre
 
     compiler::result_type compiler::calling_cast(llvm::Type * destTy, llvm::Value * value)
     {
+        if (isa<Argument>(value)) {
+            auto arg = cast<Argument>(value);
+            auto varName = arg->getName().str() + ".addr";
+            if ((value = arg->getParent()->getValueSymbolTable().lookup(varName)) == nullptr) {
+                std::cerr
+                    << "lyre: argument#" << arg->getArgNo() << " " << arg->getName().str()
+                    << " don't have an address"
+                    << std::endl ;
+                return nullptr;
+            }
+        }
+
         auto valueTy = value->getType();
         //std::clog<<"target-type: "; if (destTy) destTy->dump(); else std::clog<<"null"<<std::endl; 
         //std::clog<<"value-type: "; valueTy->dump();
@@ -679,6 +706,13 @@ namespace lyre
         }
         //std::clog<<"----"<<std::endl;
         return value;
+    }
+
+    llvm::Type* compiler::find_type(const std::string & name)
+    {
+        auto t = typemap.find(name);
+        if (t == typemap.end()) return nullptr;
+        return t->second;
     }
 
     compiler::result_type compiler::compile(const ast::stmts & stmts)
@@ -782,8 +816,13 @@ namespace lyre
             //std::clog << __FILE__ << ":" << __LINE__ << ": " << sym.id.string << std::endl;
 
             if (sym.type) {
-                auto i = typemap.find(boost::get<ast::identifier>(sym.type).string);
-                if (i != typemap.end()) type = i->second;
+                auto typeName = boost::get<ast::identifier>(sym.type).string;
+                if ((type = find_type(typeName)) == nullptr) {
+                    std::cerr
+                        << "lyre: decl " << sym.id.string << " as unknown type '" << typeName << "'"
+                        << std::endl ;
+                    return nullptr;
+                }
             }
 
             Value* value = nullptr;
@@ -830,33 +869,28 @@ namespace lyre
         auto rty = Type::getVoidTy(context);
         if (proc.type) {
             auto id = boost::get<ast::identifier>(proc.type);
-            auto t = typemap.find(id.string);
-            if (t == typemap.end()) {
+            if ((rty = find_type(id.string)) == nullptr) {
                 std::cerr
-                    << "proc: " << proc.name.string << ": unknown return type '" << id.string << "'"
+                    << "lyre: " << proc.name.string << ": unknown return type '" << id.string << "'"
                     << std::endl ;
                 return nullptr;
             }
-            rty = t->second;
         }
 
         std::vector<Type*> params;
         for (auto & param : proc.params) {
-            if (!param.type) {
-                params.push_back(variant);
-                continue;
+            auto type = variant;
+            if (param.type) {
+                auto & id = boost::get<ast::identifier>(param.type);
+                if ((type = find_type(id.string)) == nullptr) {
+                    std::cerr
+                        << "lyre: " << proc.name.string << "used an unknown parameter type '"
+                        << id.string << "' referenced by '" << param.name.string << "'"
+                        << std::endl ;
+                    return nullptr;
+                }
             }
-
-            auto & id = boost::get<ast::identifier>(param.type);
-            auto t = typemap.find(id.string);
-            if (t == typemap.end()) {
-                std::cerr
-                    << "proc: " << proc.name.string << ": unknown parameter type '"
-                    << id.string << "' referenced by '" << param.name.string << "'"
-                    << std::endl ;
-                return nullptr;
-            }
-            params.push_back(t->second);
+            params.push_back(type);
         }
 
         auto fty = FunctionType::get(rty, params, false);
@@ -888,6 +922,15 @@ namespace lyre
 
         auto entry = BasicBlock::Create(context, "entry", fun);
         builder->SetInsertPoint(entry);
+
+        /**
+         *  Create allocas on the frame for arguments. 
+         */
+        for (auto arg = fun->arg_begin(); arg != fun->arg_end(); ++arg) {
+            auto name = arg->getName().str() + ".addr";
+            auto argAddr = builder->CreateAlloca(arg->getType(), builder->getInt32(0), name.c_str());
+            builder->CreateStore(arg, argAddr);
+        }
 
         if (stmts.empty()) {
             return builder->CreateRetVoid();
@@ -951,17 +994,15 @@ namespace lyre
     compiler::result_type compiler::operator()(const ast::ret & s)
     {
         std::clog
-            << __FILE__ << ":" << __LINE__ << ": ret"
+            << __FILE__ << ":" << __LINE__ << ": ast::ret"
             << std::endl
             ;
         
         auto value = compile_expr(s.expr);
 
-        std::clog << "\t";  value->getType()->dump();
-
         if (!value) return nullptr;
 
-        value->getType()->dump();
+        std::clog << "\t";  value->getType()->dump();
 
         return builder->CreateRet(value);
     }

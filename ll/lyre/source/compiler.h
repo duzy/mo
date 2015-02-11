@@ -44,6 +44,8 @@ namespace lyre
         result_type calling_cast(llvm::Type*, llvm::Value*);
         result_type variant_cast(llvm::Type*, llvm::Value*);
 
+        llvm::Type* find_type(const std::string & s);
+
     private:
         friend struct expr_compiler;
         llvm::LLVMContext context;

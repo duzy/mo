@@ -1,6 +1,8 @@
 proc fun(a:int) int
 ----
-    return a + 1;
+    decl v = a + 1;
+    a = 1;
+    return a;
 ----
 
 say("fun: %d", fun(2));

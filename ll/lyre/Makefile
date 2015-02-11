@@ -8,6 +8,7 @@ else
 endif
 
 $(info LLVMLIBS: $(LLVMLIBS))
+$(info ---------------------------)
 
 LLVM := $(or $(wildcard /open/llvm),$(wildcard ~/tools/ll/llvm))
 LLVM_CONFIG := $(LLVM)/Debug+Asserts/bin/llvm-config
