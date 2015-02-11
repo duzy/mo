@@ -997,20 +997,31 @@ namespace lyre
         return nullptr;
     }
 
-    compiler::result_type compiler::operator()(const ast::ret & s)
+    compiler::result_type compiler::operator()(const ast::ret & ret)
     {
-        /*
-        std::clog
-            << __FILE__ << ":" << __LINE__ << ": ast::ret"
-            << std::endl
-            ;
-        */
-        
-        auto value = compile_expr(s.expr);
+        auto fun = builder->GetInsertBlock()->getParent();
+        auto rty = fun->getReturnType();
+        if (rty->isVoidTy()) {
+            if (ret.expr) {
+                std::cerr
+                    << "lyre: proc " << fun->getName().str() << " returns 'void' only"
+                    << std::endl ;
+                return nullptr;
+            }
+            return builder->CreateRetVoid();
+        }
 
-        if (!value) return nullptr;
+        auto value = compile_expr(ret.expr);
+        if (!value) {
+            std::cerr
+                << "lyre: proc " << fun->getName().str() << " must return a value"
+                << std::endl ;
+            return nullptr;
+        }
 
-        //std::clog << "\t";  value->getType()->dump();
+        value = calling_cast(rty, value);
+
+        // TODO: check value and return type somehow
 
         return builder->CreateRet(value);
     }
