@@ -389,14 +389,17 @@ namespace lyre
         auto ty1 = operand1->getType();
         auto ty2 = operand2->getType();
         if (ty1 == ty2) {
+            std::clog << __FILE__ << ":" << __LINE__ << ": " << __FUNCTION__ << std::endl;
             if (ty1->getSequentialElementType() == comp->variant) {
                 std::cerr
                     << "lyre: can't perform binary operation on two variants"
                     << std::endl ;
                 return nullptr;
             }
+            std::clog << __FILE__ << ":" << __LINE__ << ": " << __FUNCTION__ << std::endl;
         } else {
 #if 1
+            std::clog << __FILE__ << ":" << __LINE__ << ": " << __FUNCTION__ << std::endl;
             if (ty1->isPointerTy()) {
                 if (ty1->getSequentialElementType() == comp->variant) {
                     auto ty = ty2->isPointerTy() ? ty2->getSequentialElementType() : ty2;
@@ -405,6 +408,7 @@ namespace lyre
                     operand1 = comp->builder->CreateLoad(operand1);
                 }
             }
+            std::clog << __FILE__ << ":" << __LINE__ << ": " << __FUNCTION__ << std::endl;
             if (ty2->isPointerTy()) {
                 if (ty2->getSequentialElementType() == comp->variant) {
                     auto ty = ty1->isPointerTy() ? ty1->getSequentialElementType() : ty1;
@@ -413,6 +417,7 @@ namespace lyre
                     operand2 = comp->builder->CreateLoad(operand2);
                 }
             }
+            std::clog << __FILE__ << ":" << __LINE__ << ": " << __FUNCTION__ << std::endl;
 #else
             if (ty1->isPointerTy()) operand1 = comp->builder->CreateLoad(operand1);
             if (ty2->isPointerTy()) operand2 = comp->builder->CreateLoad(operand2);
