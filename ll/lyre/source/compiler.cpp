@@ -390,11 +390,15 @@ namespace lyre
         auto ty2 = operand2->getType();
         if (ty1 == ty2) {
             std::clog << __FILE__ << ":" << __LINE__ << ": " << __FUNCTION__ << std::endl;
-            if (ty1->getSequentialElementType() == comp->variant) {
+            if ((ty1 == comp->variant) ||
+                (ty1->isPointerTy() && ty1->getSequentialElementType() == comp->variant)) {
                 std::cerr
                     << "lyre: can't perform binary operation on two variants"
                     << std::endl ;
                 return nullptr;
+            } else if (ty1->isPointerTy()) {
+                operand1 = comp->builder->CreateLoad(operand1);
+                operand2 = comp->builder->CreateLoad(operand2);
             }
             std::clog << __FILE__ << ":" << __LINE__ << ": " << __FUNCTION__ << std::endl;
         } else {
