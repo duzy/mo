@@ -198,9 +198,13 @@ namespace lyre
             auto n = 0;
             for (auto & mdop : mdnode->operands()) {
                 auto md = cast<ValueAsMetadata>(mdop.get());
+                std::clog<<__FILE__<<":"<<__LINE__<<": "; fty->getParamType(n)->dump();
+                std::clog<<__FILE__<<":"<<__LINE__<<": "; md->getValue()->getType()->dump();
                 args.push_back(comp->calling_cast(fty->getParamType(n++), md->getValue()));
             }
         } else {
+            std::clog<<__FILE__<<":"<<__LINE__<<": "; fty->getParamType(0)->dump();
+            std::clog<<__FILE__<<":"<<__LINE__<<": "; operand2->getType()->dump();
             args.push_back(comp->calling_cast(fty->getParamType(0), operand2));
         }
 
@@ -382,11 +386,9 @@ namespace lyre
 
     Value *expr_compiler::binary(Instruction::BinaryOps op, Value *operand1, Value *operand2)
     {
-        /*
         std::clog << __FILE__ << ":" << __LINE__ << ": " << __FUNCTION__ << std::endl;
         std::clog << "\t"; operand1->getType()->dump();
         std::clog << "\t"; operand2->getType()->dump();
-        */
 
         auto ty1 = operand1->getType();
         auto ty2 = operand2->getType();
@@ -402,7 +404,7 @@ namespace lyre
                 operand2 = comp->builder->CreateLoad(operand2);
             }
         } else {
-#if 1
+#if 0
             if (ty1->isPointerTy()) {
                 if (ty1->getSequentialElementType() == comp->variant) {
                     auto ty = ty2->isPointerTy() ? ty2->getSequentialElementType() : ty2;
@@ -431,8 +433,8 @@ namespace lyre
             // TODO: more conversion here...
         }
 
-        //std::clog << "\t"; operand1->getType()->dump();
-        //std::clog << "\t"; operand2->getType()->dump();
+        std::clog << "\t"; operand1->getType()->dump();
+        std::clog << "\t"; operand2->getType()->dump();
 
         assert (operand1->getType() == operand2->getType() && "binary operator must have operands of the same type");
 
@@ -625,9 +627,10 @@ namespace lyre
 
         auto ptr = builder->CreateGEP(value, idx);
 
-        std::clog<<__FILE__<<":"<<__LINE__<<std::endl;
-        value->getType()->dump();
-        ptr->getType()->dump();
+        std::clog<<__FILE__<<":"<<__LINE__<<":"<<std::endl;
+        std::clog<<"\t"; value->getType()->dump();
+        std::clog<<"\t"; ptr->getType()->dump();
+        std::clog<<"\t"; if (destTy) destTy->dump(); else std::clog<<"null";
 
         if (destTy->isPointerTy()) {
             auto destPtrTy = PointerType::getUnqual(destTy);
