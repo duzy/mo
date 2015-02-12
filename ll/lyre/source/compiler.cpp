@@ -14,6 +14,10 @@
 #include <llvm/Support/raw_ostream.h>
 #include "compiler.h"
 
+#define DUMP_TY(MSG, TY)                                                \
+    std::clog << __FILE__ << ":" << __LINE__ << ": " << MSG ;           \
+    if (TY) { (TY)->dump(); } else { std::clog << "null" << std::endl; }
+
 // TODO: http://llvm.org/docs/GarbageCollection.html
 
 namespace lyre
@@ -172,14 +176,6 @@ namespace lyre
 
     Value *expr_compiler::op_call(const ast::op & op, Value *operand1, Value *operand2)
     {
-        /*
-        std::clog
-            << __FUNCTION__ << ": "
-            << "operand1 = " << operand1 << ", "
-            << "operand2 = " << operand2
-            << std::endl;
-        */
-
         if (!isa<Function>(operand1)) {
             std::cerr
                 << "lyre: '" << operand1->getName().str() << "' is not a function"
@@ -198,13 +194,13 @@ namespace lyre
             auto n = 0;
             for (auto & mdop : mdnode->operands()) {
                 auto md = cast<ValueAsMetadata>(mdop.get());
-                std::clog<<__FILE__<<":"<<__LINE__<<": "; fty->getParamType(n)->dump();
-                std::clog<<__FILE__<<":"<<__LINE__<<": "; md->getValue()->getType()->dump();
+                DUMP_TY("param-type: ", fty->getParamType(n));
+                DUMP_TY("arg-type: ", md->getValue()->getType());
                 args.push_back(comp->calling_cast(fty->getParamType(n++), md->getValue()));
             }
         } else {
-            std::clog<<__FILE__<<":"<<__LINE__<<": "; fty->getParamType(0)->dump();
-            std::clog<<__FILE__<<":"<<__LINE__<<": "; operand2->getType()->dump();
+            DUMP_TY("param-type: ", fty->getParamType(0));
+            DUMP_TY("arg-type: ", operand2->getType());
             args.push_back(comp->calling_cast(fty->getParamType(0), operand2));
         }
 
@@ -627,10 +623,9 @@ namespace lyre
 
         auto ptr = builder->CreateGEP(value, idx);
 
-        std::clog<<__FILE__<<":"<<__LINE__<<":"<<std::endl;
-        std::clog<<"\t"; value->getType()->dump();
-        std::clog<<"\t"; ptr->getType()->dump();
-        std::clog<<"\t"; if (destTy) destTy->dump(); else std::clog<<"null";
+        DUMP_TY("target-type: ", destTy);
+        DUMP_TY("value-type: ", value->getType());
+        DUMP_TY("storage-type: ", ptr->getType());
 
         if (destTy->isPointerTy()) {
             auto destPtrTy = PointerType::getUnqual(destTy);
@@ -660,10 +655,41 @@ namespace lyre
         }
 
         auto valueTy = value->getType();
-        //std::clog<<"target-type: "; if (destTy) destTy->dump(); else std::clog<<"null"<<std::endl; 
-        //std::clog<<"value-type: "; valueTy->dump();
+
+        DUMP_TY("target-type: ", destTy);
+        DUMP_TY("value-type: ", valueTy);
+
         if (valueTy == destTy) return value;
-        if (valueTy == variant) return variant_cast(destTy, value);
+
+        /**
+         *  If the destination type is variant, we need to create a temporary alloca to
+         *  store the value.
+         */
+        if (destTy == variant) {
+            auto alloca = builder->CreateAlloca(variant, builder->getInt32(0));
+
+            /**
+             *  Get pointer to the variant storage.
+             */
+            auto zero = comp->builder->getInt32(0);
+            std::vector<llvm::Value*> idx = { zero, zero, zero };
+            auto ptr = comp->builder->CreateGEP(alloca, idx);
+
+            /**
+             *  Convert the storage pointer for the value type.
+             */
+            auto destTy = PointerType::getUnqual(val->getType());
+            auto var = comp->builder->CreatePointerCast(ptr, destTy);
+
+            comp->builder->CreateStore(val, var); // store 'val' to the 'var'
+            
+            return alloca;
+        }
+
+        if (valueTy == variant) {
+            return variant_cast(destTy, value);
+        }
+
         if (valueTy->isPointerTy()) {
             auto valueElementTy = valueTy->getSequentialElementType();
             if (valueElementTy == variant) return variant_cast(destTy, value);
