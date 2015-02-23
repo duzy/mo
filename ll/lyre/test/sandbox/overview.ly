@@ -27,22 +27,24 @@ a_variant = a_string;  # okay
 
 see a_variant is string
 ---
-    # a_variant is a string
+    say("a_variant is a string");
 ---
 
 # function definition returning an integer. Blocks are enclosed with 3 or more dashes.
 proc a_function(arg1:int, arg2:string) int
----
-   decl a int # declare a local variable with unknown value
+----
+    decl a int # declare a local variable with unknown value
 
-   # this is an error -- the name '_' can't be used in a 'decl' statement.
-   # The name '_' is specially used as "the current node", it's type is always a builtin 'node'.
-   # Yet the name '_' could be used as a argument, and forcely be type 'node'. So specifying a
-   # 'type attribute' for the '_' argument is forbidded.
-   decl _ int
+    a = arg1 * 2;
 
-   return ;
----
+    # this is an error -- the name '_' can't be used in a 'decl' statement.
+    # The name '_' is specially used as "the current node", it's type is always a builtin 'node'.
+    # Yet the name '_' could be used as a argument, and forcely be type 'node'. So specifying a
+    # 'type attribute' for the '_' argument is forbidded.
+    decl _ int
+
+    return a;
+----
 
 # type alias
 type int32 is int:bits(32)
@@ -89,12 +91,6 @@ type ext_node is node
     proc .DoSomethingSpecial() --- #* something special could happen *# ---
 ---------------------
 
-# checking inheritance
-see ext_node is node
----
-    # ext_node is derived from node
----
-
 # speaking a language, e.g. template.
 speak template
 -----
@@ -121,7 +117,7 @@ an_instance.SetName("Alpha");
 # checking 'instance-of'
 see an_instance is a_class
 ---
-    # an_instance is a_class
+    say("an_instance is a_class")
 ---
 
 decl an_empty_instance a_class

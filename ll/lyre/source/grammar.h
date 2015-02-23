@@ -302,7 +302,7 @@ namespace lyre
             on_error<fail>
             (
                 expr, std::cout
-                << val("bad expression: ") << _4 << ", at: "
+                << val("bad: expression ") << _4 << ", at: "
                 << construct<std::string>(_3, _2) 
                 << std::endl
             );
@@ -514,8 +514,8 @@ namespace lyre
             on_error<fail>
             (
                 stmts, std::cout
-                << val("bad statement: ") << _4 << ", at: "
-                << construct<std::string>(_3, _2) 
+                << val("bad: statement ") << _4 << ", at: "
+                << construct<std::string>(_3, _2)
                 << std::endl
             );
         }

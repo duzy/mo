@@ -21,32 +21,35 @@ namespace lyre
 
         llvm::GenericValue eval(const ast::stmts & stmts);
 
-        result_type compile(const ast::stmts & stmts);
+        llvm::Value* compile(const ast::stmts & stmts);
 
-        result_type operator()(const ast::expr & s);
-        result_type operator()(const ast::none &);
-        result_type operator()(const ast::decl & s);
-        result_type operator()(const ast::proc & s);
-        result_type operator()(const ast::type & s);
-        result_type operator()(const ast::see & s);
-        result_type operator()(const ast::with & s);
-        result_type operator()(const ast::speak & s);
-        result_type operator()(const ast::per & s);
-        result_type operator()(const ast::ret & s);
+        llvm::Value* operator()(const ast::expr & s);
+        llvm::Value* operator()(const ast::none &);
+        llvm::Value* operator()(const ast::decl & s);
+        llvm::Value* operator()(const ast::proc & s);
+        llvm::Value* operator()(const ast::type & s);
+        llvm::Value* operator()(const ast::see & s);
+        llvm::Value* operator()(const ast::with & s);
+        llvm::Value* operator()(const ast::speak & s);
+        llvm::Value* operator()(const ast::per & s);
+        llvm::Value* operator()(const ast::ret & s);
 
     private:
-        result_type compile_expr(const ast::expr &);
-        result_type compile_expr(const boost::optional<ast::expr> & e) { return compile_expr(boost::get<ast::expr>(e)); }
-        result_type compile_body(llvm::Function * fun, const ast::stmts &);
+        llvm::Value* compile_expr(const ast::expr &);
+        llvm::Value* compile_expr(const boost::optional<ast::expr> & e) { return compile_expr(boost::get<ast::expr>(e)); }
+        llvm::Value* compile_body(llvm::Function * fun, const ast::stmts &);
 
-        result_type create_alloca(llvm::Type *Ty, llvm::Value *ArraySize = nullptr, const std::string &Name = "");
+        llvm::Value* create_alloca(llvm::Type *Ty, llvm::Value *ArraySize = nullptr, const std::string &Name = "");
 
-        result_type calling_cast(llvm::Type*, llvm::Value*);
-        result_type variant_cast(llvm::Type*, llvm::Value*);
+        llvm::Value* calling_cast(llvm::Type*, llvm::Value*);
+        llvm::Value* variant_cast(llvm::Type*, llvm::Value*);
+
+        llvm::Value* get_variant_storage(llvm::Value*);
 
         llvm::Type* find_type(const std::string & s);
 
     private:
+        friend struct CallingCast;
         friend struct expr_compiler;
         llvm::LLVMContext context;
         llvm::Type* variant;

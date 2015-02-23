@@ -128,16 +128,23 @@ static void lyre_run(const char * ly)
     auto gv = compiler.eval(stmts);
 
     std::clog
-        << "-------------------\n"
-        << "eval: " << gv.IntVal.getLimitedValue() << "\n"
-        << std::endl
+        << "--------------------------------------\n"
+        << "Eval: " << gv.IntVal.getLimitedValue() << "\n"
+        << "--------------------------------------\n"
+        << std::flush
         ;
 }
 
-int main()
+int main(int argc, char**argv)
 {
     lyre::compiler::Init();
-    lyre_run("test/00.ly");
+    if (1 < argc) {
+        for (int n = 1; n < argc; ++n) {
+            lyre_run(argv[n]);
+        }
+    } else {
+        // ...
+    }
     lyre::compiler::Shutdown();
     return 0;
 }

@@ -50,6 +50,15 @@ static void str(const char * s, ...)
 {
 }
 
+static void test_foo(Foo foo)
+{
+    IFoo *p = &foo;
+
+    foo.foo();
+
+    p->foo();
+}
+
 int main(int argc, char**argv)
 {
     int num = 0;
@@ -65,6 +74,8 @@ int main(int argc, char**argv)
 
     ptr->a();
     reinterpret_cast<Foo*>(ptr)->b();
+
+    test_foo(*reinterpret_cast<Foo*>(ptr));
 
     delete ptr;
     return 0;
