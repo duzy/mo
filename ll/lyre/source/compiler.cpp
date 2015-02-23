@@ -2248,16 +2248,16 @@ namespace lyre
         {
             D(__FUNCTION__);
 
-            DUMP_TY("target-type: ", target);
+            //DUMP_TY("target-type: ", target);
 
             auto valueTy = value->getType();
-            DUMP_TY("value-type: ", valueTy);
+            //DUMP_TY("value-type: ", valueTy);
 
             assert(valueTy->isPointerTy() && "value type is not Pointer");
             assert(target->isPointerTy() && "target type is not Void");
 
             auto pointeeTy = valueTy->getSequentialElementType();
-            DUMP_TY("pointee-type: ", pointeeTy);
+            //DUMP_TY("pointee-type: ", pointeeTy);
 
             if (pointeeTy == comp->variant) {
                 D("TODO: variant casting");
@@ -2285,7 +2285,7 @@ namespace lyre
              *  Note that 'CreatePointerCast' can also convert '[n x i8]*' into 'i8*'.
              */
             auto result = comp->builder->CreatePointerCast(value, target);
-            DUMP_TY("result-type: ", result->getType());
+            //DUMP_TY("result-type: ", result->getType());
 
             return result;
         }
@@ -2870,7 +2870,7 @@ namespace lyre
         auto fun = cast<Function>(operand1);
         auto fty = fun->getFunctionType();
 
-        D("calling "<<fun->getName().str()<<", "<<fty->getNumParams());
+        //D("calling "<<fun->getName().str()<<", "<<fty->getNumParams());
 
         std::vector<Value*> args;
 
@@ -2878,14 +2878,14 @@ namespace lyre
             auto metaArgs = cast<MDNode>(cast<MetadataAsValue>(operand2)->getMetadata());
             auto n = 0;
             for (auto & metaArg : metaArgs->operands()) {
-                auto paramType = fty->getParamType(n++);                        DUMP_TY("param-type: ", paramType);
-                auto argMetadata = cast<ValueAsMetadata>(metaArg.get());        DUMP_TY("arg-type: ", argMetadata->getValue()->getType());
+                auto paramType = fty->getParamType(n++);                        //DUMP_TY("param-type: ", paramType);
+                auto argMetadata = cast<ValueAsMetadata>(metaArg.get());        //DUMP_TY("arg-type: ", argMetadata->getValue()->getType());
                 auto arg = comp->calling_cast(paramType, argMetadata->getValue());
                 args.push_back(arg);
             }
         } else {
-            DUMP_TY("param-type: ", fty->getParamType(0));
-            DUMP_TY("arg-type: ", operand2->getType());
+            //DUMP_TY("param-type: ", fty->getParamType(0));
+            //DUMP_TY("arg-type: ", operand2->getType());
             args.push_back(comp->calling_cast(fty->getParamType(0), operand2));
         }
 
@@ -3049,16 +3049,11 @@ namespace lyre
 
     Value *expr_compiler::binary(Instruction::BinaryOps op, Value *operand1, Value *operand2)
     {
-        /*
-        DUMP_TY("binary-operand1: ", operand1->getType());
-        DUMP_TY("binary-operand2: ", operand2->getType());
-        */
-
         auto ty1 = operand1->getType();
         auto ty2 = operand2->getType();
+
         if (ty1 == ty2) {
-            if ((ty1 == comp->variant) ||
-                (ty1->isPointerTy() && ty1->getSequentialElementType() == comp->variant)) {
+            if ((ty1 == comp->variant) || (ty1->isPointerTy() && ty1->getSequentialElementType() == comp->variant)) {
                 llvm::errs()
                     << "lyre: can't perform binary operation on two variants"
                     << "\n" ;
@@ -3068,7 +3063,6 @@ namespace lyre
                 operand2 = comp->builder->CreateLoad(operand2);
             }
         } else {
-#if 1
             if (ty1->isPointerTy()) {
                 if (ty1->getSequentialElementType() == comp->variant) {
                     auto ty = ty2->isPointerTy() ? ty2->getSequentialElementType() : ty2;
@@ -3077,6 +3071,7 @@ namespace lyre
                     operand1 = comp->builder->CreateLoad(operand1);
                 }
             }
+
             if (ty2->isPointerTy()) {
                 if (ty2->getSequentialElementType() == comp->variant) {
                     auto ty = ty1->isPointerTy() ? ty1->getSequentialElementType() : ty1;
@@ -3085,22 +3080,12 @@ namespace lyre
                     operand2 = comp->builder->CreateLoad(operand2);
                 }
             }
-#else
-            if (ty1->isPointerTy()) operand1 = comp->builder->CreateLoad(operand1);
-            if (ty2->isPointerTy()) operand2 = comp->builder->CreateLoad(operand2);
-
-            ty1 = operand1->getType();
-            ty2 = operand2->getType();
-            if (ty1 == comp->variant) operand1 = comp->calling_cast(ty2, operand1);
-            if (ty2 == comp->variant) operand2 = comp->calling_cast(ty1, operand2);
-#endif
-            // TODO: more conversion here...
         }
 
-        DUMP_TY("binary-operand1: ", operand1->getType());
-        DUMP_TY("binary-operand2: ", operand2->getType());
+        //DUMP_TY("binary-operand1: ", operand1->getType());
+        //DUMP_TY("binary-operand2: ", operand2->getType());
 
-        assert (operand1->getType() == operand2->getType() && "binary operator must have operands of the same type");
+        assert(operand1->getType() == operand2->getType() && "binary operator must have operands of the same type");
 
         auto binres = comp->builder->CreateBinOp(op, operand1, operand2, "binres");
 
