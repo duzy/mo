@@ -26,3 +26,11 @@ say("foo2: %d", foo2(1));
 decl v = foo3(1);
 decl n int = v;
 say("foo3: %d", n);
+
+decl v2 = foo3(1);
+decl n1 int;
+decl n2 int;
+n1 = v2;
+n2 = foo3(1);
+say("foo3: %d", n1);
+say("foo3: %d", n2);

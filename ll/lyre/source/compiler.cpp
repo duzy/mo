@@ -1683,6 +1683,20 @@ namespace lyre
             D(__FUNCTION__);
             assert(target->isIntegerTy() && "target type is not Void");
             assert(value->getType()->isStructTy() && "value type is not Struct");
+
+            auto valueTy = value->getType();
+
+            //DUMP_TY("value-type: ", valueTy);
+
+            if (valueTy == comp->variant) {
+                //DUMP_TY("target-type: ", target);
+                auto ptr = comp->get_variant_storage(value);
+                //DUMP_TY("pointer-type: ", ptr->getType());
+                ptr = comp->builder->CreatePointerCast(ptr, PointerType::getUnqual(target));
+                //DUMP_TY("pointer-type: ", ptr->getType());
+                return comp->builder->CreateLoad(ptr);
+            }
+
             return value;
         }
 
@@ -1983,6 +1997,11 @@ namespace lyre
             D(__FUNCTION__);
             assert(target->isStructTy() && "target type is not Void");
             assert(value->getType()->isPointerTy() && "value type is not Pointer");
+
+            if (value->getType()->getSequentialElementType() == target) {
+                return comp->builder->CreateLoad(value);
+            }
+
             return value;
         }
 
@@ -2953,12 +2972,15 @@ namespace lyre
             }
         }
 
+        DUMP_TY("value-type: ", operand2->getType());
+
         auto varTy = var->getType();
-        //DUMP_TY("variable-type: ", varTy);
+
+        DUMP_TY("variable-type: ", varTy);
 
         if (varTy->isPointerTy()) {
-            auto varElementTy = varTy->getSequentialElementType();
             auto val = operand2;
+            auto varElementTy = varTy->getSequentialElementType();
 
             if (varElementTy == comp->variant) {
                 val = comp->calling_cast(nullptr, val);
@@ -2972,6 +2994,8 @@ namespace lyre
             } else {
                 val = comp->calling_cast(varElementTy, val);
             }
+
+            //DUMP_TY("variable-type: ", var->getType());
 
             comp->builder->CreateStore(val, var); // store 'val' to the 'var'
         } else {
@@ -3259,20 +3283,37 @@ namespace lyre
         auto valueTy = value->getType();
         assert((valueTy == variant || valueTy->getSequentialElementType() == variant) && "value is not a variant");
 
+        //DUMP_TY("value-type: ", valueTy);
+
         /**
          *  Get pointer to the variant storage.
          *
          *  %type.lyre.variant = type { [8 x i8], i8* }
          */
         auto zero = builder->getInt32(0);
-        auto idxs = std::vector<llvm::Value*>{ zero, zero };
-        if (valueTy->isPointerTy()) idxs.push_back(zero);
-        return builder->CreateGEP(value, idxs);
+        auto idxz = std::vector<llvm::Value*>{ zero, zero, zero };
+
+        if (valueTy == variant) {
+            ///< TODO: need a better way to arrange this temporary alloca.
+            ///< a temporary 'variant' is required for getting the element pointer.
+            auto alloca = builder->CreateAlloca(variant, builder->getInt32(0));
+
+            ///< store a copy of the 'variant' instance
+            builder->CreateStore(value, alloca);
+
+            value = alloca; ///< redirect the 'value' to the new 'alloca'
+        }
+
+        value = builder->CreateGEP(value, idxz);
+
+        //DUMP_TY("result-type: ", value->getType());
+        return value;
     }
 
     llvm::Value* compiler::variant_cast(llvm::Type * destTy, llvm::Value * value)
     {
-        assert ((value->getType() == variant || value->getType()->getSequentialElementType() == variant) &&
+        auto valueTy = value->getType();
+        assert ((valueTy == variant || valueTy->getSequentialElementType() == variant) &&
                 "variant casting on non-variant");
 
         /**
@@ -3286,14 +3327,14 @@ namespace lyre
         /**
          *  If value is of type "%type.lyre.variant*".
          */
-        if (value->getType()->isPointerTy())
+        if (valueTy->isPointerTy())
             idx.push_back(zero);
 
         auto ptr = builder->CreateGEP(value, idx);
 
         /*
         DUMP_TY("target-type: ", destTy);
-        DUMP_TY("value-type: ", value->getType());
+        DUMP_TY("value-type: ", valueTy);
         DUMP_TY("storage-type: ", ptr->getType());
         */
 
@@ -3355,6 +3396,7 @@ namespace lyre
          *  store the value.
          */
         if (destTy == variant) {
+            ///< TODO: need a better way to arrange this temporary alloca.
             auto alloca = builder->CreateAlloca(variant, builder->getInt32(0));
 
             /**
@@ -3550,12 +3592,7 @@ namespace lyre
 
         llvm::Value* lastAlloca = nullptr;
         for (auto & sym : decl) {
-            /**
-             *  The default type is 'variant'.
-             */
-            auto type = variant;
-
-            //std::clog << __FILE__ << ":" << __LINE__ << ": " << sym.id.string << std::endl;
+            auto type = variant; ///< The default type is 'variant'.
 
             if (sym.type) {
                 auto typeName = boost::get<ast::identifier>(sym.type).string;
@@ -3574,14 +3611,6 @@ namespace lyre
                      *  Use the value type if no explicit type specified.
                      */
                     if (!sym.type) type = value->getType();
-
-                    /*
-                    std::clog
-                        << "decl: " << sym.id.string << ", "
-                        << type->getTypeID() << ", "
-                        << type->getScalarSizeInBits()
-                        << std::endl;
-                    */
                 }
             }
 
@@ -3589,19 +3618,9 @@ namespace lyre
              *  Get a PointerTy of new alloca.
              */
             auto alloca = allocaBuilder.CreateAlloca(type, nullptr, sym.id.string.c_str());
-            if (value) {
-                auto store = builder->CreateStore(value, alloca);
-            }
+            if (value) builder->CreateStore(value, alloca);
 
             lastAlloca = alloca;
-
-            /*
-            std::clog
-                //<< builder->GetInsertBlock()->getParent()->getValueSymbolTable().lookup(sym.name.c_str());
-                << builder->GetInsertBlock()->getValueSymbolTable()->lookup(sym.name.c_str())
-                << alloca << ", "
-                << std::endl;
-            */
         }
         return lastAlloca;
     }
@@ -3763,7 +3782,10 @@ namespace lyre
 
         value = calling_cast(rty, value);
 
-        // TODO: check value and return type somehow
+        //DUMP_TY("return-type: ", rty);
+        //DUMP_TY("return-value-type: ", value->getType());
+
+        assert(value->getType() == rty && "return type mismatched");
 
         return builder->CreateRet(value);
     }
