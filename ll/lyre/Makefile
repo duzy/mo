@@ -31,6 +31,8 @@ source/compiler.o: source/compiler.cpp source/ast.h source/compiler.h
 source/parse.o: source/parse.cpp source/parse.h source/grammar.h source/ast.h
 source/gc/lygc.o: source/gc/lygc.cpp
 
+source/compiler.cpp: source/cc.ipp
+
 source/parse.o:
 	$(CXX) -DLYRE_USING_MCJIT=$(LYRE_USING_MCJIT) -std=c++11 -fPIC -c $< -o $@
 

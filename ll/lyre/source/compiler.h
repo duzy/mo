@@ -42,7 +42,6 @@ namespace lyre
         llvm::Value* create_alloca(llvm::Type *Ty, llvm::Value *ArraySize = nullptr, const std::string &Name = "");
 
         llvm::Value* calling_cast(llvm::Type*, llvm::Value*);
-        llvm::Value* variant_cast(llvm::Type*, llvm::Value*);
 
         llvm::Value* get_variant_storage(llvm::Value*);
 
