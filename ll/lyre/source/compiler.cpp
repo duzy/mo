@@ -28,6 +28,7 @@ namespace lyre
     using namespace llvm;
 }
 
+#include "ntt.ipp"
 #include "cc.ipp"
 
 namespace lyre
@@ -278,11 +279,11 @@ namespace lyre
             }
         }
 
-        DUMP_TY("value-type: ", operand2->getType());
+        //DUMP_TY("value-type: ", operand2->getType());
 
         auto varTy = var->getType();
 
-        DUMP_TY("variable-type: ", varTy);
+        //DUMP_TY("variable-type: ", varTy);
 
         if (varTy->isPointerTy()) {
             auto val = operand2;
