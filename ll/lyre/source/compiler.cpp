@@ -879,8 +879,15 @@ namespace lyre
 
     llvm::Value* compiler::operator()(const ast::see & s)
     {
-        D("see");
-        return nullptr;
+        auto numBlocks = s.blocks.size();
+        auto fun = builder->GetInsertBlock()->getParent();
+        auto bb0 = BasicBlock::Create(context, "see", fun);
+
+        if (numBlocks <= 2) {
+        }
+        
+        D("see: blocks = "<<numBlocks);
+        return bb0;
     }
 
     llvm::Value* compiler::operator()(const ast::with & s)

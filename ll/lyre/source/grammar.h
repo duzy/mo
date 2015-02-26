@@ -468,8 +468,8 @@ namespace lyre
             see
                 =  lexeme[ "see" >> !(alnum | '_')/*expr.idchar*/ ]
                 >  expr
-                >  as_xblock[ expr.dashes >> -( +char_('>') >> -( expr >> ':' ) ) >> stmts ]
-                > *as_xblock[ expr.dashes >> +char_('>') >> -( expr >> ':' ) >> stmts ]
+                >  as_xblock[ expr.dashes >> -( omit[ +char_('>') ] >> -( expr >> omit[ ':' ] ) ) >> stmts ]
+                > *as_xblock[ expr.dashes >> omit[ +char_('>') ] >> -( expr >> omit[ ':' ] ) >> stmts ]
                 >  expr.dashes
                 ;
 
