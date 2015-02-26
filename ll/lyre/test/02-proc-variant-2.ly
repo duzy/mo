@@ -37,5 +37,6 @@ say("foo3: %d", n2);
 n1 = v;
 say("foo3: %d", n1);
 
+v = 100;
 n2 = v;
 say("foo3: %d", n2);

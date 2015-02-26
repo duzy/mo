@@ -5,7 +5,7 @@ decl a_float = 0.1;
 decl a_string = "foobar";
 
 # A 'node' is a representation of any key-value based objects. In advance, a 'node' here could have
-# parents and children, thus they could be used to construct a 'tree'. And lyre have a bundle of
+# parent and children, thus they could be used to construct a 'tree'. And lyre have a bundle of
 # language facility to conveniently operate on a node tree.
 decl a_node = { name:'foobar' };
 

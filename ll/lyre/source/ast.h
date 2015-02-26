@@ -183,10 +183,17 @@ namespace lyre
             boost::optional<ast::block> block;
         };
 
+        struct xblock
+        {
+            boost::optional<ast::expr> expr;
+            ast::stmts stmts;
+        };
+
         struct see
         {
             ast::expr expr;
-            ast::block block;
+            xblock block0;
+            std::list<xblock> blocks;
         };
 
         struct speak
@@ -249,7 +256,8 @@ BOOST_FUSION_ADAPT_STRUCT(
 BOOST_FUSION_ADAPT_STRUCT(
     lyre::ast::see,
     (lyre::ast::expr, expr)
-    (lyre::ast::block, block)
+    (lyre::ast::xblock, block0)
+    (std::list<lyre::ast::xblock>, blocks)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
@@ -260,6 +268,12 @@ BOOST_FUSION_ADAPT_STRUCT(
 BOOST_FUSION_ADAPT_STRUCT(
     lyre::ast::block,
     (std::string, name)
+    (lyre::ast::stmts, stmts)
+)
+
+BOOST_FUSION_ADAPT_STRUCT(
+    lyre::ast::xblock,
+    (boost::optional<lyre::ast::expr>, expr)
     (lyre::ast::stmts, stmts)
 )
 

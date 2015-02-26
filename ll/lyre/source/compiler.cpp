@@ -243,27 +243,6 @@ namespace lyre
         return comp->builder->CreateCall(fun, args, name);
     }
 
-#if 0
-    Value *expr_compiler::op_list(const ast::op & op, Value *operand1, Value *operand2, llvm::Value *index)
-    {
-        std::clog
-            << __FUNCTION__ << ": "
-            << "operand1 = " << operand1 << ", "
-            << "operand2 = " << operand2
-            << std::endl;
-
-        auto elem = comp->builder->CreateGEP(operand1, index);
-        auto ptr1 = comp->builder->CreateStructGEP(elem, 0);
-        auto ptr2 = comp->builder->CreateStructGEP(elem, 1);
-        auto val = operand2;
-        if (operand2->getType()->isPtrOrPtrVectorTy())
-            comp->builder->CreatePointerCast(operand2,
-                cast<PointerType>(ptr2->getType())->getElementType());
-        comp->builder->CreateStore(val, ptr2);
-        return operand1;
-    }
-#endif
-
     Value *expr_compiler::op_set(const ast::op & op, Value *operand1, Value *operand2)
     {
         auto var = operand1;
@@ -279,37 +258,50 @@ namespace lyre
             }
         }
 
-        //DUMP_TY("value-type: ", operand2->getType());
+        DUMP_TY("value-type: ", operand2->getType());
 
         auto varTy = var->getType();
 
-        //DUMP_TY("variable-type: ", varTy);
+        DUMP_TY("variable-type: ", varTy);
 
-        if (varTy->isPointerTy()) {
-            auto val = operand2;
-            auto varElementTy = varTy->getSequentialElementType();
-
-            if (varElementTy == comp->variant) {
-                val = comp->calling_cast(nullptr, val);
-
-                auto ptr = comp->get_variant_storage(var);
-
-                /**
-                 *  Convert the storage pointer for the value type.
-                 */
-                var = comp->builder->CreatePointerCast(ptr, PointerType::getUnqual(val->getType()));
-            } else {
-                val = comp->calling_cast(varElementTy, val);
-            }
-
-            //DUMP_TY("variable-type: ", var->getType());
-
-            comp->builder->CreateStore(val, var); // store 'val' to the 'var'
-        } else {
+        if (!varTy->isPointerTy()) {
             llvm::errs()
                 << "lyre: can't set value to a non-pointer value"
                 << "\n" ;
             return nullptr;
+        }
+
+        auto val = operand2;
+        auto varElementTy = varTy->getSequentialElementType();
+
+        if (varElementTy == comp->variant) {
+            val = comp->calling_cast(nullptr, val);
+
+            DUMP_TY("value-type: ", val->getType());
+
+            if (val->getType() == comp->variant) {
+                // ...
+            }
+
+            auto zero = comp->builder->getInt32(0);
+            auto idxz = std::vector<llvm::Value*>{ zero, zero, zero };
+            auto ptr1 = comp->builder->CreateGEP(var, idxz); // CreateStructGEP
+
+            /**
+             *  Convert the storage pointer and store 'val' to the variant
+             */
+            comp->builder->CreateStore(val,
+                comp->builder->CreatePointerCast(ptr1, PointerType::getUnqual(val->getType())));
+
+            /**
+             *  Get vtable storage 
+             */
+            idxz = std::vector<llvm::Value*>{ zero, comp->builder->getInt32(1) };
+            auto ptr2 = comp->builder->CreateGEP(var, idxz);
+            //comp->builder->CreateStore(vtable, ptr2); ///< store vtable
+        } else {
+            val = comp->calling_cast(varElementTy, val);
+            comp->builder->CreateStore(val, var); ///< store 'val' to the 'var'
         }
 
         return operand1;
@@ -496,6 +488,8 @@ namespace lyre
             Function *F = Function::Create(FT, Function::ExternalLinkage, "say", module);
             F->arg_begin()->setName("s");
         }
+
+        std::tuple<int,int,int> a;
 
         engine.reset(jit);
     }
@@ -885,7 +879,7 @@ namespace lyre
 
     llvm::Value* compiler::operator()(const ast::see & s)
     {
-        std::clog << "see: " << std::endl;
+        D("see");
         return nullptr;
     }
 

@@ -297,6 +297,7 @@ namespace lyre
                 (arglist)
                 (assign)
                 (list)
+                (dashes)
             );
 
             on_error<fail>
@@ -397,6 +398,7 @@ namespace lyre
             boost::spirit::inf_type             inf;
             boost::spirit::skip_type            skip;
 
+            as<ast::xblock> as_xblock;
             as<ast::param> as_param;
             as<ast::identifier> as_identifier;
             as<std::list<std::string>> as_string_list;
@@ -466,7 +468,9 @@ namespace lyre
             see
                 =  lexeme[ "see" >> !(alnum | '_')/*expr.idchar*/ ]
                 >  expr
-                >  block(std::string("see"))
+                >  as_xblock[ expr.dashes >> -( +char_('>') >> -( expr >> ':' ) ) >> stmts ]
+                > *as_xblock[ expr.dashes >> +char_('>') >> -( expr >> ':' ) >> stmts ]
+                >  expr.dashes
                 ;
 
             ret
