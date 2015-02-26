@@ -886,7 +886,7 @@ namespace lyre
         if (numBlocks <= 2) {
         }
         
-        D("see: blocks = "<<numBlocks);
+         D("see: blocks = "<<numBlocks);
         return bb0;
     }
 
