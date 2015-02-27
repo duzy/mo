@@ -881,12 +881,45 @@ namespace lyre
     {
         auto numBlocks = s.blocks.size();
         auto fun = builder->GetInsertBlock()->getParent();
-        auto bb0 = BasicBlock::Create(context, "see", fun);
+        auto bbOut = builder->GetInsertBlock();
+        auto bb0 = BasicBlock::Create(context, "saw", fun);
 
-        if (numBlocks <= 2) {
+        if (numBlocks == 1) {
+            auto bbMerge = BasicBlock::Create(getGlobalContext(), "saw.merge");
+
+            auto seeCond = compile_expr(s.expr);
+
+            /*
+            seeCond = builder->CreateFCmpONE(seeCond,
+                ConstantFP::get(context, APFloat(0.0)), "see.cond");
+            */
+            seeCond = builder->CreateICmpEQ(seeCond,
+                ConstantInt::get(seeCond->getType(), 1), "see.cond");
+
+            builder->CreateCondBr(seeCond, bb0, bbMerge);
+
+            llvm::Value *bb0V = nullptr;
+
+            ///< Emit the block statements
+            builder->SetInsertPoint(bb0);
+            for (auto & stmt : s.blocks.begin()->stmts) {
+                bb0V = boost::apply_visitor(*this, stmt);
+            }
+            builder->CreateBr(bbMerge);
+            bb0 = builder->GetInsertBlock();
+
+            ///< Emit the merge block
+            fun->getBasicBlockList().push_back(bbMerge);
+            builder->SetInsertPoint(bbMerge);
+
+            PHINode *pn = builder->CreatePHI(bb0V->getType(), 2/*, "see.tmp"*/);
+            pn->addIncoming(bb0V, bbOut);
+            pn->addIncoming(bb0V, bb0);
+        } else if (numBlocks == 2) {
+            
         }
         
-         D("see: blocks = "<<numBlocks);
+        D("see: blocks = "<<numBlocks);
         return bb0;
     }
 
