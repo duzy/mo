@@ -11,6 +11,8 @@ see false
 ---
 
 see true
+--->> 1 == 0:
+     say("3: xxx");
 --->> 1 == 1:
      say("3: okay");
 --->> 1 == 2:

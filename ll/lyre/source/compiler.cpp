@@ -96,11 +96,11 @@ namespace lyre
             case ast::opcode::o:        operand1 = op_or (op, operand1, operand2); break;
             case ast::opcode::xo:       operand1 = op_xor(op, operand1, operand2); break;
             default:
-                D( __FUNCTION__
-                   << ": expr: op = " << int(op.opcode) << ", "
-                   //<< "operand1 = " << operand1 << ", "
-                   //<< "operand2 = " << operand2
-                   );
+                D(__FUNCTION__
+                    << ": TODO: expr: op = " << int(op.opcode) << ", "
+                    //<< "operand1 = " << operand1 << ", "
+                    //<< "operand2 = " << operand2
+                  );
             }
         }
 
@@ -894,38 +894,56 @@ namespace lyre
         auto astBlocks = std::vector<const ast::xblock*>{ &s.block0 };
         for (auto & b : s.blocks) { astBlocks.push_back(&b); }
 
-        auto bbMerge = BasicBlock::Create(context, "saw.cont");
+        auto bbMerge = BasicBlock::Create(context, "saw.stop");
 
         auto numBlocks = astBlocks.size();
         auto blocks = std::vector<BasicBlock*>{};
         for (auto n = 0; n < numBlocks; ++n) {
             auto bbSaw = BasicBlock::Create(context, "saw");
-            auto cond = builder->CreateICmpEQ(seeValue,
-                ConstantInt::get(seeValue->getType(), 1), "see.cond");
-            builder->CreateCondBr(cond, bbSaw, bbMerge);
-            blocks.push_back(bbSaw);
-        }
-
-        for (auto n = 0; n < numBlocks; ++n) {
+            auto bbCont = BasicBlock::Create(context, "saw.cont");
             auto astBlock = astBlocks[n];
-            auto bbSaw = blocks[n];
+
+            blocks.push_back(bbSaw);
+
+            llvm::Value *caseValue = ConstantInt::get(seeValue->getType(), 1);
+            if (astBlock->expr) {
+                auto v = compile_expr(boost::get<ast::expr>(astBlock->expr));
+                if (v == nullptr) {
+                    llvm::errs()
+                        << "lyre: invalid expression "
+                        << "\n" ;
+                    //return nullptr;
+                } else {
+                    //caseValue = v;
+                    DUMP_TY("saw: ", seeValue->getType());
+                    DUMP_TY("saw: ", v->getType());
+                }
+            }
+
+            builder->CreateCondBr(builder->CreateICmpEQ(seeValue, caseValue),
+                bbSaw, bbCont);
 
             ///< Emit the block statements
             fun->getBasicBlockList().push_back(bbSaw);
             builder->SetInsertPoint(bbSaw);
-
             for (auto & stmt : astBlock->stmts) {
                 auto v = boost::apply_visitor(*this, stmt);
             }
-
             builder->CreateBr(bbMerge);
 
             ///< update for PHI (the block might be changed)
             blocks[n] = builder->GetInsertBlock();
+
+            ///< Emit the continual saw block
+            fun->getBasicBlockList().push_back(bbCont);
+            builder->SetInsertPoint(bbCont);
         }
 
+        ///< Terminate the final continual block
+        builder->CreateBr(bbMerge);
+
         ///< Emit the merge block
-        fun->getBasicBlockList().push_back(bbMerge); ///< bbMerge 
+        fun->getBasicBlockList().push_back(bbMerge);
         builder->SetInsertPoint(bbMerge);
 
         /*
