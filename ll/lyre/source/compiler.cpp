@@ -879,48 +879,59 @@ namespace lyre
 
     llvm::Value* compiler::operator()(const ast::see & s)
     {
-        auto numBlocks = s.blocks.size();
-        auto fun = builder->GetInsertBlock()->getParent();
-        auto bbOut = builder->GetInsertBlock();
-        auto bb0 = BasicBlock::Create(context, "saw", fun);
+        auto seeValue = compile_expr(s.expr);
+        if (seeValue == nullptr) {
+            llvm::errs()
+                << "lyre: sees an invalid expression"
+                << "\n" ;
+            return nullptr;
+        }
 
-        if (numBlocks == 1) {
-            auto bbMerge = BasicBlock::Create(getGlobalContext(), "saw.merge");
+        auto bbOuter = builder->GetInsertBlock();
+        auto fun = bbOuter->getParent();
 
-            auto seeCond = compile_expr(s.expr);
+        ///< Put all blocks in a list
+        auto astBlocks = std::vector<ast::xblock*>{ &s.block0 };
+        for (auto & b : s.blocks) { astBlocks.push_back(&b); }
 
-            /*
-            seeCond = builder->CreateFCmpONE(seeCond,
-                ConstantFP::get(context, APFloat(0.0)), "see.cond");
-            */
-            seeCond = builder->CreateICmpEQ(seeCond,
-                ConstantInt::get(seeCond->getType(), 1), "see.cond");
+        auto numBlocks = astBlocks.size();
+        auto blocks = std::vector<BasicBlock*>{};
+        for (auto n = 0; n < numBlocks; ++n) {
+            blocks.push_back(BasicBlock::Create(context, "saw"));
+        }
 
-            builder->CreateCondBr(seeCond, bb0, bbMerge);
+        auto bbMerge = BasicBlock::Create(context, "saw.cont");
 
-            llvm::Value *bb0V = nullptr;
+        for (auto astBlock : astBlocks) {
+            auto bbSaw = BasicBlock::Create(context, "saw", fun);
+
+            auto cond = builder->CreateICmpEQ(seeValue,
+                ConstantInt::get(seeValue->getType(), 1), "see.cond");
+
+            builder->CreateCondBr(cond, bbSaw, bbMerge);
 
             ///< Emit the block statements
-            builder->SetInsertPoint(bb0);
-            for (auto & stmt : s.blocks.begin()->stmts) {
-                bb0V = boost::apply_visitor(*this, stmt);
+            builder->SetInsertPoint(bbSaw);
+            for (auto & stmt : astBlock->stmts) {
+                auto v = boost::apply_visitor(*this, stmt);
             }
             builder->CreateBr(bbMerge);
-            bb0 = builder->GetInsertBlock();
+            bbSaw = builder->GetInsertBlock(); ///< update for PHI (the block might be changed)
 
             ///< Emit the merge block
-            fun->getBasicBlockList().push_back(bbMerge);
+            fun->getBasicBlockList().push_back(bbMerge); ///< bbMerge 
             builder->SetInsertPoint(bbMerge);
 
-            PHINode *pn = builder->CreatePHI(bb0V->getType(), 2/*, "see.tmp"*/);
-            pn->addIncoming(bb0V, bbOut);
-            pn->addIncoming(bb0V, bb0);
-        } else if (numBlocks == 2) {
-            
+            /*
+           ///< Emit PHI node in the merge block
+           llvm::Value *bbSawV = builder->getInt1(1);
+           PHINode *pn = builder->CreatePHI(bbSawV->getType(), 2, "see.tmp");
+           pn->addIncoming(bbSawV, bbOuter);
+           pn->addIncoming(bbSawV, bbSaw);
+            */
         }
         
-        D("see: blocks = "<<numBlocks);
-        return bb0;
+        return bbSaw;
     }
 
     llvm::Value* compiler::operator()(const ast::with & s)
