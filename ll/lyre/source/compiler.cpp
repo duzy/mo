@@ -891,47 +891,52 @@ namespace lyre
         auto fun = bbOuter->getParent();
 
         ///< Put all blocks in a list
-        auto astBlocks = std::vector<ast::xblock*>{ &s.block0 };
+        auto astBlocks = std::vector<const ast::xblock*>{ &s.block0 };
         for (auto & b : s.blocks) { astBlocks.push_back(&b); }
+
+        auto bbMerge = BasicBlock::Create(context, "saw.cont");
 
         auto numBlocks = astBlocks.size();
         auto blocks = std::vector<BasicBlock*>{};
         for (auto n = 0; n < numBlocks; ++n) {
-            blocks.push_back(BasicBlock::Create(context, "saw"));
-        }
-
-        auto bbMerge = BasicBlock::Create(context, "saw.cont");
-
-        for (auto astBlock : astBlocks) {
-            auto bbSaw = BasicBlock::Create(context, "saw", fun);
-
+            auto bbSaw = BasicBlock::Create(context, "saw");
             auto cond = builder->CreateICmpEQ(seeValue,
                 ConstantInt::get(seeValue->getType(), 1), "see.cond");
-
             builder->CreateCondBr(cond, bbSaw, bbMerge);
+            blocks.push_back(bbSaw);
+        }
+
+        for (auto n = 0; n < numBlocks; ++n) {
+            auto astBlock = astBlocks[n];
+            auto bbSaw = blocks[n];
 
             ///< Emit the block statements
+            fun->getBasicBlockList().push_back(bbSaw);
             builder->SetInsertPoint(bbSaw);
+
             for (auto & stmt : astBlock->stmts) {
                 auto v = boost::apply_visitor(*this, stmt);
             }
+
             builder->CreateBr(bbMerge);
-            bbSaw = builder->GetInsertBlock(); ///< update for PHI (the block might be changed)
 
-            ///< Emit the merge block
-            fun->getBasicBlockList().push_back(bbMerge); ///< bbMerge 
-            builder->SetInsertPoint(bbMerge);
-
-            /*
-           ///< Emit PHI node in the merge block
-           llvm::Value *bbSawV = builder->getInt1(1);
-           PHINode *pn = builder->CreatePHI(bbSawV->getType(), 2, "see.tmp");
-           pn->addIncoming(bbSawV, bbOuter);
-           pn->addIncoming(bbSawV, bbSaw);
-            */
+            ///< update for PHI (the block might be changed)
+            blocks[n] = builder->GetInsertBlock();
         }
-        
-        return bbSaw;
+
+        ///< Emit the merge block
+        fun->getBasicBlockList().push_back(bbMerge); ///< bbMerge 
+        builder->SetInsertPoint(bbMerge);
+
+        /*
+       ///< Emit PHI node in the merge block
+       llvm::Value *bbSawV = builder->getInt1(1);
+       PHINode *pn = builder->CreatePHI(bbSawV->getType(), 2, "see.tmp");
+       pn->addIncoming(bbSawV, bbOuter);
+       pn->addIncoming(bbSawV, bbSaw);
+        */
+
+        return blocks[0];
     }
 
     llvm::Value* compiler::operator()(const ast::with & s)
