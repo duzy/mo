@@ -76,6 +76,7 @@ namespace lyre
         Value *op_set(const ast::op & op, Value *operand1, Value *operand2);
 
         Value *binary(Instruction::BinaryOps, Value *operand1, Value *operand2);
+        Value *compare(CmpInst::Predicate, Value *operand1, Value *operand2);
     };
 
     Value *expr_compiler::compile(const ast::expr & expr)
@@ -405,38 +406,32 @@ namespace lyre
 
     Value *expr_compiler::op_lt(const ast::op & op, Value *operand1, Value *operand2)
     {
-        D(__FUNCTION__);
-        return operand1;
+        return compare(CmpInst::ICMP_SLT, operand1, operand2);
     }
 
     Value *expr_compiler::op_le(const ast::op & op, Value *operand1, Value *operand2)
     {
-        D(__FUNCTION__);
-        return operand1;
+        return compare(CmpInst::ICMP_SLE, operand1, operand2);
     }
 
     Value *expr_compiler::op_gt(const ast::op & op, Value *operand1, Value *operand2)
     {
-        D(__FUNCTION__);
-        return operand1;
+        return compare(CmpInst::ICMP_SGT, operand1, operand2);
     }
 
     Value *expr_compiler::op_ge(const ast::op & op, Value *operand1, Value *operand2)
     {
-        D(__FUNCTION__);
-        return operand1;
+        return compare(CmpInst::ICMP_SGE, operand1, operand2);
     }
 
     Value *expr_compiler::op_eq(const ast::op & op, Value *operand1, Value *operand2)
     {
-        D(__FUNCTION__);
-        return binary(ICmpInst::ICMP_EQ,  operand1, operand2);
+        return compare(CmpInst::ICMP_EQ, operand1, operand2);
     }
 
     Value *expr_compiler::op_ne(const ast::op & op, Value *operand1, Value *operand2)
     {
-        D(__FUNCTION__);
-        return operand1;
+        return compare(CmpInst::ICMP_NE, operand1, operand2);
     }
 
     Value *expr_compiler::op_and(const ast::op & op, Value *operand1, Value *operand2)
@@ -499,6 +494,11 @@ namespace lyre
         //std::clog << "\t"; binres->getType()->dump();
 
         return binres;
+    }
+
+    Value *expr_compiler::compare(CmpInst::Predicate predicate, Value *operand1, Value *operand2)
+    {
+        return comp->builder->CreateICmp(predicate, operand1, operand2);
     }
 
     static bool llvm_init_done = false;
