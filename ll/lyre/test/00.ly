@@ -20,3 +20,14 @@ see true
 --->>
      say("3: xxx");
 ---
+
+decl a = 1;
+
+see a
+---> 0:
+     say("4: xxx");
+---> 1:
+     say("4: okay");
+---> 2:
+     say("4: xxx");
+----
