@@ -169,25 +169,25 @@ see a_integer == 0
 
 # switch many cases
 see a_integer
-----: 0
+----> 0:
     # the value is 0
-----: 1
+----> 1:
     # the value is 1
-----: 2
+----> 2:
     # the value is 2
-----
+---->
     # the value is none of the above
 ----
 
 # cases branching 
 see true
-----: a_integer == 0
+----> a_integer == 0:
     # equal 0
-----: a_integer < 0
+----> a_integer < 0:
     # less than 0
-----: a_integer > 0
+----> a_integer > 0:
     # greater than 0
-----
+---->
     # anything else? not possible here.
 ----
 
