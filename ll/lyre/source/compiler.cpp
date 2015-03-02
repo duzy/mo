@@ -865,9 +865,16 @@ namespace lyre
     {
         auto & entry = builder->GetInsertBlock()->getParent()->getEntryBlock();
         IRBuilder<> allocaBuilder(&entry, entry.begin());
-
         Value* lastAlloca = nullptr;
         for (auto & sym : decl) {
+            if (sym.id.string == "_") {
+                errs()
+                    << "lyre: symbol '_' is reserved"
+                    << "\n"
+                    ;
+                return nullptr;
+            }
+
             auto type = variant; ///< The default type is 'variant'.
 
             if (sym.type) {

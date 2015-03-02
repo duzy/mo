@@ -473,6 +473,10 @@ namespace lyre
                 >  expr.dashes
                 ;
 
+            per
+                =  lexeme[ "per" >> !(alnum | '_')/*expr.idchar*/ ]
+                ;
+
             ret
                 =  lexeme[ "return" >> !(alnum | '_')/*expr.idchar*/ ]
                 >  -expr
