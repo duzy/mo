@@ -498,7 +498,29 @@ namespace lyre
 
     Value *expr_compiler::compare(CmpInst::Predicate predicate, Value *operand1, Value *operand2)
     {
-        return comp->builder->CreateICmp(predicate, operand1, operand2);
+        auto ty1 = operand1->getType();
+        auto ty2 = operand2->getType();
+
+        if (ty1->isIntegerTy() && ty2->isIntegerTy()) {
+            if (ty1 != ty2) {
+                if (ty1->getIntegerBitWidth() < ty2->getIntegerBitWidth()) {
+                    operand1 = comp->builder->CreateIntCast(operand1, ty2, false);
+                } else {
+                    operand2 = comp->builder->CreateIntCast(operand2, ty1, false);
+                }
+            }
+            return comp->builder->CreateICmpEQ(operand1, operand2);
+        } else if (ty1->isFloatingPointTy() && ty2->isFloatingPointTy()) {
+            if (ty1 != ty2) operand2 = comp->builder->CreateFPCast(operand2, ty1);
+            return comp->builder->CreateFCmpOEQ(operand1, operand2);
+        }
+
+        DUMP_TY("compare: ", ty1);
+        DUMP_TY("compare: ", ty2);
+        errs()
+            << "lyre: unsupported types for comparation"
+            << "\n" ;
+        return nullptr;
     }
 
     static bool llvm_init_done = false;
