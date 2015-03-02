@@ -305,11 +305,11 @@ namespace lyre
             }
         }
 
-        DUMP_TY("value-type: ", operand2->getType());
+        //DUMP_TY("value-type: ", operand2->getType());
 
         auto varTy = var->getType();
 
-        DUMP_TY("variable-type: ", varTy);
+        //DUMP_TY("variable-type: ", varTy);
 
         if (!varTy->isPointerTy()) {
             errs()
@@ -324,7 +324,7 @@ namespace lyre
         if (varElementTy == comp->variant) {
             val = comp->calling_cast(nullptr, val);
 
-            DUMP_TY("value-type: ", val->getType());
+            //DUMP_TY("value-type: ", val->getType());
 
             if (val->getType() == comp->variant) {
                 // ...
@@ -1039,20 +1039,32 @@ namespace lyre
                 caseValue = ConstantInt::get(seeValue->getType(), state);
             }
 
-            if (seeValue->getType()->isIntegerTy() && caseValue->getType()->isIntegerTy()) {
-                if (seeValue->getType() != caseValue->getType())
-                    caseValue = builder->CreateIntCast(caseValue, seeValue->getType(), false);
-                builder->CreateCondBr(builder->CreateICmpEQ(seeValue, caseValue),
-                    bbSaw, bbCont);
-            } else {
-                DUMP_TY("saw: ", seeValue->getType());
-                DUMP_TY("saw: ", caseValue->getType());
+            ///< Remove pointers
+            seeValue = calling_cast(nullptr, seeValue);
+            caseValue = calling_cast(nullptr, caseValue);
 
+            auto seeValueTy = seeValue->getType();
+            auto caseValueTy = caseValue->getType();
+            Value *cond = nullptr;
+
+            if (seeValueTy->isIntegerTy() && caseValueTy->isIntegerTy()) {
+                if (seeValueTy != caseValueTy)
+                    caseValue = builder->CreateIntCast(caseValue, seeValueTy, false);
+                cond = builder->CreateICmpEQ(seeValue, caseValue);
+            } else if (seeValueTy->isFloatingPointTy() && caseValueTy->isFloatingPointTy()) {
+                if (seeValueTy != caseValueTy)
+                    caseValue = builder->CreateFPCast(caseValue, seeValueTy);
+                cond = builder->CreateFCmpOEQ(seeValue, caseValue);
+            } else {
+                DUMP_TY("saw: ", seeValueTy);
+                DUMP_TY("saw: ", caseValueTy);
                 errs()
                     << "lyre: unsupported see types"
                     << "\n" ;
                 return nullptr;
             }
+
+            builder->CreateCondBr(cond, bbSaw, bbCont);
 
             ///< Emit the block statements
             fun->getBasicBlockList().push_back(bbSaw);
