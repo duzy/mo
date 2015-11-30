@@ -1,4 +1,0 @@
-boolean: 1
-integer: 1
-float: 0.1000
-string: foobar
